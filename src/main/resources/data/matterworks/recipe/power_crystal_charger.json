@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "ICI",
+    "RBP",
+    "ICI"
+  ],
+  "key": {
+    "I": {
+      "item": "minecraft:iron_ingot"
+    },
+    "C": {
+      "item": "minecraft:copper_ingot"
+    },
+    "R": {
+      "item": "minecraft:redstone"
+    },
+    "B": {
+      "item": "matterworks:matter_power_bank"
+    },
+    "P": {
+      "item": "minecraft:amethyst_shard"
+    }
+  },
+  "result": {
+    "id": "matterworks:power_crystal_charger",
+    "count": 1
+  }
+}

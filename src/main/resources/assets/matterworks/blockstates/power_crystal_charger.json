@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "matterworks:block/power_crystal_charger"
+    }
+  }
+}

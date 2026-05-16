@@ -1,16 +1,22 @@
 package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
+import net.minecraft.ChatFormatting;
+import net.minecraft.core.HolderLookup;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.item.CreativeModeTab;
-import net.minecraft.world.item.Item;
+import net.minecraft.world.item.EnchantedBookItem;
 import net.minecraft.world.item.Items;
-import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.item.enchantment.Enchantment;
+import net.minecraft.world.item.enchantment.EnchantmentInstance;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.alchemy.PotionContents;
+import net.minecraft.world.item.component.ItemLore;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
-import java.util.Arrays;
 import java.util.function.Supplier;
 
 public class ModCreativeModeTabs {
@@ -20,11 +26,37 @@ public class ModCreativeModeTabs {
     @SuppressWarnings("unused")
     public static final Supplier<CreativeModeTab> MATTERWORKS_CREATIVE_TAB = CREATIVE_MODE_TAB.register("matterworks_creative_tab",
             () -> CreativeModeTab.builder()
-                    .icon(() -> Blocks.OAK_PLANKS.asItem().getDefaultInstance())
+                    .icon(() -> ModBlocks.MATTER_RECYCLER.get().asItem().getDefaultInstance())
                     .title(Component.translatable("itemGroup.matterworks"))
-                    .displayItems((itemDisplayParameters, output) -> Arrays.stream(new Item[]{
-                            Items.OAK_PLANKS
-                    }).forEach(output::accept))
+                    .displayItems((itemDisplayParameters, output) -> {
+                        output.accept(ModItems.RAW_MATTER_BUCKET.get());
+                        output.accept(ModItems.REFINED_MATTER.get());
+                        output.accept(ModItems.MATTER_SLUDGE.get());
+                        output.accept(ModItems.UNSTABLE_MATTER.get());
+                        output.accept(ModItems.MATTER_DUST.get());
+                        output.accept(ModItems.EMPTY_TEMPLATE.get());
+                        output.accept(ModItems.ENCODED_TEMPLATE.get());
+                        output.accept(ModItems.CRIMSON_POWER_CRYSTAL.get());
+                        output.accept(ModItems.AZURE_POWER_CRYSTAL.get());
+                        output.accept(ModItems.VERDANT_POWER_CRYSTAL.get());
+                        output.accept(ModItems.MATTER_POWER_BANK.get().createChargedStack());
+                        addPotionVariants(output, ModPotions.MOLECULAR_DISPLACEMENT);
+                        addPotionVariants(output, ModPotions.LONG_MOLECULAR_DISPLACEMENT);
+                        addPotionVariants(output, ModPotions.STRONG_MOLECULAR_DISPLACEMENT);
+                        addPotionVariants(output, ModPotions.VOLATILE_MOLECULAR_DISPLACEMENT);
+                        output.accept(createCrystalTuningBook(itemDisplayParameters.holders(), 1));
+                        output.accept(createCrystalTuningBook(itemDisplayParameters.holders(), 2));
+                        output.accept(createCrystalTuningBook(itemDisplayParameters.holders(), 3));
+                        output.accept(ModBlocks.MATTER_RECYCLER.get());
+                        output.accept(ModBlocks.MATTER_STABILIZER.get());
+                        output.accept(ModBlocks.MATTER_ANALYZER.get());
+                        output.accept(ModBlocks.MATTER_CONSTRUCTOR.get());
+                        output.accept(ModBlocks.MATTER_GENERATOR.get());
+                        output.accept(ModBlocks.MATTER_SEPARATOR.get());
+                        output.accept(ModBlocks.HARDENED_SLUDGE.get());
+                        output.accept(ModBlocks.POWER_CRYSTAL_CHARGER.get());
+                        output.accept(ModBlocks.POWER_CRYSTAL_ORE.get());
+                    })
                     .build());
 
     private ModCreativeModeTabs() {
@@ -32,5 +64,27 @@ public class ModCreativeModeTabs {
 
     public static void register(IEventBus eventBus) {
         CREATIVE_MODE_TAB.register(eventBus);
+    }
+
+    private static void addPotionVariants(CreativeModeTab.Output output, net.neoforged.neoforge.registries.DeferredHolder<net.minecraft.world.item.alchemy.Potion, net.minecraft.world.item.alchemy.Potion> potion) {
+        output.accept(PotionContents.createItemStack(Items.POTION, potion));
+        output.accept(PotionContents.createItemStack(Items.SPLASH_POTION, potion));
+        output.accept(PotionContents.createItemStack(Items.LINGERING_POTION, potion));
+        output.accept(PotionContents.createItemStack(Items.TIPPED_ARROW, potion));
+    }
+
+    private static ItemStack createCrystalTuningBook(HolderLookup.Provider holders, int level) {
+        ItemStack stack = EnchantedBookItem.createForEnchantment(new EnchantmentInstance(
+                holders.lookupOrThrow(Registries.ENCHANTMENT).getOrThrow(ModEnchantments.CRYSTAL_TUNING),
+                level
+        ));
+        stack.set(
+                DataComponents.LORE,
+                ItemLore.EMPTY.withLineAdded(
+                        Component.translatable("tooltip.matterworks.crystal_tuning_book")
+                                .withStyle(ChatFormatting.GRAY)
+                )
+        );
+        return stack;
     }
 }

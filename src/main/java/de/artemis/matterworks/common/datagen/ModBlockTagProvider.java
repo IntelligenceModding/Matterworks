@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.datagen;
 
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.data.PackOutput;
 import net.minecraft.tags.BlockTags;
@@ -17,6 +18,9 @@ public class ModBlockTagProvider extends BlockTagsProvider {
     @Override
     protected void addTags(HolderLookup.@NotNull Provider provider) {
         var pickaxeTag = tag(BlockTags.MINEABLE_WITH_PICKAXE);
+        pickaxeTag.add(ModBlocks.POWER_CRYSTAL_ORE.get());
+        pickaxeTag.add(ModBlocks.MATTER_SEPARATOR.get());
+        pickaxeTag.add(ModBlocks.POWER_CRYSTAL_CHARGER.get());
         ModDatagenEntries.CORE_PAIRS.forEach(pair -> {
             pickaxeTag.add(pair.base().get());
             pickaxeTag.add(pair.glowing().get());
@@ -43,5 +47,7 @@ public class ModBlockTagProvider extends BlockTagsProvider {
             axeTag.add(pair.base().get());
             axeTag.add(pair.glowing().get());
         }));
+
+        tag(BlockTags.MINEABLE_WITH_SHOVEL).add(ModBlocks.HARDENED_SLUDGE.get());
     }
 }

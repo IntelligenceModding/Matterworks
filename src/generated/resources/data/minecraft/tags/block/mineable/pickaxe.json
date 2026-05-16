@@ -1,3 +1,7 @@
 {
-  "values": []
+  "values": [
+    "matterworks:power_crystal_ore",
+    "matterworks:matter_separator",
+    "matterworks:power_crystal_charger"
+  ]
 }

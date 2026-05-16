@@ -1,0 +1,13 @@
+{
+  "type": "minecraft:crafting_shapeless",
+  "category": "misc",
+  "ingredients": [
+    {
+      "item": "matterworks:refined_matter"
+    }
+  ],
+  "result": {
+    "id": "matterworks:matter_dust",
+    "count": 10
+  }
+}
