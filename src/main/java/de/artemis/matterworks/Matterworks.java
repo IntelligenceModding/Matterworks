@@ -10,6 +10,7 @@ import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.registry.ModMobEffects;
+import de.artemis.matterworks.common.registry.ModParticles;
 import de.artemis.matterworks.common.registry.ModPotions;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -28,6 +29,7 @@ public class Matterworks {
         ModMobEffects.register(modEventBus);
         ModPotions.register(modEventBus);
         ModCreativeModeTabs.register(modEventBus);
+        ModParticles.register(modEventBus);
         modEventBus.addListener(ModCapabilities::registerCapabilities);
         modEventBus.addListener(DataGenerators::gatherData);
     }

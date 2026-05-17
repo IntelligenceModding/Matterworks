@@ -35,6 +35,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("tooltip.matterworks.encoded_with", "Encoded With: %s");
         add("tooltip.matterworks.pattern_progress", "Pattern Progress: %s / %s");
         add("tooltip.matterworks.power_crystal_charge", "Charge: %s / %s");
+        add("tooltip.matterworks.unstable_matter_bucket.rupture", "Containment Failure In: %ss");
         add("tooltip.matterworks.crimson_power_crystal", "Speeds machine processing but increases FE use while charged.");
         add("tooltip.matterworks.azure_power_crystal", "Prevents machine process failure while charged.");
         add("tooltip.matterworks.verdant_power_crystal", "Reduces FE use and expands internal FE storage while charged.");
@@ -44,10 +45,11 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("fluid_type.matterworks.matter_sludge", "Matter Sludge");
         add("fluid_type.matterworks.unstable_matter", "Unstable Matter");
         addItem(ModItems.RAW_MATTER_BUCKET, "Raw Matter Bucket");
-        addItem(ModItems.REFINED_MATTER, "Refined Matter Bucket");
-        addItem(ModItems.MATTER_SLUDGE, "Matter Sludge Bucket");
-        addItem(ModItems.UNSTABLE_MATTER, "Unstable Matter Bucket");
+        addItem(ModItems.REFINED_MATTER_BUCKET, "Refined Matter Bucket");
+        addItem(ModItems.MATTER_SLUDGE_BUCKET, "Matter Sludge Bucket");
+        addItem(ModItems.UNSTABLE_MATTER_BUCKET, "Unstable Matter Bucket");
         addItem(ModItems.MATTER_DUST, "Matter Dust");
+        addItem(ModItems.ENTROPIC_MATTER, "Entropic Matter");
         addItem(ModItems.EMPTY_TEMPLATE, "Empty Template");
         addItem(ModItems.ENCODED_TEMPLATE, "Encoded Template");
         addItem(ModItems.CRIMSON_POWER_CRYSTAL, "Crimson Power Crystal");

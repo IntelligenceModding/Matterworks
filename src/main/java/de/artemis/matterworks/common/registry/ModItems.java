@@ -4,6 +4,7 @@ import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.item.EncodedTemplateItem;
 import de.artemis.matterworks.common.item.MatterPowerBankItem;
 import de.artemis.matterworks.common.item.PowerCrystalItem;
+import de.artemis.matterworks.common.item.UnstableMatterBucketItem;
 import net.minecraft.ChatFormatting;
 import net.minecraft.world.item.BucketItem;
 import net.minecraft.world.item.Item;
@@ -29,20 +30,20 @@ public class ModItems {
             UnaryOperator.identity()
     );
 
-    public static final DeferredItem<BucketItem> REFINED_MATTER = register(
-            "refined_matter",
+    public static final DeferredItem<BucketItem> REFINED_MATTER_BUCKET = register(
+            "refined_matter_bucket",
             properties -> new BucketItem(ModFluids.REFINED_MATTER.get(), properties.craftRemainder(Items.BUCKET).stacksTo(1)),
             UnaryOperator.identity()
     );
 
-    public static final DeferredItem<BucketItem> UNSTABLE_MATTER = register(
-            "unstable_matter",
-            properties -> new BucketItem(ModFluids.UNSTABLE_MATTER.get(), properties.craftRemainder(Items.BUCKET).stacksTo(1).rarity(Rarity.UNCOMMON)),
+    public static final DeferredItem<BucketItem> UNSTABLE_MATTER_BUCKET = register(
+            "unstable_matter_bucket",
+            properties -> new UnstableMatterBucketItem(ModFluids.UNSTABLE_MATTER.get(), properties.stacksTo(1).rarity(Rarity.UNCOMMON)),
             UnaryOperator.identity()
     );
 
-    public static final DeferredItem<BucketItem> MATTER_SLUDGE = register(
-            "matter_sludge",
+    public static final DeferredItem<BucketItem> MATTER_SLUDGE_BUCKET = register(
+            "matter_sludge_bucket",
             properties -> new BucketItem(ModFluids.MATTER_SLUDGE.get(), properties.craftRemainder(Items.BUCKET).stacksTo(1)),
             UnaryOperator.identity()
     );
@@ -51,6 +52,12 @@ public class ModItems {
             "matter_dust",
             Item::new,
             UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<Item> ENTROPIC_MATTER = register(
+            "entropic_matter",
+            Item::new,
+            properties -> properties.rarity(Rarity.UNCOMMON)
     );
 
     public static final DeferredItem<Item> EMPTY_TEMPLATE = register(

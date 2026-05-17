@@ -2,7 +2,6 @@ package de.artemis.matterworks.common.block;
 
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
-import net.minecraft.core.particles.DustParticleOptions;
 import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
@@ -21,12 +20,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.material.FluidState;
 import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.phys.Vec3;
-import org.joml.Vector3f;
 
 public class MatterSludgeBlock extends LiquidBlock {
     public static final int HARDEN_TIME_TICKS = 6000;
     private static final Vec3 MOVEMENT_DRAG = new Vec3(0.82D, 0.72D, 0.82D);
-    private static final Vector3f GLOW_TINT = new Vector3f(0.49F, 0.39F, 0.28F);
 
     public MatterSludgeBlock(FlowingFluid fluid, Properties properties) {
         super(fluid, properties);
@@ -66,6 +63,19 @@ public class MatterSludgeBlock extends LiquidBlock {
         super.entityInside(state, level, pos, entity);
         entity.makeStuckInBlock(state, MOVEMENT_DRAG);
 
+        if (!level.isClientSide() && entity.tickCount % 12 == 0 && entity.getDeltaMovement().horizontalDistanceSqr() > 0.0025D) {
+            level.playSound(
+                    null,
+                    entity.getX(),
+                    entity.getY(),
+                    entity.getZ(),
+                    level.random.nextInt(4) == 0 ? SoundEvents.SLIME_BLOCK_STEP : SoundEvents.MUD_STEP,
+                    SoundSource.BLOCKS,
+                    0.18F + level.random.nextFloat() * 0.08F,
+                    0.7F + level.random.nextFloat() * 0.18F
+            );
+        }
+
         if (!level.isClientSide() && entity instanceof LivingEntity livingEntity && !entity.isInvulnerable()) {
             int fluidAmount = level.getFluidState(pos).getAmount();
             int amplifier = fluidAmount >= 7 ? 2 : fluidAmount >= 4 ? 1 : 0;
@@ -83,36 +93,51 @@ public class MatterSludgeBlock extends LiquidBlock {
         double y = sample.y();
         double z = sample.z();
 
+        if (random.nextInt(3) == 0) {
+            level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0D, 0.015D, 0.0D);
+        }
         if (random.nextInt(5) == 0) {
-            level.addParticle(ParticleTypes.SMOKE, x, y, z, 0.0D, 0.01D, 0.0D);
+            level.addParticle(ParticleTypes.ASH, x, y, z, 0.0D, 0.01D, 0.0D);
         }
-        if (random.nextInt(7) == 0) {
-            level.addParticle(new DustParticleOptions(GLOW_TINT, 0.8F), x, y, z, 0.0D, 0.015D, 0.0D);
+        if (random.nextInt(9) == 0) {
+            level.addParticle(ParticleTypes.WHITE_ASH, x, y, z, 0.0D, 0.008D, 0.0D);
         }
-        if (random.nextInt(10) == 0) {
-            level.addParticle(ParticleTypes.ELECTRIC_SPARK, x, y, z, 0.0D, 0.02D, 0.0D);
+        if (random.nextInt(14) == 0) {
+            level.addParticle(ParticleTypes.CAMPFIRE_COSY_SMOKE, x, y, z, 0.0D, 0.02D, 0.0D);
         }
         if (random.nextInt(18) == 0) {
             level.playLocalSound(
                     x,
                     y,
                     z,
-                    net.minecraft.sounds.SoundEvents.BUBBLE_COLUMN_BUBBLE_POP,
-                    net.minecraft.sounds.SoundSource.BLOCKS,
+                    SoundEvents.BUBBLE_COLUMN_BUBBLE_POP,
+                    SoundSource.BLOCKS,
                     0.12F + random.nextFloat() * 0.08F,
                     0.6F + random.nextFloat() * 0.25F,
                     false
             );
         }
-        if (random.nextInt(28) == 0) {
+        if (random.nextInt(24) == 0) {
             level.playLocalSound(
                     x,
                     y,
                     z,
-                    net.minecraft.sounds.SoundEvents.FIRE_EXTINGUISH,
-                    net.minecraft.sounds.SoundSource.BLOCKS,
+                    SoundEvents.FIRE_EXTINGUISH,
+                    SoundSource.BLOCKS,
                     0.08F + random.nextFloat() * 0.05F,
                     1.5F + random.nextFloat() * 0.3F,
+                    false
+            );
+        }
+        if (random.nextInt(40) == 0) {
+            level.playLocalSound(
+                    x,
+                    y,
+                    z,
+                    SoundEvents.LAVA_POP,
+                    SoundSource.BLOCKS,
+                    0.06F + random.nextFloat() * 0.05F,
+                    0.55F + random.nextFloat() * 0.18F,
                     false
             );
         }
@@ -202,9 +227,10 @@ public class MatterSludgeBlock extends LiquidBlock {
         double centerZ = pos.getZ() + 0.5D;
 
         level.sendParticles(ParticleTypes.SMOKE, centerX, pos.getY() + surfaceHeight + 0.02D, centerZ, 8, 0.22D, 0.08D, 0.22D, 0.01D);
-        level.sendParticles(new DustParticleOptions(GLOW_TINT, 1.0F), centerX, pos.getY() + surfaceHeight, centerZ, 10, 0.28D, 0.05D, 0.28D, 0.0D);
         level.sendParticles(ParticleTypes.ASH, centerX, pos.getY() + surfaceHeight + 0.03D, centerZ, 6, 0.2D, 0.04D, 0.2D, 0.005D);
+        level.sendParticles(ParticleTypes.WHITE_ASH, centerX, pos.getY() + surfaceHeight + 0.02D, centerZ, 4, 0.18D, 0.03D, 0.18D, 0.003D);
         level.playSound(null, centerX, centerY, centerZ, SoundEvents.MUD_PLACE, SoundSource.BLOCKS, 0.45F, 0.75F);
+        level.playSound(null, centerX, centerY, centerZ, SoundEvents.MUD_BREAK, SoundSource.BLOCKS, 0.22F, 0.55F);
         level.playSound(null, centerX, centerY, centerZ, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.18F, 1.6F);
     }
 }

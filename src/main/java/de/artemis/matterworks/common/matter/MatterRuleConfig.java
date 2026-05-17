@@ -20,8 +20,9 @@ public record MatterRuleConfig(
         return new MatterRuleConfig(
                 ids(
                         "matterworks:raw_matter_bucket",
-                        "matterworks:refined_matter",
-                        "matterworks:unstable_matter",
+                        "matterworks:refined_matter_bucket",
+                        "matterworks:unstable_matter_bucket",
+                        "matterworks:matter_sludge_bucket",
                         "matterworks:matter_dust",
                         "matterworks:empty_template",
                         "matterworks:encoded_template",
@@ -38,8 +39,9 @@ public record MatterRuleConfig(
                 new LinkedHashSet<>(),
                 ids(
                         "matterworks:raw_matter_bucket",
-                        "matterworks:refined_matter",
-                        "matterworks:unstable_matter",
+                        "matterworks:refined_matter_bucket",
+                        "matterworks:unstable_matter_bucket",
+                        "matterworks:matter_sludge_bucket",
                         "matterworks:matter_dust",
                         "matterworks:empty_template",
                         "matterworks:encoded_template",

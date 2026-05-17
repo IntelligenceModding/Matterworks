@@ -1,43 +1,16 @@
 package de.artemis.matterworks.common.fluid;
 
 import net.minecraft.resources.ResourceLocation;
-import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidType;
+import org.joml.Vector3f;
 
-import java.util.function.Consumer;
-
-public class RawMatterFluidType extends FluidType {
-    private static final ResourceLocation STILL_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_still");
-    private static final ResourceLocation FLOWING_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_flow");
-    private static final ResourceLocation OVERLAY_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_overlay");
-    private static final int TINT_COLOR = 0xFFD4B27A;
+public class RawMatterFluidType extends AbstractMatterFluidType {
+    private static final ResourceLocation STILL_TEXTURE = ResourceLocation.fromNamespaceAndPath("matterworks", "block/fluid/raw_matter_still");
+    private static final ResourceLocation FLOWING_TEXTURE = ResourceLocation.fromNamespaceAndPath("matterworks", "block/fluid/raw_matter_flow");
+    private static final int TINT_COLOR = 0xFFF4F6F7;
+    private static final Vector3f FOG_COLOR = new Vector3f(0.82F, 0.85F, 0.88F);
 
     public RawMatterFluidType(Properties properties) {
-        super(properties);
-    }
-
-    @Override
-    public void initializeClient(Consumer<IClientFluidTypeExtensions> consumer) {
-        consumer.accept(new IClientFluidTypeExtensions() {
-            @Override
-            public ResourceLocation getStillTexture() {
-                return STILL_TEXTURE;
-            }
-
-            @Override
-            public ResourceLocation getFlowingTexture() {
-                return FLOWING_TEXTURE;
-            }
-
-            @Override
-            public ResourceLocation getOverlayTexture() {
-                return OVERLAY_TEXTURE;
-            }
-
-            @Override
-            public int getTintColor() {
-                return TINT_COLOR;
-            }
-        });
+        super(properties, STILL_TEXTURE, FLOWING_TEXTURE, TINT_COLOR, FOG_COLOR, -1.0F, 0.056F, 4.0F);
     }
 }

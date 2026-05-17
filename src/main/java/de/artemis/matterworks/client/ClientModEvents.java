@@ -1,5 +1,6 @@
 package de.artemis.matterworks.client;
 
+import de.artemis.matterworks.client.particle.RawMatterDripParticle;
 import de.artemis.matterworks.client.render.PowerCrystalOreBlockEntityRenderer;
 import de.artemis.matterworks.client.screen.MatterAnalyzerScreen;
 import de.artemis.matterworks.client.screen.MatterConstructorScreen;
@@ -10,8 +11,10 @@ import de.artemis.matterworks.client.screen.MatterStabilizerScreen;
 import de.artemis.matterworks.client.screen.PowerCrystalChargerScreen;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
+import de.artemis.matterworks.common.registry.ModParticles;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
+import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 
 public class ClientModEvents {
     private ClientModEvents() {
@@ -25,6 +28,12 @@ public class ClientModEvents {
         event.register(ModMenuTypes.MATTER_GENERATOR.get(), MatterGeneratorScreen::new);
         event.register(ModMenuTypes.MATTER_SEPARATOR.get(), MatterSeparatorScreen::new);
         event.register(ModMenuTypes.POWER_CRYSTAL_CHARGER.get(), PowerCrystalChargerScreen::new);
+    }
+
+    public static void registerParticleProviders(RegisterParticleProvidersEvent event) {
+        event.registerSpecial(ModParticles.DRIPPING_RAW_MATTER.get(), new RawMatterDripParticle.DrippingProvider());
+        event.registerSpecial(ModParticles.FALLING_RAW_MATTER.get(), new RawMatterDripParticle.FallingProvider());
+        event.registerSpecial(ModParticles.LANDING_RAW_MATTER.get(), new RawMatterDripParticle.LandingProvider());
     }
 
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {

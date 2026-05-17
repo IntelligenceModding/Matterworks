@@ -229,9 +229,9 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
             itemHandler.setStackInSlot(RAW_BUCKET_OUTPUT_SLOT, oldRawInput);
         }
 
-        if (oldLegacyExchange.is(ModItems.UNSTABLE_MATTER.get())) {
+        if (oldLegacyExchange.is(ModItems.UNSTABLE_MATTER_BUCKET.get())) {
             itemHandler.setStackInSlot(UNSTABLE_BUCKET_OUTPUT_SLOT, oldLegacyExchange);
-        } else if (oldLegacyExchange.is(ModItems.REFINED_MATTER.get())) {
+        } else if (oldLegacyExchange.is(ModItems.REFINED_MATTER_BUCKET.get())) {
             itemHandler.setStackInSlot(REFINED_BUCKET_OUTPUT_SLOT, oldLegacyExchange);
         } else if (oldLegacyExchange.is(Items.BUCKET)) {
             itemHandler.setStackInSlot(REFINED_BUCKET_INPUT_SLOT, oldLegacyExchange);
@@ -329,14 +329,14 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
         }
 
         ItemStack outputStack = itemHandler.getStackInSlot(UNSTABLE_BUCKET_OUTPUT_SLOT);
-        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.UNSTABLE_MATTER.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
+        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.UNSTABLE_MATTER_BUCKET.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
             return;
         }
 
         unstableMatterTank.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);
         inputStack.shrink(1);
         if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(UNSTABLE_BUCKET_OUTPUT_SLOT, ModItems.UNSTABLE_MATTER.get().getDefaultInstance());
+            itemHandler.setStackInSlot(UNSTABLE_BUCKET_OUTPUT_SLOT, ModItems.UNSTABLE_MATTER_BUCKET.get().getDefaultInstance());
         } else {
             outputStack.grow(1);
         }
@@ -349,14 +349,14 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
         }
 
         ItemStack outputStack = itemHandler.getStackInSlot(REFINED_BUCKET_OUTPUT_SLOT);
-        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.REFINED_MATTER.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
+        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.REFINED_MATTER_BUCKET.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
             return;
         }
 
         fluidTank.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);
         inputStack.shrink(1);
         if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(REFINED_BUCKET_OUTPUT_SLOT, ModItems.REFINED_MATTER.get().getDefaultInstance());
+            itemHandler.setStackInSlot(REFINED_BUCKET_OUTPUT_SLOT, ModItems.REFINED_MATTER_BUCKET.get().getDefaultInstance());
         } else {
             outputStack.grow(1);
         }

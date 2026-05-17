@@ -108,7 +108,7 @@ public class MatterConstructorMenu extends AbstractMatterMachineMenu {
                 if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT + 1, false)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (sourceStack.is(ModItems.REFINED_MATTER.get())) {
+            } else if (sourceStack.is(ModItems.REFINED_MATTER_BUCKET.get())) {
                 if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT, MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT + 1, false)) {
                     return ItemStack.EMPTY;
                 }

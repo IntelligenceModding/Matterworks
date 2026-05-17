@@ -327,7 +327,7 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
             return stack.is(ModItems.ENCODED_TEMPLATE.get()) && EncodedTemplateData.isComplete(stack);
         }
         if (slot == REFINED_BUCKET_INPUT_SLOT) {
-            return stack.is(ModItems.REFINED_MATTER.get());
+        return stack.is(ModItems.REFINED_MATTER_BUCKET.get());
         }
         if (slot == SLUDGE_BUCKET_INPUT_SLOT) {
             return stack.is(Items.BUCKET);
@@ -437,7 +437,7 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
 
     private void importRefinedMatterBucket() {
         ItemStack inputStack = itemHandler.getStackInSlot(REFINED_BUCKET_INPUT_SLOT);
-        if (!inputStack.is(ModItems.REFINED_MATTER.get()) || fluidTank.getSpace() < FluidType.BUCKET_VOLUME) {
+        if (!inputStack.is(ModItems.REFINED_MATTER_BUCKET.get()) || fluidTank.getSpace() < FluidType.BUCKET_VOLUME) {
             return;
         }
 
@@ -462,14 +462,14 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
         }
 
         ItemStack outputStack = itemHandler.getStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT);
-        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.MATTER_SLUDGE.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
+        if (!outputStack.isEmpty() && (!outputStack.is(ModItems.MATTER_SLUDGE_BUCKET.get()) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
             return;
         }
 
         sludgeTank.drain(FluidType.BUCKET_VOLUME, IFluidHandler.FluidAction.EXECUTE);
         inputStack.shrink(1);
         if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT, ModItems.MATTER_SLUDGE.get().getDefaultInstance());
+            itemHandler.setStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT, ModItems.MATTER_SLUDGE_BUCKET.get().getDefaultInstance());
         } else {
             outputStack.grow(1);
         }

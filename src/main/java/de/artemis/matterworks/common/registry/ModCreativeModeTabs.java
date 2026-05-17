@@ -30,10 +30,11 @@ public class ModCreativeModeTabs {
                     .title(Component.translatable("itemGroup.matterworks"))
                     .displayItems((itemDisplayParameters, output) -> {
                         output.accept(ModItems.RAW_MATTER_BUCKET.get());
-                        output.accept(ModItems.REFINED_MATTER.get());
-                        output.accept(ModItems.MATTER_SLUDGE.get());
-                        output.accept(ModItems.UNSTABLE_MATTER.get());
+                        output.accept(ModItems.REFINED_MATTER_BUCKET.get());
+                        output.accept(ModItems.MATTER_SLUDGE_BUCKET.get());
+                        output.accept(ModItems.UNSTABLE_MATTER_BUCKET.get());
                         output.accept(ModItems.MATTER_DUST.get());
+                        output.accept(ModItems.ENTROPIC_MATTER.get());
                         output.accept(ModItems.EMPTY_TEMPLATE.get());
                         output.accept(ModItems.ENCODED_TEMPLATE.get());
                         output.accept(ModItems.CRIMSON_POWER_CRYSTAL.get());

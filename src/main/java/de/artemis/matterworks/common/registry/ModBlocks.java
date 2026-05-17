@@ -12,6 +12,9 @@ import de.artemis.matterworks.common.block.HardenedSludgeBlock;
 import de.artemis.matterworks.common.block.PowerCrystalChargerBlock;
 import de.artemis.matterworks.common.block.PowerCrystalOreBlock;
 import de.artemis.matterworks.common.block.PowerCrystalRevealBlock;
+import de.artemis.matterworks.common.block.RawMatterBlock;
+import de.artemis.matterworks.common.block.RefinedMatterBlock;
+import de.artemis.matterworks.common.block.UnstableMatterBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
@@ -63,36 +66,39 @@ public class ModBlocks {
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
     );
 
-    public static final DeferredBlock<LiquidBlock> RAW_MATTER_BLOCK = BLOCKS.register("raw_matter",
-            () -> new LiquidBlock(ModFluids.RAW_MATTER.get(), BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.COLOR_ORANGE)
+    public static final DeferredBlock<RawMatterBlock> RAW_MATTER_BLOCK = BLOCKS.register("raw_matter",
+            () -> new RawMatterBlock(ModFluids.RAW_MATTER.get(), BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.SNOW)
                     .replaceable()
                     .noCollission()
                     .strength(100.0F)
                     .pushReaction(PushReaction.DESTROY)
                     .liquid()
+                    .lightLevel(state -> 2)
                     .sound(SoundType.EMPTY)
                     .noLootTable()));
 
-    public static final DeferredBlock<LiquidBlock> REFINED_MATTER_BLOCK = BLOCKS.register("refined_matter",
-            () -> new LiquidBlock(ModFluids.REFINED_MATTER.get(), BlockBehaviour.Properties.of()
-                    .mapColor(MapColor.DIAMOND)
-                    .replaceable()
-                    .noCollission()
-                    .strength(100.0F)
-                    .pushReaction(PushReaction.DESTROY)
-                    .liquid()
-                    .sound(SoundType.EMPTY)
-                    .noLootTable()));
-
-    public static final DeferredBlock<LiquidBlock> UNSTABLE_MATTER_BLOCK = BLOCKS.register("unstable_matter",
-            () -> new LiquidBlock(ModFluids.UNSTABLE_MATTER.get(), BlockBehaviour.Properties.of()
+    public static final DeferredBlock<RefinedMatterBlock> REFINED_MATTER_BLOCK = BLOCKS.register("refined_matter",
+            () -> new RefinedMatterBlock(ModFluids.REFINED_MATTER.get(), BlockBehaviour.Properties.of()
                     .mapColor(MapColor.COLOR_PURPLE)
                     .replaceable()
                     .noCollission()
                     .strength(100.0F)
                     .pushReaction(PushReaction.DESTROY)
                     .liquid()
+                    .lightLevel(state -> 4)
+                    .sound(SoundType.EMPTY)
+                    .noLootTable()));
+
+    public static final DeferredBlock<UnstableMatterBlock> UNSTABLE_MATTER_BLOCK = BLOCKS.register("unstable_matter",
+            () -> new UnstableMatterBlock(ModFluids.UNSTABLE_MATTER.get(), BlockBehaviour.Properties.of()
+                    .mapColor(MapColor.COLOR_ORANGE)
+                    .replaceable()
+                    .noCollission()
+                    .strength(100.0F)
+                    .pushReaction(PushReaction.DESTROY)
+                    .liquid()
+                    .lightLevel(state -> 8)
                     .sound(SoundType.EMPTY)
                     .noLootTable()));
 
