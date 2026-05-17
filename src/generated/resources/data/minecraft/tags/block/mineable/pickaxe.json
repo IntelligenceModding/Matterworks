@@ -2,6 +2,10 @@
   "values": [
     "matterworks:power_crystal_ore",
     "matterworks:matter_separator",
-    "matterworks:power_crystal_charger"
+    "matterworks:power_crystal_charger",
+    "matterworks:matter_energy_cell",
+    "matterworks:matter_pylon",
+    "matterworks:creative_source",
+    "matterworks:creative_sink"
   ]
 }

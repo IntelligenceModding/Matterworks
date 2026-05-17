@@ -6,6 +6,7 @@ import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.particle.Particle;
 import net.minecraft.client.particle.ParticleProvider;
 import net.minecraft.client.particle.ParticleRenderType;
+import net.minecraft.client.particle.SpriteSet;
 import net.minecraft.client.particle.TextureSheetParticle;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.particles.ParticleOptions;
@@ -20,12 +21,13 @@ public abstract class RawMatterDripParticle extends TextureSheetParticle {
 
     private final Fluid fluidType;
 
-    protected RawMatterDripParticle(ClientLevel level, double x, double y, double z, Fluid fluidType) {
+    protected RawMatterDripParticle(ClientLevel level, double x, double y, double z, Fluid fluidType, SpriteSet sprites) {
         super(level, x, y, z);
         this.setSize(0.01F, 0.01F);
         this.gravity = 0.06F;
         this.fluidType = fluidType;
         this.setColor(RED, GREEN, BLUE);
+        this.pickSprite(sprites);
     }
 
     @Override
@@ -74,8 +76,8 @@ public abstract class RawMatterDripParticle extends TextureSheetParticle {
     public static class Dripping extends RawMatterDripParticle {
         private final ParticleOptions fallingParticle;
 
-        public Dripping(ClientLevel level, double x, double y, double z) {
-            super(level, x, y, z, ModFluids.RAW_MATTER.get());
+        public Dripping(ClientLevel level, double x, double y, double z, SpriteSet sprites) {
+            super(level, x, y, z, ModFluids.RAW_MATTER.get(), sprites);
             this.fallingParticle = ModParticles.FALLING_RAW_MATTER.get();
             this.gravity *= 0.02F;
             this.lifetime = 40;
@@ -100,8 +102,8 @@ public abstract class RawMatterDripParticle extends TextureSheetParticle {
     public static class Falling extends RawMatterDripParticle {
         protected final ParticleOptions landParticle;
 
-        public Falling(ClientLevel level, double x, double y, double z) {
-            super(level, x, y, z, ModFluids.RAW_MATTER.get());
+        public Falling(ClientLevel level, double x, double y, double z, SpriteSet sprites) {
+            super(level, x, y, z, ModFluids.RAW_MATTER.get(), sprites);
             this.landParticle = ModParticles.LANDING_RAW_MATTER.get();
             this.lifetime = (int) (64.0D / (Math.random() * 0.8D + 0.2D));
         }
@@ -116,31 +118,49 @@ public abstract class RawMatterDripParticle extends TextureSheetParticle {
     }
 
     public static class Landing extends RawMatterDripParticle {
-        public Landing(ClientLevel level, double x, double y, double z) {
-            super(level, x, y, z, null);
+        public Landing(ClientLevel level, double x, double y, double z, SpriteSet sprites) {
+            super(level, x, y, z, null, sprites);
             this.lifetime = (int) (16.0D / (Math.random() * 0.8D + 0.2D));
             this.gravity = 0.0F;
         }
     }
 
     public static class DrippingProvider implements ParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites;
+
+        public DrippingProvider(SpriteSet sprites) {
+            this.sprites = sprites;
+        }
+
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
-            return new Dripping(level, x, y, z);
+            return new Dripping(level, x, y, z, this.sprites);
         }
     }
 
     public static class FallingProvider implements ParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites;
+
+        public FallingProvider(SpriteSet sprites) {
+            this.sprites = sprites;
+        }
+
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
-            return new Falling(level, x, y, z);
+            return new Falling(level, x, y, z, this.sprites);
         }
     }
 
     public static class LandingProvider implements ParticleProvider<SimpleParticleType> {
+        private final SpriteSet sprites;
+
+        public LandingProvider(SpriteSet sprites) {
+            this.sprites = sprites;
+        }
+
         @Override
         public Particle createParticle(SimpleParticleType type, ClientLevel level, double x, double y, double z, double xSpeed, double ySpeed, double zSpeed) {
-            return new Landing(level, x, y, z);
+            return new Landing(level, x, y, z, this.sprites);
         }
     }
 }

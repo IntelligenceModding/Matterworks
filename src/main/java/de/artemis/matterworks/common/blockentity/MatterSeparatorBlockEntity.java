@@ -304,6 +304,12 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     }
 
     @Override
+    protected void syncFluidTankCapacities() {
+        super.syncFluidTankCapacities();
+        syncTankCapacity(sludgeTank, getModifiedFluidTankCapacity(MATTER_SLUDGE_TANK_CAPACITY));
+    }
+
+    @Override
     protected Component getDefaultName() {
         return Component.translatable(ModBlocks.MATTER_SEPARATOR.get().getDescriptionId());
     }
@@ -350,11 +356,6 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         } else {
             dustStack.grow(DUST_OUTPUT_COUNT);
         }
-    }
-
-    @Override
-    protected void processFailed() {
-        fluidTank.drain(REFINED_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
     }
 
     @Override

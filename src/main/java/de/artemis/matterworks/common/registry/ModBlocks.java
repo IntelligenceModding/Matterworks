@@ -3,11 +3,17 @@ package de.artemis.matterworks.common.registry;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.block.MatterAnalyzerBlock;
 import de.artemis.matterworks.common.block.MatterConstructorBlock;
+import de.artemis.matterworks.common.block.MatterEnergyCellBlock;
+import de.artemis.matterworks.common.block.MatterFluidTankBlock;
 import de.artemis.matterworks.common.block.MatterGeneratorBlock;
+import de.artemis.matterworks.common.block.MatterPylonBlock;
 import de.artemis.matterworks.common.block.MatterRecyclerBlock;
 import de.artemis.matterworks.common.block.MatterSeparatorBlock;
+import de.artemis.matterworks.common.block.MatterStorageBarrelBlock;
 import de.artemis.matterworks.common.block.MatterSludgeBlock;
 import de.artemis.matterworks.common.block.MatterStabilizerBlock;
+import de.artemis.matterworks.common.block.CreativeSinkBlock;
+import de.artemis.matterworks.common.block.CreativeSourceBlock;
 import de.artemis.matterworks.common.block.HardenedSludgeBlock;
 import de.artemis.matterworks.common.block.PowerCrystalChargerBlock;
 import de.artemis.matterworks.common.block.PowerCrystalOreBlock;
@@ -18,6 +24,7 @@ import de.artemis.matterworks.common.block.UnstableMatterBlock;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.EntityType;
 import net.minecraft.world.item.Item;
+import net.minecraft.world.item.Rarity;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.LiquidBlock;
@@ -41,8 +48,17 @@ public class ModBlocks {
             Function<BlockBehaviour.Properties, T> blockFactory,
             UnaryOperator<BlockBehaviour.Properties> properties
     ) {
+        return register(name, blockFactory, properties, itemProperties -> itemProperties);
+    }
+
+    private static <T extends Block> DeferredBlock<T> register(
+            String name,
+            Function<BlockBehaviour.Properties, T> blockFactory,
+            UnaryOperator<BlockBehaviour.Properties> properties,
+            UnaryOperator<Item.Properties> itemProperties
+    ) {
         DeferredBlock<T> block = BLOCKS.registerBlock(name, blockFactory, properties.apply(BlockBehaviour.Properties.of()));
-        ModItems.ITEMS.registerSimpleBlockItem(block, new Item.Properties());
+        ModItems.ITEMS.registerSimpleBlockItem(block, itemProperties.apply(new Item.Properties()));
         return block;
     }
 
@@ -136,6 +152,44 @@ public class ModBlocks {
             "matter_generator",
             MatterGeneratorBlock::new,
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterEnergyCellBlock> MATTER_ENERGY_CELL = register(
+            "matter_energy_cell",
+            MatterEnergyCellBlock::new,
+            properties -> properties.strength(3.5F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterFluidTankBlock> MATTER_FLUID_TANK = register(
+            "matter_fluid_tank",
+            MatterFluidTankBlock::new,
+            properties -> properties.strength(3.5F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterStorageBarrelBlock> MATTER_STORAGE_BARREL = register(
+            "matter_storage_barrel",
+            MatterStorageBarrelBlock::new,
+            properties -> properties.strength(2.5F).sound(SoundType.WOOD)
+    );
+
+    public static final DeferredBlock<MatterPylonBlock> MATTER_PYLON = register(
+            "matter_pylon",
+            MatterPylonBlock::new,
+            properties -> properties.strength(2.5F).sound(SoundType.COPPER).noOcclusion()
+    );
+
+    public static final DeferredBlock<CreativeSourceBlock> CREATIVE_SOURCE = register(
+            "creative_source",
+            CreativeSourceBlock::new,
+            properties -> properties.strength(3.5F).sound(SoundType.METAL),
+            itemProperties -> itemProperties.rarity(Rarity.EPIC)
+    );
+
+    public static final DeferredBlock<CreativeSinkBlock> CREATIVE_SINK = register(
+            "creative_sink",
+            CreativeSinkBlock::new,
+            properties -> properties.strength(3.5F).sound(SoundType.METAL),
+            itemProperties -> itemProperties.rarity(Rarity.EPIC)
     );
 
     public static final DeferredBlock<MatterSeparatorBlock> MATTER_SEPARATOR = register(

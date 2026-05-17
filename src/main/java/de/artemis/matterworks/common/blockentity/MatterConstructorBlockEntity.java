@@ -311,6 +311,12 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
     }
 
     @Override
+    protected void syncFluidTankCapacities() {
+        super.syncFluidTankCapacities();
+        syncTankCapacity(sludgeTank, getModifiedFluidTankCapacity(MATTER_SLUDGE_TANK_CAPACITY));
+    }
+
+    @Override
     protected Component getDefaultName() {
         return Component.translatable(ModBlocks.MATTER_CONSTRUCTOR.get().getDescriptionId());
     }
@@ -400,11 +406,6 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
         } else {
             outputStack.grow(1);
         }
-    }
-
-    @Override
-    protected void processFailed() {
-        fluidTank.drain(getRequiredRefinedMatter(), IFluidHandler.FluidAction.EXECUTE);
     }
 
     @Override

@@ -249,6 +249,13 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
     }
 
     @Override
+    protected void syncFluidTankCapacities() {
+        super.syncFluidTankCapacities();
+        syncTankCapacity(rawMatterTank, getModifiedFluidTankCapacity(RAW_MATTER_TANK_CAPACITY));
+        syncTankCapacity(unstableMatterTank, getModifiedFluidTankCapacity(UNSTABLE_MATTER_TANK_CAPACITY));
+    }
+
+    @Override
     protected Component getDefaultName() {
         return Component.translatable(ModBlocks.MATTER_STABILIZER.get().getDescriptionId());
     }
@@ -285,11 +292,6 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
         rawMatterTank.drain(RAW_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
         fluidTank.fill(new FluidStack(ModFluids.REFINED_MATTER.get(), REFINED_MATTER_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
         unstableMatterTank.fill(new FluidStack(ModFluids.UNSTABLE_MATTER.get(), UNSTABLE_MATTER_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
-    }
-
-    @Override
-    protected void processFailed() {
-        rawMatterTank.drain(RAW_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
     }
 
     @Override

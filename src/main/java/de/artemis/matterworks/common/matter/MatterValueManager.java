@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.matter;
 
 import com.mojang.logging.LogUtils;
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.network.SetPylonDebugOverlayPayload;
 import de.artemis.matterworks.common.template.TemplateAnalysisManager;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.component.DataComponents;
@@ -18,6 +19,7 @@ import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
 
 import java.io.IOException;
@@ -235,6 +237,23 @@ public final class MatterValueManager {
                                         context.getSource().sendSuccess(() -> Component.literal("Recycler debug disabled."), false);
                                     }
                                     return 1;
+                                })))
+                        .then(Commands.literal("matter_network")
+                                .then(Commands.literal("on").executes(context -> {
+                                    if (context.getSource().getPlayer() instanceof ServerPlayer player) {
+                                        PacketDistributor.sendToPlayer(player, new SetPylonDebugOverlayPayload(true));
+                                        context.getSource().sendSuccess(() -> Component.literal("Matter network transfer overlay enabled."), false);
+                                        return 1;
+                                    }
+                                    return 0;
+                                }))
+                                .then(Commands.literal("off").executes(context -> {
+                                    if (context.getSource().getPlayer() instanceof ServerPlayer player) {
+                                        PacketDistributor.sendToPlayer(player, new SetPylonDebugOverlayPayload(false));
+                                        context.getSource().sendSuccess(() -> Component.literal("Matter network transfer overlay disabled."), false);
+                                        return 1;
+                                    }
+                                    return 0;
                                 })))
         );
     }

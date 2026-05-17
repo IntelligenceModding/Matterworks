@@ -3,10 +3,16 @@ package de.artemis.matterworks.common.registry;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterAnalyzerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterConstructorBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterEnergyCellBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterGeneratorBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterRecyclerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterSeparatorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStabilizerBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
+import de.artemis.matterworks.common.blockentity.CreativeSinkBlockEntity;
+import de.artemis.matterworks.common.blockentity.CreativeSourceBlockEntity;
 import de.artemis.matterworks.common.blockentity.PowerCrystalChargerBlockEntity;
 import de.artemis.matterworks.common.blockentity.PowerCrystalOreBlockEntity;
 import net.minecraft.core.registries.Registries;
@@ -38,6 +44,30 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterGeneratorBlockEntity>> MATTER_GENERATOR =
             BLOCK_ENTITY_TYPES.register("matter_generator",
                     () -> BlockEntityType.Builder.of(MatterGeneratorBlockEntity::new, ModBlocks.MATTER_GENERATOR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterEnergyCellBlockEntity>> MATTER_ENERGY_CELL =
+            BLOCK_ENTITY_TYPES.register("matter_energy_cell",
+                    () -> BlockEntityType.Builder.of(MatterEnergyCellBlockEntity::new, ModBlocks.MATTER_ENERGY_CELL.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterFluidTankBlockEntity>> MATTER_FLUID_TANK =
+            BLOCK_ENTITY_TYPES.register("matter_fluid_tank",
+                    () -> BlockEntityType.Builder.of(MatterFluidTankBlockEntity::new, ModBlocks.MATTER_FLUID_TANK.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterStorageBarrelBlockEntity>> MATTER_STORAGE_BARREL =
+            BLOCK_ENTITY_TYPES.register("matter_storage_barrel",
+                    () -> BlockEntityType.Builder.of(MatterStorageBarrelBlockEntity::new, ModBlocks.MATTER_STORAGE_BARREL.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterPylonBlockEntity>> MATTER_PYLON =
+            BLOCK_ENTITY_TYPES.register("matter_pylon",
+                    () -> BlockEntityType.Builder.of(MatterPylonBlockEntity::new, ModBlocks.MATTER_PYLON.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeSourceBlockEntity>> CREATIVE_SOURCE =
+            BLOCK_ENTITY_TYPES.register("creative_source",
+                    () -> BlockEntityType.Builder.of(CreativeSourceBlockEntity::new, ModBlocks.CREATIVE_SOURCE.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeSinkBlockEntity>> CREATIVE_SINK =
+            BLOCK_ENTITY_TYPES.register("creative_sink",
+                    () -> BlockEntityType.Builder.of(CreativeSinkBlockEntity::new, ModBlocks.CREATIVE_SINK.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterSeparatorBlockEntity>> MATTER_SEPARATOR =
             BLOCK_ENTITY_TYPES.register("matter_separator",

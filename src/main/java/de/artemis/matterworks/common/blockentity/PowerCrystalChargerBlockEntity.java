@@ -83,10 +83,6 @@ public class PowerCrystalChargerBlockEntity extends AbstractMatterMachineBlockEn
     }
 
     @Override
-    protected void processFailed() {
-    }
-
-    @Override
     protected int getMaxProgress() {
         return TICKS_PER_PERCENT;
     }

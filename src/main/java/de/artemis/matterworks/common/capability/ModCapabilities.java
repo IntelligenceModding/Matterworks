@@ -85,6 +85,61 @@ public class ModCapabilities {
         );
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.MATTER_ENERGY_CELL.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.MATTER_ENERGY_CELL.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage(side)
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.MATTER_FLUID_TANK.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.FluidHandler.BLOCK,
+                ModBlockEntities.MATTER_FLUID_TANK.get(),
+                (blockEntity, side) -> blockEntity.getFluidStorage(side)
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.MATTER_STORAGE_BARREL.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.CREATIVE_SOURCE.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage()
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.CREATIVE_SOURCE.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.FluidHandler.BLOCK,
+                ModBlockEntities.CREATIVE_SOURCE.get(),
+                (blockEntity, side) -> blockEntity.getFluidHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.CREATIVE_SINK.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage()
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.CREATIVE_SINK.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.FluidHandler.BLOCK,
+                ModBlockEntities.CREATIVE_SINK.get(),
+                (blockEntity, side) -> blockEntity.getFluidHandler()
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.MATTER_SEPARATOR.get(),
                 (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );

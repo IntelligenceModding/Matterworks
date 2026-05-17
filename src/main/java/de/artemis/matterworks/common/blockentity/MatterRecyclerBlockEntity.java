@@ -81,6 +81,7 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
             return;
         }
 
+        syncFluidTankCapacities();
         transferEnergyFromInputItem();
 
         ItemStack inputStack = itemHandler.getStackInSlot(INPUT_SLOT);
@@ -165,11 +166,6 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
     }
 
     @Override
-    protected void processFailed() {
-        itemHandler.getStackInSlot(INPUT_SLOT).shrink(1);
-    }
-
-    @Override
     protected int getMaxProgress() {
         return PowerCrystalEffects.getModifiedProcessTime(PROCESS_TIME, getEffectiveCrystalStack());
     }
@@ -183,12 +179,6 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
     protected boolean hasEnoughEnergy() {
         return true;
     }
-
-    @Override
-    protected boolean shouldFailProcess() {
-        return false;
-    }
-
     @Override
     protected void afterProcessingTick() {
         ItemStack bucketInputStack = itemHandler.getStackInSlot(FLUID_BUCKET_INPUT_SLOT);

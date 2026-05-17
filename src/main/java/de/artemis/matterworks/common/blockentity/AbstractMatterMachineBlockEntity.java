@@ -6,8 +6,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
@@ -48,6 +46,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
 
     protected final FluidTank fluidTank;
     protected final EnergyStorage energyStorage;
+    private final int baseFluidTankCapacity;
     private final IEnergyStorage externalEnergyStorage = new IEnergyStorage() {
         @Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
@@ -235,6 +234,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
             int slotCount
     ) {
         super(type, pos, blockState);
+        this.baseFluidTankCapacity = tankCapacity;
         this.itemHandler = new ItemStackHandler(slotCount) {
             @Override
             protected void onContentsChanged(int slot) {
@@ -320,12 +320,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
             progress++;
             if (progress >= getMaxProgress()) {
                 progress = 0;
-                if (shouldFailProcess()) {
-                    processFailed();
-                    playFailureSound();
-                } else {
-                    processItem();
-                }
+                processItem();
                 clearLatchedProcessCrystal();
                 setChanged();
             }
@@ -381,6 +376,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
         } else {
             activeProcessCrystal = ItemStack.EMPTY;
         }
+        syncFluidTankCapacities();
     }
 
     private void migrateLegacyInventory() {
@@ -401,6 +397,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     }
 
     protected void beforeProcessingTick() {
+        syncFluidTankCapacities();
         transferEnergyFromInputItem();
     }
 
@@ -409,21 +406,6 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
 
     protected boolean hasEnoughEnergy() {
         return energyStorage.getEnergyStored() >= getEnergyPerTick();
-    }
-
-    protected boolean shouldFailProcess() {
-        if (level == null) {
-            return false;
-        }
-
-        int failureChancePercent = PowerCrystalEffects.getFailureChancePercent(getEffectiveCrystalStack());
-        return failureChancePercent > 0 && level.getRandom().nextInt(100) < failureChancePercent;
-    }
-
-    protected void playFailureSound() {
-        if (level != null) {
-            level.playSound(null, worldPosition, SoundEvents.CRAFTER_FAIL, SoundSource.BLOCKS, 0.9F, 1.0F);
-        }
     }
 
     protected void drainCrystalCharge() {
@@ -447,6 +429,25 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     protected void clearLatchedProcessCrystal() {
         activeProcessCrystal = ItemStack.EMPTY;
         processCrystalLatched = false;
+    }
+
+    protected void syncFluidTankCapacities() {
+        syncTankCapacity(fluidTank, getModifiedFluidTankCapacity(baseFluidTankCapacity));
+    }
+
+    protected int getModifiedFluidTankCapacity(int baseCapacity) {
+        return PowerCrystalEffects.getModifiedFluidCapacity(baseCapacity, getEffectiveCrystalStack());
+    }
+
+    protected void syncTankCapacity(FluidTank tank, int capacity) {
+        int clampedCapacity = Math.max(0, capacity);
+        if (tank.getCapacity() != clampedCapacity) {
+            tank.setCapacity(clampedCapacity);
+            if (tank.getFluidAmount() > clampedCapacity) {
+                tank.setFluid(tank.getFluid().copyWithAmount(clampedCapacity));
+            }
+            setChanged();
+        }
     }
 
     protected int getSlotLimit(int slot) {
@@ -512,8 +513,6 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     protected abstract boolean canProcess();
 
     protected abstract void processItem();
-
-    protected abstract void processFailed();
 
     protected abstract int getMaxProgress();
 

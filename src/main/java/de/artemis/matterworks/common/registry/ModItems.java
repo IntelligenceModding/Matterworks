@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.item.EncodedTemplateItem;
+import de.artemis.matterworks.common.item.MatterFilterItem;
 import de.artemis.matterworks.common.item.MatterPowerBankItem;
 import de.artemis.matterworks.common.item.PowerCrystalItem;
 import de.artemis.matterworks.common.item.UnstableMatterBucketItem;
@@ -64,6 +65,18 @@ public class ModItems {
             "empty_template",
             Item::new,
             UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<MatterFilterItem> MATTER_ITEM_FILTER = register(
+            "matter_item_filter",
+            properties -> new MatterFilterItem(properties, false),
+            properties -> properties.rarity(Rarity.UNCOMMON)
+    );
+
+    public static final DeferredItem<MatterFilterItem> MATTER_FLUID_FILTER = register(
+            "matter_fluid_filter",
+            properties -> new MatterFilterItem(properties, true),
+            properties -> properties.rarity(Rarity.UNCOMMON)
     );
 
     public static final DeferredItem<EncodedTemplateItem> ENCODED_TEMPLATE = register(

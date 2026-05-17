@@ -1,0 +1,10 @@
+{
+  "variants": {
+    "lit=false": {
+      "model": "matterworks:block/creative_sink"
+    },
+    "lit=true": {
+      "model": "matterworks:block/creative_sink_lit"
+    }
+  }
+}

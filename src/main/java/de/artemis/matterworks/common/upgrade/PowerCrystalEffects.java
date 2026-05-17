@@ -2,13 +2,12 @@ package de.artemis.matterworks.common.upgrade;
 
 import de.artemis.matterworks.common.registry.ModItems;
 import net.minecraft.ChatFormatting;
-import net.minecraft.util.RandomSource;
 import net.minecraft.world.item.ItemStack;
 
 public final class PowerCrystalEffects {
     public static final int CRYSTAL_CHARGE_COST = 1;
-    public static final int BASE_FAILURE_CHANCE_PERCENT = 10;
     public static final float CRIMSON_SPEED_MULTIPLIER = 0.6F;
+    public static final int AZURE_FLUID_TANK_CAPACITY_MULTIPLIER = 2;
     public static final int ANALYZER_BASE_PROCESS_TIME = 100;
     public static final int ANALYZER_CRIMSON_PROCESS_TIME = 60;
     public static final int ANALYZER_BASE_ENERGY_PER_TICK = 25;
@@ -16,7 +15,6 @@ public final class PowerCrystalEffects {
     public static final int ANALYZER_VERDANT_ENERGY_PER_TICK = 15;
     public static final int ANALYZER_BASE_ENERGY_CAPACITY = 10000;
     public static final int ANALYZER_VERDANT_ENERGY_CAPACITY = 20000;
-    public static final int ANALYZER_AZURE_SAMPLE_PRESERVE_CHANCE = 4;
     public static final int CONSTRUCTOR_BASE_ENERGY_CAPACITY = 10000;
     public static final int CONSTRUCTOR_VERDANT_ENERGY_CAPACITY = 20000;
 
@@ -55,17 +53,6 @@ public final class PowerCrystalEffects {
         return 1;
     }
 
-    public static int getFailureChancePercent(ItemStack crystalStack) {
-        if (isActive(crystalStack) && crystalStack.is(ModItems.AZURE_POWER_CRYSTAL.get())) {
-            return 0;
-        }
-        return BASE_FAILURE_CHANCE_PERCENT;
-    }
-
-    public static boolean shouldConsumeAnalyzerSample(ItemStack crystalStack, RandomSource random) {
-        return true;
-    }
-
     public static int getConstructorEnergyPerTick(int baseEnergyPerTick, ItemStack crystalStack) {
         return getModifiedEnergyPerTick(baseEnergyPerTick, Math.max(1, Math.round(baseEnergyPerTick * 1.8F)), Math.max(1, Math.round(baseEnergyPerTick * 0.6F)), crystalStack);
     }
@@ -83,6 +70,13 @@ public final class PowerCrystalEffects {
             return Math.max(1, Math.round(baseProcessTime * CRIMSON_SPEED_MULTIPLIER));
         }
         return baseProcessTime;
+    }
+
+    public static int getModifiedFluidCapacity(int baseCapacity, ItemStack crystalStack) {
+        if (isActive(crystalStack) && crystalStack.is(ModItems.AZURE_POWER_CRYSTAL.get())) {
+            return baseCapacity * AZURE_FLUID_TANK_CAPACITY_MULTIPLIER;
+        }
+        return baseCapacity;
     }
 
     public static ChatFormatting getTooltipColor(ItemStack crystalStack) {

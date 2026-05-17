@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "matterworks:block/matter_storage_barrel"
+    }
+  }
+}

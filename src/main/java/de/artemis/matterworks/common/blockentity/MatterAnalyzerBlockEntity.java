@@ -15,8 +15,6 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
-import net.minecraft.sounds.SoundEvents;
-import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -301,12 +299,7 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             progress++;
             if (progress >= getCurrentProcessTime()) {
                 progress = 0;
-                if (shouldFailProcess()) {
-                    processFailed();
-                    playFailureSound();
-                } else {
-                    processItem();
-                }
+                processItem();
                 clearLatchedProcessCrystal();
                 setChanged();
             }
@@ -419,14 +412,8 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         }
 
         EncodedTemplateData.addAnalysisProgress(templateStack, PowerCrystalEffects.getAnalyzerProgressPerProcess(crystalStack));
-        if (PowerCrystalEffects.shouldConsumeAnalyzerSample(crystalStack, level.getRandom())) {
-            itemStack.shrink(1);
-        }
-        moveCompletedTemplateToOutput();
-    }
-
-    private void processFailed() {
         itemHandler.getStackInSlot(ITEM_SLOT).shrink(1);
+        moveCompletedTemplateToOutput();
     }
 
     private boolean isTemplateReadyFor(ItemStack itemStack, ItemStack templateStack) {
@@ -508,15 +495,6 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         return energyStored >= getCurrentEnergyPerTick();
     }
 
-    private boolean shouldFailProcess() {
-        if (level == null) {
-            return false;
-        }
-
-        int failureChancePercent = PowerCrystalEffects.getFailureChancePercent(getEffectiveCrystalStack());
-        return failureChancePercent > 0 && level.getRandom().nextInt(100) < failureChancePercent;
-    }
-
     private int getCurrentEnergyPerTick() {
         return PowerCrystalEffects.getAnalyzerEnergyPerTick(getEffectiveCrystalStack());
     }
@@ -527,12 +505,6 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
 
     private void clampEnergyToCurrentCapacity() {
         energyStored = Math.min(energyStored, getCurrentEnergyCapacity());
-    }
-
-    private void playFailureSound() {
-        if (level != null) {
-            level.playSound(null, worldPosition, SoundEvents.CRAFTER_FAIL, SoundSource.BLOCKS, 0.9F, 1.0F);
-        }
     }
 
     private void drainCrystalCharge() {

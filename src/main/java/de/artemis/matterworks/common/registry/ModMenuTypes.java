@@ -3,9 +3,14 @@ package de.artemis.matterworks.common.registry;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.menu.MatterAnalyzerMenu;
 import de.artemis.matterworks.common.menu.MatterConstructorMenu;
+import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
+import de.artemis.matterworks.common.menu.MatterFilterMenu;
+import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterGeneratorMenu;
+import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import de.artemis.matterworks.common.menu.MatterRecyclerMenu;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
+import de.artemis.matterworks.common.menu.MatterStorageBarrelMenu;
 import de.artemis.matterworks.common.menu.MatterStabilizerMenu;
 import de.artemis.matterworks.common.menu.PowerCrystalChargerMenu;
 import net.minecraft.core.registries.Registries;
@@ -38,6 +43,26 @@ public class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<MatterGeneratorMenu>> MATTER_GENERATOR =
             MENU_TYPES.register("matter_generator",
                     () -> IMenuTypeExtension.create(MatterGeneratorMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterEnergyCellMenu>> MATTER_ENERGY_CELL =
+            MENU_TYPES.register("matter_energy_cell",
+                    () -> IMenuTypeExtension.create(MatterEnergyCellMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterFluidTankMenu>> MATTER_FLUID_TANK =
+            MENU_TYPES.register("matter_fluid_tank",
+                    () -> IMenuTypeExtension.create(MatterFluidTankMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterStorageBarrelMenu>> MATTER_STORAGE_BARREL =
+            MENU_TYPES.register("matter_storage_barrel",
+                    () -> IMenuTypeExtension.create(MatterStorageBarrelMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterPylonMenu>> MATTER_PYLON =
+            MENU_TYPES.register("matter_pylon",
+                    () -> IMenuTypeExtension.create(MatterPylonMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterFilterMenu>> MATTER_FILTER =
+            MENU_TYPES.register("matter_filter",
+                    () -> IMenuTypeExtension.create(MatterFilterMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<MatterSeparatorMenu>> MATTER_SEPARATOR =
             MENU_TYPES.register("matter_separator",

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "pattern": [
+    "PPP",
+    "CMC",
+    "PPP"
+  ],
+  "key": {
+    "P": {
+      "item": "minecraft:paper"
+    },
+    "C": {
+      "item": "minecraft:chest"
+    },
+    "M": {
+      "item": "matterworks:matter_dust"
+    }
+  },
+  "result": {
+    "id": "matterworks:matter_item_filter",
+    "count": 1
+  }
+}
