@@ -86,7 +86,7 @@ public class ModCapabilities {
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.MATTER_ENERGY_CELL.get(),
-                (blockEntity, side) -> blockEntity.getItemHandler()
+                (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
         event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,
@@ -96,7 +96,7 @@ public class ModCapabilities {
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.MATTER_FLUID_TANK.get(),
-                (blockEntity, side) -> blockEntity.getItemHandler()
+                (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
         event.registerBlockEntity(
                 Capabilities.FluidHandler.BLOCK,
@@ -106,7 +106,7 @@ public class ModCapabilities {
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.MATTER_STORAGE_BARREL.get(),
-                (blockEntity, side) -> blockEntity.getItemHandler()
+                (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
         event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,

@@ -37,7 +37,7 @@ public class PowerCrystalChargerBlockEntity extends AbstractMatterMachineBlockEn
 
     @Override
     public Component getDisplayName() {
-        return getDefaultName();
+        return super.getDisplayName();
     }
 
     @Override

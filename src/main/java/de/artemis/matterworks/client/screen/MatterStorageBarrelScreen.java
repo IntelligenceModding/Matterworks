@@ -3,27 +3,26 @@ package de.artemis.matterworks.client.screen;
 import de.artemis.matterworks.common.menu.MatterStorageBarrelMenu;
 import de.artemis.matterworks.common.network.OpenMatterNetworkMenuPayload;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class MatterStorageBarrelScreen extends AbstractContainerScreen<MatterStorageBarrelMenu> {
+import java.util.List;
+
+public class MatterStorageBarrelScreen extends AbstractRenamableContainerScreen<MatterStorageBarrelMenu> {
+    private final MachineSideConfigController sideConfig = new MachineSideConfigController();
+
     public MatterStorageBarrelScreen(MatterStorageBarrelMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 222;
-        this.inventoryLabelY = 128;
+        this.imageHeight = 244;
+        this.inventoryLabelY = 150;
     }
 
     @Override
     protected void init() {
         super.init();
-        this.addRenderableWidget(Button.builder(Component.translatable("screen.matterworks.matter_network.open"), button ->
-                        PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos())))
-                .bounds(this.leftPos + 120, this.topPos + 6, 48, 16)
-                .build());
+        sideConfig.init(menu);
     }
 
     @Override
@@ -31,31 +30,38 @@ public class MatterStorageBarrelScreen extends AbstractContainerScreen<MatterSto
         int left = this.leftPos;
         int top = this.topPos;
 
-        guiGraphics.fill(left, top, left + this.imageWidth, top + this.imageHeight, 0xFF2B2B31);
-        guiGraphics.fill(left + 2, top + 2, left + this.imageWidth - 2, top + this.imageHeight - 2, 0xFF3A3A42);
-
-        drawSlotGrid(guiGraphics, left + 7, top + 17, 6);
-        drawSlotGrid(guiGraphics, left + 7, top + 139, 3);
-        drawHotbar(guiGraphics, left + 7, top + 197);
+        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, this.imageWidth, this.imageHeight);
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 6, top + 16, 164, 110);
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 6, top + 160, 164, 56);
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 6, top + 218, 164, 20);
+        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
+        sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 
-    private void drawSlotGrid(GuiGraphics guiGraphics, int left, int top, int rows) {
-        for (int row = 0; row < rows; row++) {
-            for (int column = 0; column < 9; column++) {
-                drawSlot(guiGraphics, left + column * 18, top + row * 18);
-            }
+    @Override
+    public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+        this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        super.render(guiGraphics, mouseX, mouseY, partialTick);
+        if (sideConfig.isShowing()) {
+            sideConfig.renderTooltip(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
         }
+        TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
+        this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    private void drawHotbar(GuiGraphics guiGraphics, int left, int top) {
-        for (int slot = 0; slot < 9; slot++) {
-            drawSlot(guiGraphics, left + slot * 18, top);
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (TopCategoryTabs.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, buildTabs())) {
+            return true;
         }
+        if (sideConfig.mouseClicked(menu, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight)) {
+            return true;
+        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
-    private void drawSlot(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF1B1B1F);
-        guiGraphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B93);
-        guiGraphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF232329);
+    private List<TopCategoryTabs.Tab> buildTabs() {
+        return sideConfig.buildTabs(menu, () -> PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos(), menu.isRemoteAccess())));
     }
 }

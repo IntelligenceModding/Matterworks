@@ -2,6 +2,8 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterAnalyzerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
@@ -18,7 +20,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class MatterAnalyzerMenu extends AbstractContainerMenu {
+public class MatterAnalyzerMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int MACHINE_SLOT_COUNT = 6;
     private static final int PLAYER_INVENTORY_START = MACHINE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
@@ -122,6 +124,46 @@ public class MatterAnalyzerMenu extends AbstractContainerMenu {
 
     public int getProgressBarColor() {
         return 0xFF000000 | data.get(MatterAnalyzerBlockEntity.DATA_PROGRESS_COLOR);
+    }
+
+    @Override
+    public BlockPos getBlockPos() {
+        return blockEntity.getBlockPos();
+    }
+
+    @Override
+    public String getBlockDisplayName() {
+        return blockEntity.getDisplayName().getString();
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return blockEntity.supportsSideConfigType(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return blockEntity.supportsSideConfigInput(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return blockEntity.supportsSideConfigOutput(type);
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, net.minecraft.core.Direction side) {
+        return blockEntity.getSideAccessMode(type, side);
+    }
+
+    @Override
+    public net.minecraft.core.Direction getSideConfigFrontFacing() {
+        return SideConfigOrientation.resolveFrontFacing(blockEntity.getBlockState());
+    }
+
+    @Override
+    public ItemStack getPrimaryTabIcon() {
+        return blockEntity.getBlockState().getBlock().asItem().getDefaultInstance();
     }
 
     @Override

@@ -1,6 +1,15 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
+      "model": "matterworks:block/matter_storage_barrel"
+    },
+    "facing=east": {
+      "model": "matterworks:block/matter_storage_barrel"
+    },
+    "facing=south": {
+      "model": "matterworks:block/matter_storage_barrel"
+    },
+    "facing=west": {
       "model": "matterworks:block/matter_storage_barrel"
     }
   }

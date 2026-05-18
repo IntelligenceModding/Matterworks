@@ -1,11 +1,22 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.ConfiguredEnergyStorage;
+import de.artemis.matterworks.common.io.ConfiguredFluidHandler;
+import de.artemis.matterworks.common.io.ConfiguredItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.io.SideConfigurationData;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
@@ -21,11 +32,14 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.function.Predicate;
 import de.artemis.matterworks.common.upgrade.PowerCrystalData;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
+import org.jetbrains.annotations.NotNull;
 
-public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
+import java.util.Objects;
+import java.util.function.Predicate;
+
+public abstract class AbstractMatterMachineBlockEntity extends BlockEntity implements CustomNamedBlockEntity, SideConfigurableBlockEntity {
     public static final int ENERGY_ITEM_INPUT_SLOT = 0;
     public static final int ENERGY_ITEM_OUTPUT_SLOT = 1;
     public static final int INPUT_SLOT = 2;
@@ -47,6 +61,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     protected final FluidTank fluidTank;
     protected final EnergyStorage energyStorage;
     private final int baseFluidTankCapacity;
+    private final SideConfigurationData sideConfiguration = new SideConfigurationData(SideAccessMode.INPUT, SideAccessMode.BOTH, SideAccessMode.INPUT);
     private final IEnergyStorage externalEnergyStorage = new IEnergyStorage() {
         @Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
@@ -209,9 +224,13 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
             return false;
         }
     };
+    private final IItemHandler[] configuredItemHandlers = createConfiguredItemHandlers();
+    private final IFluidHandler[] configuredFluidHandlers = createConfiguredFluidHandlers();
+    private final IEnergyStorage[] configuredEnergyHandlers = createConfiguredEnergyHandlers();
     protected int progress;
     protected ItemStack activeProcessCrystal = ItemStack.EMPTY;
     protected boolean processCrystalLatched;
+    private String customName = "";
 
     protected AbstractMatterMachineBlockEntity(
             BlockEntityType<?> type,
@@ -267,6 +286,25 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
                 return received;
             }
         };
+        for (Direction side : Direction.values()) {
+            if (side == Direction.DOWN) {
+                sideConfiguration.set(SideConfigType.ITEMS, side, sanitizeSideAccessMode(SideConfigType.ITEMS, side, SideAccessMode.OUTPUT));
+            }
+        }
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide()) {
+            SideConfigDebugTracker.onClientLoad(this);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        SideConfigDebugTracker.onClientUnload(this);
+        super.setRemoved();
     }
 
     public ItemStackHandler getItemHandler() {
@@ -291,18 +329,15 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     }
 
     public IEnergyStorage getEnergyStorage(@Nullable Direction side) {
-        return externalEnergyStorage;
+        return side == null ? externalEnergyStorage : configuredEnergyHandlers[side.ordinal()];
     }
 
     public @Nullable IItemHandler getAutomationHandler(@Nullable Direction side) {
-        if (side == null) {
-            return itemHandler;
-        }
-        return side == Direction.DOWN ? outputAutomationHandler : inputAutomationHandler;
+        return side == null ? itemHandler : configuredItemHandlers[side.ordinal()];
     }
 
     public @Nullable IFluidHandler getFluidAutomationHandler(@Nullable Direction side) {
-        return fluidTank;
+        return side == null ? getBaseFluidAutomationHandler() : configuredFluidHandlers[side.ordinal()];
     }
 
     public void serverTick() {
@@ -342,17 +377,57 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     }
 
     @Override
+    public Component getDisplayName() {
+        return customName.isEmpty() ? getDefaultName() : Component.literal(customName);
+    }
+
+    @Override
+    public String getCustomNameText() {
+        return customName;
+    }
+
+    @Override
+    public void setCustomNameText(String customName) {
+        String normalized = normalizeCustomName(customName);
+        if (Objects.equals(this.customName, normalized)) {
+            return;
+        }
+        this.customName = normalized;
+        setChanged();
+        syncCustomName();
+    }
+
+    @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        sideConfiguration.writeToTag(tag);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
+        return tag;
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("inventory", itemHandler.serializeNBT(registries));
         tag.put("tank", fluidTank.writeToNBT(registries, new CompoundTag()));
         tag.putInt("energy", energyStorage.getEnergyStored());
         tag.putInt("progress", progress);
+        sideConfiguration.writeToTag(tag);
         if (processCrystalLatched) {
             tag.putBoolean("process_crystal_latched", true);
         }
         if (!activeProcessCrystal.isEmpty()) {
             tag.put("active_process_crystal", activeProcessCrystal.saveOptional(registries));
+        }
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
         }
     }
 
@@ -366,6 +441,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
         if (tag.contains("tank")) {
             fluidTank.readFromNBT(registries, tag.getCompound("tank"));
         }
+        sideConfiguration.readFromTag(tag, this::sanitizeSideAccessMode);
         if (tag.contains("energy")) {
             energyStorage.receiveEnergy(tag.getInt("energy"), false);
         }
@@ -376,6 +452,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
         } else {
             activeProcessCrystal = ItemStack.EMPTY;
         }
+        customName = normalizeCustomName(tag.getString("custom_name"));
         syncFluidTankCapacities();
     }
 
@@ -437,6 +514,47 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
 
     protected int getModifiedFluidTankCapacity(int baseCapacity) {
         return PowerCrystalEffects.getModifiedFluidCapacity(baseCapacity, getEffectiveCrystalStack());
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return switch (type) {
+            case ITEMS, ENERGY -> true;
+            case FLUIDS -> supportsFluidSideConfig();
+        };
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return switch (type) {
+            case ITEMS, ENERGY -> true;
+            case FLUIDS -> supportsFluidSideConfigInput();
+        };
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return switch (type) {
+            case ITEMS -> true;
+            case ENERGY -> false;
+            case FLUIDS -> supportsFluidSideConfigOutput();
+        };
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, Direction side) {
+        return sideConfiguration.get(type, side);
+    }
+
+    @Override
+    public void setSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (!supportsSideConfigType(type)) {
+            return;
+        }
+        if (sideConfiguration.set(type, side, sanitizeSideAccessMode(type, side, mode))) {
+            setChanged();
+            syncCustomName();
+        }
     }
 
     protected void syncTankCapacity(FluidTank tank, int capacity) {
@@ -517,4 +635,95 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity {
     protected abstract int getMaxProgress();
 
     protected abstract int getEnergyPerTick();
+
+    protected boolean supportsFluidSideConfig() {
+        return baseFluidTankCapacity > 0;
+    }
+
+    protected boolean supportsFluidSideConfigInput() {
+        return supportsFluidSideConfig();
+    }
+
+    protected boolean supportsFluidSideConfigOutput() {
+        return supportsFluidSideConfig();
+    }
+
+    protected IItemHandler getInputAutomationHandler() {
+        return inputAutomationHandler;
+    }
+
+    protected IItemHandler getOutputAutomationHandler() {
+        return outputAutomationHandler;
+    }
+
+    protected IFluidHandler getBaseFluidAutomationHandler() {
+        return fluidTank;
+    }
+
+    protected void initializeSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
+        sideConfiguration.set(type, side, sanitizeSideAccessMode(type, side, mode));
+    }
+
+    private static String normalizeCustomName(String customName) {
+        String normalized = customName.strip();
+        return normalized.length() > 64 ? normalized.substring(0, 64) : normalized;
+    }
+
+    private void syncCustomName() {
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private SideAccessMode sanitizeSideAccessMode(SideConfigType type, Direction side, SideAccessMode requestedMode) {
+        if (!supportsSideConfigType(type)) {
+            return SideAccessMode.DISABLED;
+        }
+        boolean canInput = supportsSideConfigInput(type);
+        boolean canOutput = supportsSideConfigOutput(type);
+        if (requestedMode == SideAccessMode.BOTH && !(canInput && canOutput)) {
+            return canInput ? SideAccessMode.INPUT : canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.INPUT && !canInput) {
+            return canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.OUTPUT && !canOutput) {
+            return canInput ? SideAccessMode.INPUT : SideAccessMode.DISABLED;
+        }
+        return requestedMode;
+    }
+
+    private IItemHandler[] createConfiguredItemHandlers() {
+        IItemHandler[] handlers = new IItemHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredItemHandler(
+                    () -> getSideAccessMode(SideConfigType.ITEMS, side),
+                    this::getInputAutomationHandler,
+                    this::getOutputAutomationHandler
+            );
+        }
+        return handlers;
+    }
+
+    private IFluidHandler[] createConfiguredFluidHandlers() {
+        IFluidHandler[] handlers = new IFluidHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredFluidHandler(
+                    () -> getSideAccessMode(SideConfigType.FLUIDS, side),
+                    this::getBaseFluidAutomationHandler
+            );
+        }
+        return handlers;
+    }
+
+    private IEnergyStorage[] createConfiguredEnergyHandlers() {
+        IEnergyStorage[] handlers = new IEnergyStorage[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredEnergyStorage(
+                    () -> getSideAccessMode(SideConfigType.ENERGY, side),
+                    () -> externalEnergyStorage
+            );
+        }
+        return handlers;
+    }
 }

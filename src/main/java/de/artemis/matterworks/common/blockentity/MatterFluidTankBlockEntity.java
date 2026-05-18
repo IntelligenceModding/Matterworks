@@ -1,6 +1,12 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.fluid.FluidItemHelper;
+import de.artemis.matterworks.common.io.ConfiguredFluidHandler;
+import de.artemis.matterworks.common.io.ConfiguredItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.io.SideConfigurationData;
 import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -12,6 +18,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.SimpleContainer;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -24,10 +31,11 @@ import net.neoforged.neoforge.fluids.capability.IFluidHandler;
 import net.neoforged.neoforge.fluids.capability.IFluidHandlerItem;
 import net.neoforged.neoforge.fluids.capability.templates.FluidTank;
 import net.neoforged.neoforge.fluids.FluidType;
+import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
+public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity implements SideConfigurableBlockEntity {
     public static final int DRAIN_SLOT = 0;
     public static final int FILL_SLOT = 1;
     public static final int DATA_FLUID_AMOUNT = 0;
@@ -59,6 +67,87 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
             setChanged();
         }
     };
+    private final SideConfigurationData sideConfiguration = new SideConfigurationData(SideAccessMode.BOTH, SideAccessMode.BOTH, SideAccessMode.DISABLED);
+    private final IItemHandler inputAutomationHandler = new IItemHandler() {
+        @Override
+        public int getSlots() {
+            return 2;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return switch (slot) {
+                case 0 -> itemHandler.getStackInSlot(DRAIN_SLOT);
+                case 1 -> itemHandler.getStackInSlot(FILL_SLOT);
+                default -> ItemStack.EMPTY;
+            };
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return switch (slot) {
+                case 0 -> itemHandler.insertItem(DRAIN_SLOT, stack, simulate);
+                case 1 -> itemHandler.insertItem(FILL_SLOT, stack, simulate);
+                default -> stack;
+            };
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return ItemStack.EMPTY;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return slot == 0 || slot == 1 ? 1 : 0;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return slot == 0 || slot == 1;
+        }
+    };
+    private final IItemHandler outputAutomationHandler = new IItemHandler() {
+        @Override
+        public int getSlots() {
+            return 2;
+        }
+
+        @Override
+        public ItemStack getStackInSlot(int slot) {
+            return switch (slot) {
+                case 0 -> itemHandler.getStackInSlot(DRAIN_SLOT);
+                case 1 -> itemHandler.getStackInSlot(FILL_SLOT);
+                default -> ItemStack.EMPTY;
+            };
+        }
+
+        @Override
+        public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
+            return stack;
+        }
+
+        @Override
+        public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            return switch (slot) {
+                case 0 -> itemHandler.extractItem(DRAIN_SLOT, amount, simulate);
+                case 1 -> itemHandler.extractItem(FILL_SLOT, amount, simulate);
+                default -> ItemStack.EMPTY;
+            };
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return slot == 0 || slot == 1 ? 1 : 0;
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return false;
+        }
+    };
+    private final IItemHandler[] configuredItemHandlers = createConfiguredItemHandlers();
+    private final IFluidHandler[] configuredFluidHandlers = createConfiguredFluidHandlers();
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -93,7 +182,11 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
     }
 
     public IFluidHandler getFluidStorage(@Nullable Direction side) {
-        return fluidTank;
+        return side == null ? fluidTank : configuredFluidHandlers[side.ordinal()];
+    }
+
+    public IItemHandler getAutomationHandler(@Nullable Direction side) {
+        return side == null ? itemHandler : configuredItemHandlers[side.ordinal()];
     }
 
     public ContainerData getData() {
@@ -133,13 +226,22 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
     }
 
     @Override
-    public Component getDisplayName() {
+    protected Component getDefaultName() {
         return Component.translatable(ModBlocks.MATTER_FLUID_TANK.get().getDescriptionId());
     }
 
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
         return new MatterFluidTankMenu(containerId, playerInventory, this, data);
+    }
+
+    @Override
+    public boolean openPrimaryMenu(Player player, boolean remoteAccess) {
+        player.openMenu(
+                new SimpleMenuProvider((containerId, inventory, menuPlayer) -> new MatterFluidTankMenu(containerId, inventory, this, data, remoteAccess), getDisplayName()),
+                worldPosition
+        );
+        return true;
     }
 
     @Override
@@ -150,6 +252,7 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
     @Override
     protected boolean canLinkTo(MatterPylonBlockEntity other) {
         return other.getType() == ModBlockEntities.MATTER_PYLON.get()
+                || other.getType() == ModBlockEntities.MATTER_NETWORK_CONTROLLER.get()
                 || other.getType() == ModBlockEntities.MATTER_FLUID_TANK.get();
     }
 
@@ -178,6 +281,7 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
         super.saveAdditional(tag, registries);
         tag.put("inventory", itemHandler.serializeNBT(registries));
         tag.put("fluid", fluidTank.writeToNBT(registries, new CompoundTag()));
+        sideConfiguration.writeToTag(tag);
     }
 
     @Override
@@ -188,6 +292,45 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
         }
         if (tag.contains("fluid")) {
             fluidTank.readFromNBT(registries, tag.getCompound("fluid"));
+        }
+        sideConfiguration.readFromTag(tag, this::sanitizeSideAccessMode);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        sideConfiguration.writeToTag(tag);
+        return tag;
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return type == SideConfigType.ITEMS || type == SideConfigType.FLUIDS;
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return supportsSideConfigType(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return supportsSideConfigType(type);
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, Direction side) {
+        return sideConfiguration.get(type, side);
+    }
+
+    @Override
+    public void setSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (!supportsSideConfigType(type)) {
+            return;
+        }
+        if (sideConfiguration.set(type, side, sanitizeSideAccessMode(type, side, mode))) {
+            setChanged();
+            syncVisualState();
         }
     }
 
@@ -230,6 +373,9 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
             if (fluidTank.getFluidAmount() <= 0) {
                 return;
             }
+            if (!getSideAccessMode(SideConfigType.FLUIDS, direction).allowsOutput()) {
+                continue;
+            }
 
             BlockPos targetPos = worldPosition.relative(direction);
             IFluidHandler targetHandler = level.getCapability(Capabilities.FluidHandler.BLOCK, targetPos, direction.getOpposite());
@@ -243,5 +389,32 @@ public class MatterFluidTankBlockEntity extends MatterPylonBlockEntity {
                 setChanged();
             }
         }
+    }
+
+    private SideAccessMode sanitizeSideAccessMode(SideConfigType type, Direction side, SideAccessMode requestedMode) {
+        return supportsSideConfigType(type) ? requestedMode : SideAccessMode.DISABLED;
+    }
+
+    private IItemHandler[] createConfiguredItemHandlers() {
+        IItemHandler[] handlers = new IItemHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredItemHandler(
+                    () -> getSideAccessMode(SideConfigType.ITEMS, side),
+                    () -> inputAutomationHandler,
+                    () -> outputAutomationHandler
+            );
+        }
+        return handlers;
+    }
+
+    private IFluidHandler[] createConfiguredFluidHandlers() {
+        IFluidHandler[] handlers = new IFluidHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredFluidHandler(
+                    () -> getSideAccessMode(SideConfigType.FLUIDS, side),
+                    () -> fluidTank
+            );
+        }
+        return handlers;
     }
 }

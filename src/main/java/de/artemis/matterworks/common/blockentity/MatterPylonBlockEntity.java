@@ -1,12 +1,15 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.block.MatterPylonBlock;
+import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.filter.MatterFilterData;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.transport.PylonMode;
+import de.artemis.matterworks.common.upgrade.PowerCrystalData;
+import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import de.artemis.matterworks.common.world.PylonChunkLoading;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -22,7 +25,10 @@ import net.minecraft.resources.ResourceKey;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.Nameable;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
@@ -53,12 +59,13 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
 import java.util.WeakHashMap;
 
-public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider {
+public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider, CustomNamedBlockEntity {
     public static final int CHANNEL_COUNT = 4;
     public static final int CHANNEL_ENERGY = 0;
     public static final int CHANNEL_ITEMS = 1;
@@ -73,11 +80,16 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     public static final int FILTER_SLOT_FLUID_EXPORT_WHITELIST = 6;
     public static final int FILTER_SLOT_FLUID_EXPORT_BLACKLIST = 7;
     public static final int FILTER_SLOT_COUNT = 8;
+    public static final int CRYSTAL_SLOT_COUNT = 3;
+    public static final int NETWORK_COLOR_CODE_PARTS = 3;
     private static final int MAX_LINKS = 4;
     private static final int MAX_LINK_DISTANCE = 16;
     private static final int MAX_ENERGY_TRANSFER_PER_TICK = 120;
     private static final int MAX_ITEM_TRANSFER_PER_TICK = 16;
     private static final int MAX_FLUID_TRANSFER_PER_TICK = 250;
+    private static final float TRANSFER_BOOST_PER_CRYSTAL = 0.5F;
+    private static final int CRYSTAL_MAINTENANCE_INTERVAL = PowerCrystalChargerBlockEntity.TICKS_PER_PERCENT;
+    private static final int CRYSTAL_MAINTENANCE_ENERGY_COST = PowerCrystalChargerBlockEntity.TICKS_PER_PERCENT * PowerCrystalChargerBlockEntity.ENERGY_PER_TICK;
     public static final int DEFAULT_PYLON_ID = 1;
     public static final int DATA_COUNT = CHANNEL_COUNT * 2;
     private static final Map<UUID, PendingLink> PENDING_LINKS = new HashMap<>();
@@ -86,6 +98,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     private final LinkedHashSet<BlockPos> linkedPylons = new LinkedHashSet<>();
     private final PylonMode[] modes = createDefaultModes();
     private final int[] pylonIds = createDefaultPylonIds();
+    private final DyeColor[] networkColorCode = createDefaultNetworkColorCode();
     private final ItemStackHandler filterHandler = new ItemStackHandler(FILTER_SLOT_COUNT) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -101,6 +114,22 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
                         FILTER_SLOT_FLUID_EXPORT_WHITELIST, FILTER_SLOT_FLUID_EXPORT_BLACKLIST -> stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
                 default -> false;
             };
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 1;
+        }
+    };
+    private final ItemStackHandler crystalHandler = new ItemStackHandler(CRYSTAL_SLOT_COUNT) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+        }
+
+        @Override
+        public boolean isItemValid(int slot, ItemStack stack) {
+            return supportsUpgradeCrystals() && PowerCrystalEffects.isPowerCrystal(stack);
         }
 
         @Override
@@ -144,6 +173,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             return DATA_COUNT;
         }
     };
+    private String customName = "";
 
     public MatterPylonBlockEntity(BlockPos pos, BlockState blockState) {
         this(ModBlockEntities.MATTER_PYLON.get(), pos, blockState);
@@ -196,6 +226,24 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return isValidChannel(channel) ? pylonIds[channel] : DEFAULT_PYLON_ID;
     }
 
+    public DyeColor getNetworkColor(int index) {
+        return index >= 0 && index < NETWORK_COLOR_CODE_PARTS ? networkColorCode[index] : DyeColor.WHITE;
+    }
+
+    public void setNetworkColor(int index, DyeColor color) {
+        if (index < 0 || index >= NETWORK_COLOR_CODE_PARTS) {
+            return;
+        }
+        DyeColor sanitized = color == null ? DyeColor.WHITE : color;
+        if (networkColorCode[index] == sanitized) {
+            return;
+        }
+        networkColorCode[index] = sanitized;
+        markNetworkDirty();
+        setChanged();
+        syncVisualState();
+    }
+
     public int getTransferDisplayAmount(int channel) {
         return isValidChannel(channel) ? transferDisplayAmounts[channel] : 0;
     }
@@ -204,12 +252,28 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return isValidChannel(channel) ? transferDisplayRoles[channel] : TransferDisplayRole.IDLE;
     }
 
+    public int getTransferRoleAmount(int channel, TransferDisplayRole role) {
+        if (!isValidChannel(channel) || role == null) {
+            return 0;
+        }
+        return switch (role) {
+            case SOURCE -> transferSourceAmounts[channel];
+            case SINK -> transferSinkAmounts[channel];
+            case TRANSIT -> transferTransitAmounts[channel];
+            case IDLE -> 0;
+        };
+    }
+
     public int getRedstoneOutputSignal() {
         return redstoneOutputSignal;
     }
 
     public ItemStackHandler getFilterHandler() {
         return filterHandler;
+    }
+
+    public ItemStackHandler getCrystalHandler() {
+        return crystalHandler;
     }
 
     public boolean supportsFilterChannel(int channel) {
@@ -221,10 +285,18 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     public void openMatterNetworkMenu(Player player) {
+        openMatterNetworkMenu(player, false);
+    }
+
+    public void openMatterNetworkMenu(Player player, boolean remoteAccess) {
         player.openMenu(
-                new SimpleMenuProvider((containerId, inventory, menuPlayer) -> new MatterPylonMenu(containerId, inventory, this, data), getMatterNetworkMenuTitle()),
+                new SimpleMenuProvider((containerId, inventory, menuPlayer) -> new MatterPylonMenu(containerId, inventory, this, data, remoteAccess), getMatterNetworkMenuTitle()),
                 worldPosition
         );
+    }
+
+    public boolean openPrimaryMenu(Player player, boolean remoteAccess) {
+        return false;
     }
 
     public boolean isMatterNetworkMenuStillValid(Player player) {
@@ -236,6 +308,49 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
 
     public Set<BlockPos> getLinkedNodePositions() {
         return Set.copyOf(linkedPylons);
+    }
+
+    public BlockPos getControllerTrackedPos() {
+        return worldPosition;
+    }
+
+    public String getControllerTrackedDisplayName() {
+        return getDisplayName().getString();
+    }
+
+    public boolean hasControllerExternalTarget() {
+        return false;
+    }
+
+    protected Set<BlockPos> collectConnectedNodePositions() {
+        if (level == null) {
+            return Set.of();
+        }
+
+        ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+        LinkedHashSet<BlockPos> members = new LinkedHashSet<>();
+        queue.add(worldPosition);
+        members.add(worldPosition);
+
+        while (!queue.isEmpty()) {
+            BlockPos currentPos = queue.removeFirst();
+            MatterPylonBlockEntity current = getNode(level, currentPos);
+            if (current == null) {
+                continue;
+            }
+
+            for (BlockPos linkedPos : current.linkedPylons) {
+                MatterPylonBlockEntity linked = getNode(level, linkedPos);
+                if (linked == null || !linked.linkedPylons.contains(currentPos)) {
+                    continue;
+                }
+                if (members.add(linkedPos)) {
+                    queue.addLast(linkedPos);
+                }
+            }
+        }
+
+        return Set.copyOf(members);
     }
 
     public static Set<MatterPylonBlockEntity> getClientLoadedNodes(Level level) {
@@ -301,6 +416,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         clearTransferDisplayIfStale(serverLevel.getGameTime());
         clearStaleRedstoneOutput(serverLevel.getGameTime());
         pruneInvalidLinks();
+        maintainCrystalCharge(serverLevel);
 
         processEnergyChannel(serverLevel);
         processItemChannel(serverLevel);
@@ -323,7 +439,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             return;
         }
 
-        distributeEnergyAcrossRoutes(serverLevel, sourceStorage, routes, MAX_ENERGY_TRANSFER_PER_TICK);
+        distributeEnergyAcrossRoutes(serverLevel, sourceStorage, routes, getMaxEnergyTransferPerTick());
     }
 
     private void processItemChannel(ServerLevel serverLevel) {
@@ -661,6 +777,17 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return level.getSignal(attachedPos, facing);
     }
 
+    public SimpleContainer createDropInventory() {
+        SimpleContainer inventory = new SimpleContainer(FILTER_SLOT_COUNT + CRYSTAL_SLOT_COUNT);
+        for (int slot = 0; slot < filterHandler.getSlots(); slot++) {
+            inventory.setItem(slot, filterHandler.getStackInSlot(slot).copy());
+        }
+        for (int slot = 0; slot < crystalHandler.getSlots(); slot++) {
+            inventory.setItem(FILTER_SLOT_COUNT + slot, crystalHandler.getStackInSlot(slot).copy());
+        }
+        return inventory;
+    }
+
     private int distributeEnergyAcrossRoutes(ServerLevel serverLevel, IEnergyStorage sourceStorage, List<EnergyTransferRoute> routes, int maxTransfer) {
         int remaining = Math.min(maxTransfer, sourceStorage.extractEnergy(maxTransfer, true));
         if (remaining <= 0) {
@@ -738,7 +865,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             routesByPriority.computeIfAbsent(route.priority, ignored -> new ArrayList<>()).add(route);
         }
 
-        int remaining = MAX_ITEM_TRANSFER_PER_TICK;
+        int remaining = getMaxItemTransferPerTick();
         for (List<ItemTransferRoute> priorityRoutes : routesByPriority.values()) {
             if (remaining <= 0) {
                 break;
@@ -796,7 +923,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             routesByPriority.computeIfAbsent(route.priority, ignored -> new ArrayList<>()).add(route);
         }
 
-        int remaining = MAX_FLUID_TRANSFER_PER_TICK;
+        int remaining = getMaxFluidTransferPerTick();
         for (List<FluidTransferRoute> priorityRoutes : routesByPriority.values()) {
             if (remaining <= 0) {
                 break;
@@ -1120,6 +1247,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         super.onLoad();
         if (level != null && level.isClientSide()) {
             CLIENT_LOADED_NODES.add(this);
+            if (this instanceof de.artemis.matterworks.common.io.SideConfigurableBlockEntity) {
+                SideConfigDebugTracker.onClientLoad(this);
+            }
         }
         markNetworkDirty();
         if (level instanceof ServerLevel serverLevel) {
@@ -1131,6 +1261,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     public void setRemoved() {
         markNetworkDirty();
         CLIENT_LOADED_NODES.remove(this);
+        SideConfigDebugTracker.onClientUnload(this);
         super.setRemoved();
     }
 
@@ -1303,7 +1434,23 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable(ModBlocks.MATTER_PYLON.get().getDescriptionId());
+        return customName.isEmpty() ? getDefaultName() : Component.literal(customName);
+    }
+
+    @Override
+    public String getCustomNameText() {
+        return customName;
+    }
+
+    @Override
+    public void setCustomNameText(String customName) {
+        String normalized = normalizeCustomName(customName);
+        if (Objects.equals(this.customName, normalized)) {
+            return;
+        }
+        this.customName = normalized;
+        setChanged();
+        syncVisualState();
     }
 
     @Override
@@ -1315,12 +1462,214 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return true;
     }
 
+    public boolean supportsUpgradeCrystals() {
+        return getClass() == MatterPylonBlockEntity.class;
+    }
+
+    protected Component getDefaultName() {
+        return Component.translatable(ModBlocks.MATTER_PYLON.get().getDescriptionId());
+    }
+
     protected boolean canLinkTo(MatterPylonBlockEntity other) {
         return true;
     }
 
     public boolean supportsConfiguredChannel(int channel) {
         return supportsChannel(channel);
+    }
+
+    public boolean matchesNetworkColorCode(MatterPylonBlockEntity other) {
+        for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+            if (getNetworkColor(index) != other.getNetworkColor(index)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public int getEffectiveTransferCap(int channel) {
+        return switch (channel) {
+            case CHANNEL_ENERGY -> getMaxEnergyTransferPerTick();
+            case CHANNEL_ITEMS -> getMaxItemTransferPerTick();
+            case CHANNEL_FLUIDS -> getMaxFluidTransferPerTick();
+            case CHANNEL_REDSTONE -> 15;
+            default -> 0;
+        };
+    }
+
+    public int getActiveCrystalCount(int channel) {
+        net.minecraft.world.item.Item crystalItem = switch (channel) {
+            case CHANNEL_ITEMS -> ModItems.CRIMSON_POWER_CRYSTAL.get();
+            case CHANNEL_ENERGY -> ModItems.VERDANT_POWER_CRYSTAL.get();
+            case CHANNEL_FLUIDS -> ModItems.AZURE_POWER_CRYSTAL.get();
+            default -> null;
+        };
+        if (crystalItem == null) {
+            return 0;
+        }
+
+        int activeCrystals = 0;
+        for (int slot = 0; slot < crystalHandler.getSlots(); slot++) {
+            ItemStack stack = crystalHandler.getStackInSlot(slot);
+            if (stack.is(crystalItem) && PowerCrystalEffects.isActive(stack)) {
+                activeCrystals++;
+            }
+        }
+        return activeCrystals;
+    }
+
+    public int getCrystalMaintenanceEnergyPerTick() {
+        if (!supportsUpgradeCrystals()) {
+            return 0;
+        }
+
+        int activeCrystals = 0;
+        for (int slot = 0; slot < crystalHandler.getSlots(); slot++) {
+            if (PowerCrystalEffects.isActive(crystalHandler.getStackInSlot(slot))) {
+                activeCrystals++;
+            }
+        }
+        return activeCrystals * PowerCrystalChargerBlockEntity.ENERGY_PER_TICK;
+    }
+
+    private void maintainCrystalCharge(ServerLevel serverLevel) {
+        if (!supportsUpgradeCrystals() || serverLevel.getGameTime() % CRYSTAL_MAINTENANCE_INTERVAL != 0L) {
+            return;
+        }
+
+        boolean changed = false;
+        for (int slot = 0; slot < crystalHandler.getSlots(); slot++) {
+            ItemStack stack = crystalHandler.getStackInSlot(slot);
+            if (!PowerCrystalEffects.isPowerCrystal(stack)) {
+                continue;
+            }
+
+            int beforeCharge = PowerCrystalData.getChargePercent(stack);
+            if (consumeCrystalMaintenanceEnergy(serverLevel, CRYSTAL_MAINTENANCE_ENERGY_COST)) {
+                int updatedCharge = Math.min(PowerCrystalData.MAX_CHARGE, beforeCharge + 1);
+                if (updatedCharge != beforeCharge) {
+                    PowerCrystalData.setChargePercent(stack, updatedCharge);
+                    changed = true;
+                }
+            } else {
+                int updatedCharge = PowerCrystalData.drainCharge(stack, 1);
+                if (updatedCharge != beforeCharge) {
+                    changed = true;
+                }
+            }
+        }
+
+        if (changed) {
+            setChanged();
+            syncVisualState();
+        }
+    }
+
+    private boolean consumeCrystalMaintenanceEnergy(ServerLevel serverLevel, int amount) {
+        if (amount <= 0) {
+            return true;
+        }
+
+        List<EnergyMaintenanceSource> sources = collectCrystalMaintenanceSources(serverLevel);
+        if (sources.isEmpty()) {
+            return false;
+        }
+
+        int available = 0;
+        for (EnergyMaintenanceSource source : sources) {
+            available += source.storage().extractEnergy(amount - available, true);
+            if (available >= amount) {
+                break;
+            }
+        }
+        if (available < amount) {
+            return false;
+        }
+
+        int remaining = amount;
+        long gameTime = serverLevel.getGameTime();
+        for (EnergyMaintenanceSource source : sources) {
+            if (remaining <= 0) {
+                break;
+            }
+            int extracted = source.storage().extractEnergy(remaining, false);
+            if (extracted <= 0) {
+                continue;
+            }
+            remaining -= extracted;
+            if (!source.path().isEmpty()) {
+                recordTransferAlongPath(CHANNEL_ENERGY, source.path(), extracted, gameTime);
+            }
+        }
+        return remaining <= 0;
+    }
+
+    private List<EnergyMaintenanceSource> collectCrystalMaintenanceSources(ServerLevel serverLevel) {
+        List<EnergyMaintenanceSource> sources = new ArrayList<>();
+
+        IEnergyStorage localStorage = getAttachedEnergyStorage(false);
+        if (localStorage != null && localStorage.canExtract()) {
+            sources.add(new EnergyMaintenanceSource(localStorage, List.of()));
+        }
+
+        if (!supportsChannel(CHANNEL_ENERGY) || !modes[CHANNEL_ENERGY].canImport() || linkedPylons.isEmpty()) {
+            return sources;
+        }
+
+        List<EnergyMaintenanceSource> networkSources = new ArrayList<>();
+        for (BlockPos memberPos : collectConnectedNodePositions()) {
+            if (memberPos.equals(worldPosition)) {
+                continue;
+            }
+
+            MatterPylonBlockEntity exporter = getNode(serverLevel, memberPos);
+            if (exporter == null || !exporter.supportsChannel(CHANNEL_ENERGY) || !exporter.modes[CHANNEL_ENERGY].canExport()) {
+                continue;
+            }
+
+            IEnergyStorage exporterStorage = exporter.getAttachedEnergyStorage(false);
+            if (exporterStorage == null || !exporterStorage.canExtract()) {
+                continue;
+            }
+
+            for (CachedRoute cachedRoute : NetworkCacheManager.getRoutes(serverLevel, memberPos, CHANNEL_ENERGY)) {
+                if (cachedRoute.targetPos().equals(worldPosition)) {
+                    networkSources.add(new EnergyMaintenanceSource(exporterStorage, cachedRoute.path()));
+                    break;
+                }
+            }
+        }
+
+        networkSources.sort(Comparator.comparingInt(source -> source.path().size()));
+        sources.addAll(networkSources);
+        return sources;
+    }
+
+    private int getMaxEnergyTransferPerTick() {
+        return getBoostedTransferAmount(MAX_ENERGY_TRANSFER_PER_TICK, ModItems.VERDANT_POWER_CRYSTAL.get());
+    }
+
+    private int getMaxItemTransferPerTick() {
+        return getBoostedTransferAmount(MAX_ITEM_TRANSFER_PER_TICK, ModItems.CRIMSON_POWER_CRYSTAL.get());
+    }
+
+    private int getMaxFluidTransferPerTick() {
+        return getBoostedTransferAmount(MAX_FLUID_TRANSFER_PER_TICK, ModItems.AZURE_POWER_CRYSTAL.get());
+    }
+
+    private int getBoostedTransferAmount(int baseAmount, net.minecraft.world.item.Item crystalItem) {
+        if (!supportsUpgradeCrystals()) {
+            return baseAmount;
+        }
+
+        int activeCrystals = 0;
+        for (int slot = 0; slot < crystalHandler.getSlots(); slot++) {
+            ItemStack stack = crystalHandler.getStackInSlot(slot);
+            if (stack.is(crystalItem) && PowerCrystalEffects.isActive(stack)) {
+                activeCrystals++;
+            }
+        }
+        return Math.max(1, Math.round(baseAmount * (1.0F + activeCrystals * TRANSFER_BOOST_PER_CRYSTAL)));
     }
 
     protected Component getMatterNetworkMenuTitle() {
@@ -1343,10 +1692,17 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
         tag.putInt("redstone_output_signal", redstoneOutputSignal);
         writeTransferDisplayTag(tag);
         writeActiveLinkChannelMasksTag(tag);
         writeLinkedPositionsTag(tag);
+        writeNetworkColorCodeTag(tag);
+        if (supportsUpgradeCrystals()) {
+            tag.put("crystal_inventory", crystalHandler.serializeNBT(registries));
+        }
         return tag;
     }
 
@@ -1367,7 +1723,12 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             tag.put("pending_fluid", pendingFluidStack.save(registries));
         }
         tag.put("filter_inventory", filterHandler.serializeNBT(registries));
+        tag.put("crystal_inventory", crystalHandler.serializeNBT(registries));
         writeLinkedPositionsTag(tag);
+        writeNetworkColorCodeTag(tag);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
     }
 
     private void writeLinkedPositionsTag(CompoundTag tag) {
@@ -1380,6 +1741,12 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             links.add(linkTag);
         }
         tag.put("links", links);
+    }
+
+    private void writeNetworkColorCodeTag(CompoundTag tag) {
+        for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+            tag.putString(getNetworkColorTagName(index), networkColorCode[index].getName());
+        }
     }
 
     private void writeActiveLinkChannelMasksTag(CompoundTag tag) {
@@ -1396,6 +1763,12 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
             activeLinks.add(linkTag);
         }
         tag.put("active_link_channel_masks", activeLinks);
+    }
+
+    private void readNetworkColorCodeTag(CompoundTag tag) {
+        for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+            networkColorCode[index] = parseNetworkColor(tag.getString(getNetworkColorTagName(index)));
+        }
     }
 
     @Override
@@ -1419,8 +1792,12 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         lastReceivedRedstoneGameTime = Long.MIN_VALUE;
         pendingItemStack = tag.contains("pending_item") ? ItemStack.parseOptional(registries, tag.getCompound("pending_item")) : ItemStack.EMPTY;
         pendingFluidStack = tag.contains("pending_fluid") ? FluidStack.parseOptional(registries, tag.getCompound("pending_fluid")) : FluidStack.EMPTY;
+        readNetworkColorCodeTag(tag);
         if (tag.contains("filter_inventory")) {
             filterHandler.deserializeNBT(registries, tag.getCompound("filter_inventory"));
+        }
+        if (tag.contains("crystal_inventory")) {
+            crystalHandler.deserializeNBT(registries, tag.getCompound("crystal_inventory"));
         }
         for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
             transferSourceAmounts[channel] = 0;
@@ -1448,6 +1825,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
                 linkedPylons.add(new BlockPos(linkTag.getInt("x"), linkTag.getInt("y"), linkTag.getInt("z")));
             }
         }
+        customName = normalizeCustomName(tag.getString("custom_name"));
     }
 
     public static int getModeDataIndex(int channel) {
@@ -1554,7 +1932,15 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return amounts;
     }
 
-    private void syncVisualState() {
+    private static DyeColor[] createDefaultNetworkColorCode() {
+        DyeColor[] colors = new DyeColor[NETWORK_COLOR_CODE_PARTS];
+        for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+            colors[index] = DyeColor.WHITE;
+        }
+        return colors;
+    }
+
+    protected void syncVisualState() {
         if (level instanceof ServerLevel serverLevel) {
             serverLevel.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
         }
@@ -1580,12 +1966,26 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         return "channel_" + (channel + 1) + "_id";
     }
 
+    private static String getNetworkColorTagName(int index) {
+        return "network_color_" + (index + 1);
+    }
+
     private static String getTransferDisplayAmountTagName(int channel) {
         return "channel_" + (channel + 1) + "_transfer_display_amount";
     }
 
     private static String getTransferDisplayRoleTagName(int channel) {
         return "channel_" + (channel + 1) + "_transfer_display_role";
+    }
+
+    private static String normalizeCustomName(String customName) {
+        String normalized = customName.strip();
+        return normalized.length() > 64 ? normalized.substring(0, 64) : normalized;
+    }
+
+    private static DyeColor parseNetworkColor(String serializedColor) {
+        DyeColor color = DyeColor.byName(serializedColor, null);
+        return color == null ? DyeColor.WHITE : color;
     }
 
     private static PylonMode parseMode(String serializedMode) {
@@ -1732,6 +2132,11 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
         }
 
         private Map<Integer, List<CachedRoute>> buildRoutesForExporter(ServerLevel level, BlockPos exporterPos, Set<BlockPos> members) {
+            MatterPylonBlockEntity exporterPylon = getNode(level, exporterPos);
+            if (exporterPylon == null) {
+                return Map.of();
+            }
+
             ArrayDeque<BlockPos> queue = new ArrayDeque<>();
             Map<BlockPos, BlockPos> parent = new HashMap<>();
             Set<BlockPos> visited = new HashSet<>();
@@ -1749,7 +2154,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
 
                 if (!currentPos.equals(exporterPos)) {
                     for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
-                        if (currentPylon.supportsChannel(channel) && currentPylon.modes[channel].canImport()) {
+                        if (currentPylon.supportsChannel(channel)
+                                && currentPylon.modes[channel].canImport()
+                                && exporterPylon.matchesNetworkColorCode(currentPylon)) {
                             routesByChannel
                                     .computeIfAbsent(channel, ignored -> new ArrayList<>())
                                     .add(new CachedRoute(currentPos, buildPath(parent, currentPos), currentPylon.pylonIds[channel]));
@@ -1804,6 +2211,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider 
     }
 
     private record RedstoneTransferRoute(BlockPos targetPos, List<BlockPos> path, MatterPylonBlockEntity targetPylon, int priority) {
+    }
+
+    private record EnergyMaintenanceSource(IEnergyStorage storage, List<BlockPos> path) {
     }
 
     private record ItemMoveResult(int movedAmount, @Nullable BlockPos targetPos, int nextRoundRobinIndex) {

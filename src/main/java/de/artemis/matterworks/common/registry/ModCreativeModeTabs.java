@@ -59,6 +59,8 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.MATTER_FLUID_TANK.get());
                         output.accept(ModBlocks.MATTER_STORAGE_BARREL.get());
                         output.accept(ModBlocks.MATTER_PYLON.get());
+                        output.accept(ModBlocks.MATTER_NETWORK_CONTROLLER.get());
+                        output.accept(ModBlocks.MATTER_NETWORK_MONITOR.get());
                         output.accept(ModBlocks.CREATIVE_SOURCE.get());
                         output.accept(ModBlocks.CREATIVE_SINK.get());
                         output.accept(ModBlocks.MATTER_SEPARATOR.get());

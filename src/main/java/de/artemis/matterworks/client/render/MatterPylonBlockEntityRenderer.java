@@ -2,8 +2,14 @@ package de.artemis.matterworks.client.render;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.blaze3d.vertex.VertexConsumer;
-import de.artemis.matterworks.common.debug.PylonDebugOverlayState;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
+import de.artemis.matterworks.common.debug.PylonDebugOverlayState;
+import de.artemis.matterworks.common.debug.SideConfigDebugOverlayState;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.menu.SideConfigOrientation;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -11,6 +17,7 @@ import net.minecraft.client.renderer.RenderType;
 import net.minecraft.client.renderer.blockentity.BlockEntityRenderer;
 import net.minecraft.client.renderer.blockentity.BlockEntityRendererProvider;
 import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec3;
 import org.joml.Matrix4f;
@@ -63,21 +70,31 @@ public class MatterPylonBlockEntityRenderer<T extends MatterPylonBlockEntity> im
 
         Font font = Minecraft.getInstance().font;
 
-        poseStack.pushPose();
-        poseStack.translate(0.5D, 1.24D, 0.5D);
-        poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
-        poseStack.scale(0.025F, -0.025F, 0.025F);
+        if (PylonDebugOverlayState.isEnabled()) {
+            poseStack.pushPose();
+            poseStack.translate(0.5D, 1.24D, 0.5D);
+            poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+            poseStack.scale(0.025F, -0.025F, 0.025F);
 
-        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
-            int transferAmount = blockEntity.getTransferDisplayAmount(channel);
-            MatterPylonBlockEntity.TransferDisplayRole role = blockEntity.getTransferDisplayRole(channel);
-            String text = formatChannelText(channel, role, transferAmount);
-            int color = getChannelColor(channel, transferAmount > 0);
-            float x = -font.width(text) / 2.0F;
-            float y = channel * 10.0F;
-            font.drawInBatch(text, x, y, color, false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+            for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
+                int transferAmount = blockEntity.getTransferDisplayAmount(channel);
+                MatterPylonBlockEntity.TransferDisplayRole role = blockEntity.getTransferDisplayRole(channel);
+                String text = formatChannelText(channel, role, transferAmount);
+                int color = getChannelColor(channel, transferAmount > 0);
+                float x = -font.width(text) / 2.0F;
+                float y = channel * 10.0F;
+                font.drawInBatch(text, x, y, color, false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+            }
+            String capText = formatCapText(blockEntity);
+            font.drawInBatch(capText, -font.width(capText) / 2.0F, MatterPylonBlockEntity.CHANNEL_COUNT * 10.0F + 2.0F,
+                    0xFFC5C7CC, false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+            if (blockEntity.supportsUpgradeCrystals()) {
+                String crystalText = formatCrystalText(blockEntity);
+                font.drawInBatch(crystalText, -font.width(crystalText) / 2.0F, MatterPylonBlockEntity.CHANNEL_COUNT * 10.0F + 12.0F,
+                        0xFFD8C9FF, false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+            }
+            poseStack.popPose();
         }
-        poseStack.popPose();
     }
 
     public static void renderMatterNetworkLinks(Iterable<MatterPylonBlockEntity> nodes, PoseStack poseStack, MultiBufferSource buffer, Vec3 cameraPos, long gameTime) {
@@ -105,6 +122,29 @@ public class MatterPylonBlockEntityRenderer<T extends MatterPylonBlockEntity> im
                     drawLightningBeam(matrix, consumer, nodePos, linkedPos, cameraPos, gameTime, color[0], color[1], color[2], CHANNEL_LINK_ALPHA, CHANNEL_LINK_WIDTH, channel);
                 }
             }
+        }
+    }
+
+    public static void renderSideConfigOverlays(Iterable<BlockEntity> blockEntities, PoseStack poseStack, MultiBufferSource buffer, Vec3 cameraPos) {
+        if (!SideConfigDebugOverlayState.isEnabled()) {
+            return;
+        }
+
+        Font font = Minecraft.getInstance().font;
+        for (BlockEntity blockEntity : blockEntities) {
+            if (!(blockEntity instanceof SideConfigurableBlockEntity configurable)) {
+                continue;
+            }
+
+            BlockPos blockPos = blockEntity.getBlockPos();
+            if (!Vec3.atCenterOf(blockPos).closerThan(cameraPos, 96.0D)) {
+                continue;
+            }
+
+            poseStack.pushPose();
+            poseStack.translate(blockPos.getX() - cameraPos.x, blockPos.getY() - cameraPos.y, blockPos.getZ() - cameraPos.z);
+            renderSideConfigOverlay(blockEntity.getBlockState(), configurable, poseStack, buffer, 0x00F000F0, font);
+            poseStack.popPose();
         }
     }
 
@@ -176,29 +216,44 @@ public class MatterPylonBlockEntityRenderer<T extends MatterPylonBlockEntity> im
                 continue;
             }
             segmentDirection.normalize();
-            Vector3f widthA = segmentDirection.cross(new Vector3f(0.0F, 1.0F, 0.0F), new Vector3f());
-            if (widthA.lengthSquared() < 1.0E-4F) {
-                widthA = segmentDirection.cross(new Vector3f(1.0F, 0.0F, 0.0F), new Vector3f());
+            Vector3f axisA = segmentDirection.cross(new Vector3f(0.0F, 1.0F, 0.0F), new Vector3f());
+            if (axisA.lengthSquared() < 1.0E-4F) {
+                axisA = segmentDirection.cross(new Vector3f(1.0F, 0.0F, 0.0F), new Vector3f());
             }
-            widthA.normalize().mul(width);
-            Vector3f widthB = segmentDirection.cross(widthA, new Vector3f()).normalize().mul(width * 0.7F);
+            axisA.normalize().mul(width);
+            Vector3f axisB = segmentDirection.cross(new Vector3f(axisA).normalize(), new Vector3f()).normalize().mul(width);
 
-            addBoltQuad(matrix, consumer, segmentStart, segmentEnd, widthA, red, green, blue, alpha);
-            addBoltQuad(matrix, consumer, segmentStart, segmentEnd, widthB, red, green, blue, alpha);
+            addBoltPrism(matrix, consumer, segmentStart, segmentEnd, axisA, axisB, red, green, blue, alpha);
         }
     }
 
-    private static void addBoltQuad(Matrix4f matrix, VertexConsumer consumer, Vector3f start, Vector3f end, Vector3f width,
-                                    float red, float green, float blue, float alpha) {
-        Vector3f startMin = new Vector3f(start).sub(width);
-        Vector3f startMax = new Vector3f(start).add(width);
-        Vector3f endMax = new Vector3f(end).add(width);
-        Vector3f endMin = new Vector3f(end).sub(width);
+    private static void addBoltPrism(Matrix4f matrix, VertexConsumer consumer, Vector3f start, Vector3f end, Vector3f axisA, Vector3f axisB,
+                                     float red, float green, float blue, float alpha) {
+        Vector3f startA = new Vector3f(start).add(axisA);
+        Vector3f startB = new Vector3f(start).add(axisB);
+        Vector3f startNegA = new Vector3f(start).sub(axisA);
+        Vector3f startNegB = new Vector3f(start).sub(axisB);
+        Vector3f endA = new Vector3f(end).add(axisA);
+        Vector3f endB = new Vector3f(end).add(axisB);
+        Vector3f endNegA = new Vector3f(end).sub(axisA);
+        Vector3f endNegB = new Vector3f(end).sub(axisB);
 
-        addVertex(consumer, matrix, startMin, red, green, blue, alpha);
-        addVertex(consumer, matrix, startMax, red, green, blue, alpha);
-        addVertex(consumer, matrix, endMax, red, green, blue, alpha);
-        addVertex(consumer, matrix, endMin, red, green, blue, alpha);
+        addQuad(matrix, consumer, startA, startB, endB, endA, red, green, blue, alpha);
+        addQuad(matrix, consumer, startB, startNegA, endNegA, endB, red, green, blue, alpha);
+        addQuad(matrix, consumer, startNegA, startNegB, endNegB, endNegA, red, green, blue, alpha);
+        addQuad(matrix, consumer, startNegB, startA, endA, endNegB, red, green, blue, alpha);
+
+        float coreAlpha = Math.min(1.0F, alpha + 0.10F);
+        addQuad(matrix, consumer, startA, startNegA, endNegA, endA, red, green, blue, coreAlpha);
+        addQuad(matrix, consumer, startB, startNegB, endNegB, endB, red, green, blue, coreAlpha);
+    }
+
+    private static void addQuad(Matrix4f matrix, VertexConsumer consumer, Vector3f first, Vector3f second, Vector3f third, Vector3f fourth,
+                                float red, float green, float blue, float alpha) {
+        addVertex(consumer, matrix, first, red, green, blue, alpha);
+        addVertex(consumer, matrix, second, red, green, blue, alpha);
+        addVertex(consumer, matrix, third, red, green, blue, alpha);
+        addVertex(consumer, matrix, fourth, red, green, blue, alpha);
     }
 
     private static void addVertex(VertexConsumer consumer, Matrix4f matrix, Vector3f point, float red, float green, float blue, float alpha) {
@@ -300,5 +355,116 @@ public class MatterPylonBlockEntityRenderer<T extends MatterPylonBlockEntity> im
             case MatterPylonBlockEntity.CHANNEL_REDSTONE -> active ? 0xFFF0C34A : 0xCCF0C34A;
             default -> 0xFFC5C7CC;
         };
+    }
+
+    private static String formatCapText(MatterPylonBlockEntity blockEntity) {
+        return "cap e" + blockEntity.getEffectiveTransferCap(MatterPylonBlockEntity.CHANNEL_ENERGY)
+                + " i" + blockEntity.getEffectiveTransferCap(MatterPylonBlockEntity.CHANNEL_ITEMS)
+                + " f" + blockEntity.getEffectiveTransferCap(MatterPylonBlockEntity.CHANNEL_FLUIDS);
+    }
+
+    private static String formatCrystalText(MatterPylonBlockEntity blockEntity) {
+        return "cry r" + blockEntity.getActiveCrystalCount(MatterPylonBlockEntity.CHANNEL_ITEMS)
+                + " g" + blockEntity.getActiveCrystalCount(MatterPylonBlockEntity.CHANNEL_ENERGY)
+                + " b" + blockEntity.getActiveCrystalCount(MatterPylonBlockEntity.CHANNEL_FLUIDS)
+                + " up " + blockEntity.getCrystalMaintenanceEnergyPerTick() + "fe/t";
+    }
+
+    private static void renderSideConfigOverlay(BlockState blockState, SideConfigurableBlockEntity configurable, PoseStack poseStack, MultiBufferSource buffer, int packedLight, Font font) {
+        Direction frontFacing = SideConfigOrientation.resolveFrontFacing(blockState);
+        for (Direction side : Direction.values()) {
+            List<TextSegment> segments = buildSideConfigSegments(configurable, side);
+            if (segments.isEmpty()) {
+                continue;
+            }
+
+            poseStack.pushPose();
+            translateToSide(poseStack, side);
+            poseStack.mulPose(Minecraft.getInstance().getEntityRenderDispatcher().cameraOrientation());
+            poseStack.scale(0.015F, -0.015F, 0.015F);
+
+            String sideLabel = getRelativeSideLabel(side, frontFacing);
+            float sideLabelX = -font.width(sideLabel) / 2.0F;
+            font.drawInBatch(sideLabel, sideLabelX, -9.0F, 0xFFE0E3E8, false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+
+            float totalWidth = 0.0F;
+            for (TextSegment segment : segments) {
+                totalWidth += font.width(segment.text());
+            }
+            float x = -totalWidth / 2.0F;
+            for (TextSegment segment : segments) {
+                font.drawInBatch(segment.text(), x, 1.0F, segment.color(), false, poseStack.last().pose(), buffer, Font.DisplayMode.SEE_THROUGH, 0, packedLight);
+                x += font.width(segment.text());
+            }
+            poseStack.popPose();
+        }
+    }
+
+    private static List<TextSegment> buildSideConfigSegments(SideConfigurableBlockEntity configurable, Direction side) {
+        List<TextSegment> segments = new ArrayList<>();
+        for (SideConfigType type : SideConfigType.values()) {
+            if (!configurable.supportsSideConfigType(type)) {
+                continue;
+            }
+            if (!segments.isEmpty()) {
+                segments.add(new TextSegment("  ", 0xFFD0D4DB));
+            }
+            segments.add(new TextSegment(getTypeShortLabel(type) + "=", getTypeColor(type)));
+            segments.add(new TextSegment(configurable.getSideAccessMode(type, side).getShortLabel(), 0xFFD0D4DB));
+        }
+        return segments;
+    }
+
+    private static void translateToSide(PoseStack poseStack, Direction side) {
+        float verticalOffset = 0.18F;
+        switch (side) {
+            case DOWN -> poseStack.translate(0.5D, -0.05D, 0.5D);
+            case UP -> poseStack.translate(0.5D, 1.05D, 0.5D);
+            case NORTH -> poseStack.translate(0.5D, 0.5D + verticalOffset, -0.05D);
+            case SOUTH -> poseStack.translate(0.5D, 0.5D + verticalOffset, 1.05D);
+            case WEST -> poseStack.translate(-0.05D, 0.5D + verticalOffset, 0.5D);
+            case EAST -> poseStack.translate(1.05D, 0.5D + verticalOffset, 0.5D);
+        }
+    }
+
+    private static String getRelativeSideLabel(Direction side, Direction frontFacing) {
+        if (side == Direction.UP) {
+            return "Up";
+        }
+        if (side == Direction.DOWN) {
+            return "Down";
+        }
+        if (side == frontFacing) {
+            return "Front";
+        }
+        if (side == frontFacing.getOpposite()) {
+            return "Back";
+        }
+        if (side == frontFacing.getCounterClockWise()) {
+            return "Left";
+        }
+        if (side == frontFacing.getClockWise()) {
+            return "Right";
+        }
+        return side.getName();
+    }
+
+    private static String getTypeShortLabel(SideConfigType type) {
+        return switch (type) {
+            case ITEMS -> "I";
+            case FLUIDS -> "F";
+            case ENERGY -> "E";
+        };
+    }
+
+    private static int getTypeColor(SideConfigType type) {
+        return switch (type) {
+            case ITEMS -> 0xFFD9A441;
+            case FLUIDS -> 0xFF55A8FF;
+            case ENERGY -> 0xFFE35B47;
+        };
+    }
+
+    private record TextSegment(String text, int color) {
     }
 }

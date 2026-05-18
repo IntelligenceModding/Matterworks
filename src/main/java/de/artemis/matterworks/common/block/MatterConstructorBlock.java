@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterConstructorBlock extends BaseEntityBlock {
+public class MatterConstructorBlock extends HorizontalFacingMachineBlock {
     public static final MapCodec<MatterConstructorBlock> CODEC = simpleCodec(MatterConstructorBlock::new);
 
     public MatterConstructorBlock(Properties properties) {

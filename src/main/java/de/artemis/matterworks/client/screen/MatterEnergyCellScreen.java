@@ -3,13 +3,15 @@ package de.artemis.matterworks.client.screen;
 import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
 import de.artemis.matterworks.common.network.OpenMatterNetworkMenuPayload;
 import net.minecraft.client.gui.GuiGraphics;
-import net.minecraft.client.gui.components.Button;
-import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
-public class MatterEnergyCellScreen extends AbstractContainerScreen<MatterEnergyCellMenu> {
+import java.util.List;
+
+public class MatterEnergyCellScreen extends AbstractRenamableContainerScreen<MatterEnergyCellMenu> {
+    private final MachineSideConfigController sideConfig = new MachineSideConfigController();
+
     public MatterEnergyCellScreen(MatterEnergyCellMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
@@ -20,10 +22,7 @@ public class MatterEnergyCellScreen extends AbstractContainerScreen<MatterEnergy
     @Override
     protected void init() {
         super.init();
-        this.addRenderableWidget(Button.builder(Component.translatable("screen.matterworks.matter_network.open"), button ->
-                        PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos())))
-                .bounds(this.leftPos + 120, this.topPos + 6, 48, 16)
-                .build());
+        sideConfig.init(menu);
     }
 
     @Override
@@ -31,54 +30,39 @@ public class MatterEnergyCellScreen extends AbstractContainerScreen<MatterEnergy
         int left = this.leftPos;
         int top = this.topPos;
 
-        guiGraphics.fill(left, top, left + this.imageWidth, top + this.imageHeight, 0xFF2B2B31);
-        guiGraphics.fill(left + 2, top + 2, left + this.imageWidth - 2, top + this.imageHeight - 2, 0xFF3A3A42);
-
-        drawSlot(guiGraphics, left + 52, top + 34);
-        drawSlot(guiGraphics, left + 106, top + 34);
-        drawEnergyBar(guiGraphics, left + 80, top + 18, menu.getScaledEnergyAmount(50));
-        drawTransferMarkers(guiGraphics, left + 70, top + 42);
-        drawPlayerInventorySlots(guiGraphics, left + 7, top + 83);
+        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, this.imageWidth, this.imageHeight);
+        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
+        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + 80, top + 18, 16, 52);
+        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + 82, top + 20, 12, 48, menu.getScaledEnergyAmount(48), 0xFFE23D2D);
+        VanillaGuiHelper.drawHorizontalBarFrame(guiGraphics, left + 60, top + 40, 54, 10);
+        guiGraphics.fill(left + 62, top + 43, left + 76, top + 47, 0xFFD8B55B);
+        guiGraphics.fill(left + 98, top + 43, left + 112, top + 47, 0xFF5C8FD8);
+        sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderEnergyTooltip(guiGraphics, mouseX, mouseY);
+        if (sideConfig.isShowing()) {
+            sideConfig.renderTooltip(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
+        } else {
+            renderEnergyTooltip(guiGraphics, mouseX, mouseY);
+        }
+        TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    private void drawSlot(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x, y, x + 18, y + 18, 0xFF1B1B1F);
-        guiGraphics.fill(x + 1, y + 1, x + 17, y + 17, 0xFF8B8B93);
-        guiGraphics.fill(x + 2, y + 2, x + 16, y + 16, 0xFF232329);
-    }
-
-    private void drawEnergyBar(GuiGraphics guiGraphics, int x, int y, int filledHeight) {
-        guiGraphics.fill(x, y, x + 16, y + 52, 0xFF1B1B1F);
-        guiGraphics.fill(x + 1, y + 1, x + 15, y + 51, 0xFF232329);
-        if (filledHeight > 0) {
-            guiGraphics.fill(x + 2, y + 50 - filledHeight, x + 14, y + 50, 0xFFE23D2D);
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (TopCategoryTabs.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, buildTabs())) {
+            return true;
         }
-    }
-
-    private void drawTransferMarkers(GuiGraphics guiGraphics, int x, int y) {
-        guiGraphics.fill(x - 10, y, x - 1, y + 4, 0xFFFFB347);
-        guiGraphics.fill(x + 16, y, x + 25, y + 4, 0xFF55C7FF);
-        guiGraphics.fill(x - 1, y - 1, x + 16, y + 5, 0xFF1B1B1F);
-    }
-
-    private void drawPlayerInventorySlots(GuiGraphics guiGraphics, int left, int top) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                drawSlot(guiGraphics, left + column * 18, top + row * 18);
-            }
+        if (sideConfig.mouseClicked(menu, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight)) {
+            return true;
         }
-
-        for (int hotbarSlot = 0; hotbarSlot < 9; hotbarSlot++) {
-            drawSlot(guiGraphics, left + hotbarSlot * 18, top + 58);
-        }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void renderEnergyTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -92,5 +76,9 @@ public class MatterEnergyCellScreen extends AbstractContainerScreen<MatterEnergy
                     mouseY
             );
         }
+    }
+
+    private List<TopCategoryTabs.Tab> buildTabs() {
+        return sideConfig.buildTabs(menu, () -> PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos(), menu.isRemoteAccess())));
     }
 }

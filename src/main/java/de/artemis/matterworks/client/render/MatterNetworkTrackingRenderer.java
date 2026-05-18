@@ -27,20 +27,53 @@ public final class MatterNetworkTrackingRenderer {
 
         Matrix4f matrix = poseStack.last().pose();
         VertexConsumer consumer = buffer.getBuffer(RenderType.lightning());
-        addFace(consumer, matrix, minX, minY, minZ, maxX, maxY, minZ, 0.18F, 0.82F, 1.0F, 0.40F);
-        addFace(consumer, matrix, minX, minY, maxZ, maxX, maxY, maxZ, 0.18F, 0.82F, 1.0F, 0.40F);
-        addFace(consumer, matrix, minX, minY, minZ, minX, maxY, maxZ, 0.18F, 0.82F, 1.0F, 0.28F);
-        addFace(consumer, matrix, maxX, minY, minZ, maxX, maxY, maxZ, 0.18F, 0.82F, 1.0F, 0.28F);
-        addFace(consumer, matrix, minX, maxY, minZ, maxX, maxY, maxZ, 0.36F, 0.95F, 1.0F, 0.22F);
+        addFace(consumer, matrix,
+                minX, minY, minZ,
+                minX, maxY, minZ,
+                maxX, maxY, minZ,
+                maxX, minY, minZ,
+                0.18F, 0.82F, 1.0F, 0.40F);
+        addFace(consumer, matrix,
+                maxX, minY, maxZ,
+                maxX, maxY, maxZ,
+                minX, maxY, maxZ,
+                minX, minY, maxZ,
+                0.18F, 0.82F, 1.0F, 0.40F);
+        addFace(consumer, matrix,
+                minX, minY, maxZ,
+                minX, maxY, maxZ,
+                minX, maxY, minZ,
+                minX, minY, minZ,
+                0.18F, 0.82F, 1.0F, 0.28F);
+        addFace(consumer, matrix,
+                maxX, minY, minZ,
+                maxX, maxY, minZ,
+                maxX, maxY, maxZ,
+                maxX, minY, maxZ,
+                0.18F, 0.82F, 1.0F, 0.28F);
+        addFace(consumer, matrix,
+                minX, maxY, minZ,
+                minX, maxY, maxZ,
+                maxX, maxY, maxZ,
+                maxX, maxY, minZ,
+                0.36F, 0.95F, 1.0F, 0.22F);
+        addFace(consumer, matrix,
+                minX, minY, maxZ,
+                minX, minY, minZ,
+                maxX, minY, minZ,
+                maxX, minY, maxZ,
+                0.12F, 0.64F, 0.84F, 0.22F);
     }
 
     private static void addFace(VertexConsumer consumer, Matrix4f matrix,
-                                float minX, float minY, float minZ,
-                                float maxX, float maxY, float maxZ,
+                                float x1, float y1, float z1,
+                                float x2, float y2, float z2,
+                                float x3, float y3, float z3,
+                                float x4, float y4, float z4,
                                 float red, float green, float blue, float alpha) {
-        consumer.addVertex(matrix, minX, minY, minZ).setColor(red, green, blue, alpha);
-        consumer.addVertex(matrix, minX, maxY, maxZ).setColor(red, green, blue, alpha);
-        consumer.addVertex(matrix, maxX, maxY, maxZ).setColor(red, green, blue, alpha);
-        consumer.addVertex(matrix, maxX, minY, minZ).setColor(red, green, blue, alpha);
+        consumer.addVertex(matrix, x1, y1, z1).setColor(red, green, blue, alpha);
+        consumer.addVertex(matrix, x2, y2, z2).setColor(red, green, blue, alpha);
+        consumer.addVertex(matrix, x3, y3, z3).setColor(red, green, blue, alpha);
+        consumer.addVertex(matrix, x4, y4, z4).setColor(red, green, blue, alpha);
     }
 }

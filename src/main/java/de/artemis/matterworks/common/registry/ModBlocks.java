@@ -6,6 +6,8 @@ import de.artemis.matterworks.common.block.MatterConstructorBlock;
 import de.artemis.matterworks.common.block.MatterEnergyCellBlock;
 import de.artemis.matterworks.common.block.MatterFluidTankBlock;
 import de.artemis.matterworks.common.block.MatterGeneratorBlock;
+import de.artemis.matterworks.common.block.MatterNetworkControllerBlock;
+import de.artemis.matterworks.common.block.MatterNetworkMonitorBlock;
 import de.artemis.matterworks.common.block.MatterPylonBlock;
 import de.artemis.matterworks.common.block.MatterRecyclerBlock;
 import de.artemis.matterworks.common.block.MatterSeparatorBlock;
@@ -175,6 +177,18 @@ public class ModBlocks {
     public static final DeferredBlock<MatterPylonBlock> MATTER_PYLON = register(
             "matter_pylon",
             MatterPylonBlock::new,
+            properties -> properties.strength(2.5F).sound(SoundType.COPPER).noOcclusion()
+    );
+
+    public static final DeferredBlock<MatterNetworkControllerBlock> MATTER_NETWORK_CONTROLLER = register(
+            "matter_network_controller",
+            MatterNetworkControllerBlock::new,
+            properties -> properties.strength(2.5F).sound(SoundType.COPPER).noOcclusion()
+    );
+
+    public static final DeferredBlock<MatterNetworkMonitorBlock> MATTER_NETWORK_MONITOR = register(
+            "matter_network_monitor",
+            MatterNetworkMonitorBlock::new,
             properties -> properties.strength(2.5F).sound(SoundType.COPPER).noOcclusion()
     );
 

@@ -1,6 +1,8 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterGeneratorBlockEntity;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
@@ -15,7 +17,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class MatterGeneratorMenu extends AbstractContainerMenu {
+public class MatterGeneratorMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int PLAYER_INVENTORY_START = 1;
     private static final int PLAYER_INVENTORY_END = 28;
     private static final int PLAYER_HOTBAR_START = 28;
@@ -68,6 +70,46 @@ public class MatterGeneratorMenu extends AbstractContainerMenu {
             return 0;
         }
         return Math.max(1, energyStored * height / energyCapacity);
+    }
+
+    @Override
+    public BlockPos getBlockPos() {
+        return blockEntity.getBlockPos();
+    }
+
+    @Override
+    public String getBlockDisplayName() {
+        return blockEntity.getDisplayName().getString();
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return blockEntity.supportsSideConfigType(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return blockEntity.supportsSideConfigInput(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return blockEntity.supportsSideConfigOutput(type);
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, net.minecraft.core.Direction side) {
+        return blockEntity.getSideAccessMode(type, side);
+    }
+
+    @Override
+    public net.minecraft.core.Direction getSideConfigFrontFacing() {
+        return SideConfigOrientation.resolveFrontFacing(blockEntity.getBlockState());
+    }
+
+    @Override
+    public ItemStack getPrimaryTabIcon() {
+        return blockEntity.getBlockState().getBlock().asItem().getDefaultInstance();
     }
 
     @Override

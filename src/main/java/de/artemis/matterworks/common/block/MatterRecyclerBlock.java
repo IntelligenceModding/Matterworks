@@ -21,7 +21,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterRecyclerBlock extends BaseEntityBlock {
+public class MatterRecyclerBlock extends HorizontalFacingMachineBlock {
     public static final MapCodec<MatterRecyclerBlock> CODEC = simpleCodec(MatterRecyclerBlock::new);
 
     public MatterRecyclerBlock(Properties properties) {

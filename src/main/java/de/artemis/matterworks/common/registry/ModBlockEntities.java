@@ -6,6 +6,8 @@ import de.artemis.matterworks.common.blockentity.MatterConstructorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterEnergyCellBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterGeneratorBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterNetworkMonitorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterRecyclerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterSeparatorBlockEntity;
@@ -60,6 +62,14 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterPylonBlockEntity>> MATTER_PYLON =
             BLOCK_ENTITY_TYPES.register("matter_pylon",
                     () -> BlockEntityType.Builder.of(MatterPylonBlockEntity::new, ModBlocks.MATTER_PYLON.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterNetworkControllerBlockEntity>> MATTER_NETWORK_CONTROLLER =
+            BLOCK_ENTITY_TYPES.register("matter_network_controller",
+                    () -> BlockEntityType.Builder.of(MatterNetworkControllerBlockEntity::new, ModBlocks.MATTER_NETWORK_CONTROLLER.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterNetworkMonitorBlockEntity>> MATTER_NETWORK_MONITOR =
+            BLOCK_ENTITY_TYPES.register("matter_network_monitor",
+                    () -> BlockEntityType.Builder.of(MatterNetworkMonitorBlockEntity::new, ModBlocks.MATTER_NETWORK_MONITOR.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CreativeSourceBlockEntity>> CREATIVE_SOURCE =
             BLOCK_ENTITY_TYPES.register("creative_source",

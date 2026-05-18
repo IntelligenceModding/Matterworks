@@ -7,6 +7,8 @@ import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
 import de.artemis.matterworks.common.menu.MatterFilterMenu;
 import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterGeneratorMenu;
+import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
+import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import de.artemis.matterworks.common.menu.MatterRecyclerMenu;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
@@ -59,6 +61,14 @@ public class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<MatterPylonMenu>> MATTER_PYLON =
             MENU_TYPES.register("matter_pylon",
                     () -> IMenuTypeExtension.create(MatterPylonMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterNetworkControllerMenu>> MATTER_NETWORK_CONTROLLER =
+            MENU_TYPES.register("matter_network_controller",
+                    () -> IMenuTypeExtension.create(MatterNetworkControllerMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterNetworkMonitorMenu>> MATTER_NETWORK_MONITOR =
+            MENU_TYPES.register("matter_network_monitor",
+                    () -> IMenuTypeExtension.create(MatterNetworkMonitorMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<MatterFilterMenu>> MATTER_FILTER =
             MENU_TYPES.register("matter_filter",

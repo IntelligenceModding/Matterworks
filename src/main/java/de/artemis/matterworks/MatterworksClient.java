@@ -10,6 +10,7 @@ import net.neoforged.neoforge.common.NeoForge;
 public class MatterworksClient {
     public MatterworksClient(IEventBus modEventBus) {
         NeoForge.EVENT_BUS.addListener(ClientModEvents::renderMatterNetworkLinks);
+        modEventBus.addListener(ClientModEvents::addGuiOverlayLayers);
         modEventBus.addListener(ClientModEvents::registerParticleProviders);
         modEventBus.addListener(ClientModEvents::registerScreens);
         modEventBus.addListener(ClientModEvents::registerRenderers);

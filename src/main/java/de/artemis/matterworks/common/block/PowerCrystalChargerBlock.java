@@ -19,7 +19,7 @@ import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
-public class PowerCrystalChargerBlock extends BaseEntityBlock {
+public class PowerCrystalChargerBlock extends HorizontalFacingMachineBlock {
     public static final MapCodec<PowerCrystalChargerBlock> CODEC = simpleCodec(PowerCrystalChargerBlock::new);
 
     public PowerCrystalChargerBlock(Properties properties) {

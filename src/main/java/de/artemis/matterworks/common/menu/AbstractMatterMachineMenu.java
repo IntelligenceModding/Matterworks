@@ -2,12 +2,15 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.AbstractMatterMachineBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.slot.BucketInputSlot;
 import de.artemis.matterworks.common.menu.slot.CrystalSlot;
 import de.artemis.matterworks.common.menu.slot.EnergyInputSlot;
 import de.artemis.matterworks.common.menu.slot.InputSlot;
 import de.artemis.matterworks.common.menu.slot.OutputOnlySlot;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -17,7 +20,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu {
+public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
     protected final AbstractMatterMachineBlockEntity blockEntity;
     protected final ContainerData data;
     protected final int machineSlotCount;
@@ -76,6 +79,46 @@ public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu {
 
     protected SlotItemHandler createOutputOnlySlot(int slot, int x, int y) {
         return new OutputOnlySlot(blockEntity.getItemHandler(), slot, x, y);
+    }
+
+    @Override
+    public BlockPos getBlockPos() {
+        return blockEntity.getBlockPos();
+    }
+
+    @Override
+    public String getBlockDisplayName() {
+        return blockEntity.getDisplayName().getString();
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return blockEntity.supportsSideConfigType(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return blockEntity.supportsSideConfigInput(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return blockEntity.supportsSideConfigOutput(type);
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, net.minecraft.core.Direction side) {
+        return blockEntity.getSideAccessMode(type, side);
+    }
+
+    @Override
+    public net.minecraft.core.Direction getSideConfigFrontFacing() {
+        return SideConfigOrientation.resolveFrontFacing(blockEntity.getBlockState());
+    }
+
+    @Override
+    public ItemStack getPrimaryTabIcon() {
+        return blockEntity.getBlockState().getBlock().asItem().getDefaultInstance();
     }
 
     public boolean isProcessing() {

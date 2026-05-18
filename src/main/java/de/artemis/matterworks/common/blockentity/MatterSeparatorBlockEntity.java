@@ -252,7 +252,7 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
     @Override
     public Component getDisplayName() {
-        return getDefaultName();
+        return super.getDisplayName();
     }
 
     @Override
@@ -261,15 +261,17 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     }
 
     @Override
-    public @Nullable IItemHandler getAutomationHandler(@Nullable Direction side) {
-        if (side == null) {
-            return itemHandler;
-        }
-        return side == Direction.DOWN ? automationOutputHandler : automationInputHandler;
+    protected IItemHandler getInputAutomationHandler() {
+        return automationInputHandler;
     }
 
     @Override
-    public @Nullable IFluidHandler getFluidAutomationHandler(@Nullable Direction side) {
+    protected IItemHandler getOutputAutomationHandler() {
+        return automationOutputHandler;
+    }
+
+    @Override
+    protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
     }
 

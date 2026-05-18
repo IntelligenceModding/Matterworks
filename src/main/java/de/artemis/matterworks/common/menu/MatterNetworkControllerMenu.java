@@ -9,7 +9,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.item.ItemStack;
 
-public class MatterNetworkControllerMenu extends AbstractContainerMenu {
+public class MatterNetworkControllerMenu extends AbstractContainerMenu implements NamedBlockMenu {
     private final MatterNetworkControllerBlockEntity blockEntity;
     private final boolean remoteAccess;
 
@@ -29,6 +29,11 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu {
 
     public BlockPos getBlockPos() {
         return blockEntity.getBlockPos();
+    }
+
+    @Override
+    public String getBlockDisplayName() {
+        return blockEntity.getDisplayName().getString();
     }
 
     @Override

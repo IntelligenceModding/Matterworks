@@ -2,18 +2,31 @@ package de.artemis.matterworks.common.matter;
 
 import com.mojang.logging.LogUtils;
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.menu.SideConfigOrientation;
 import de.artemis.matterworks.common.network.SetPylonDebugOverlayPayload;
+import de.artemis.matterworks.common.network.SetSideConfigDebugOverlayPayload;
 import de.artemis.matterworks.common.template.TemplateAnalysisManager;
 import net.minecraft.commands.Commands;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.registries.BuiltInRegistries;
+import net.minecraft.network.chat.MutableComponent;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.level.block.HorizontalDirectionalBlock;
+import net.minecraft.world.level.block.entity.BlockEntity;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.Level;
+import net.minecraft.world.phys.BlockHitResult;
+import net.minecraft.world.phys.HitResult;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
@@ -255,6 +268,27 @@ public final class MatterValueManager {
                                     }
                                     return 0;
                                 })))
+                        .then(Commands.literal("side_config")
+                                .then(Commands.literal("on").executes(context -> {
+                                    if (context.getSource().getPlayer() instanceof ServerPlayer player) {
+                                        PacketDistributor.sendToPlayer(player, new SetSideConfigDebugOverlayPayload(true));
+                                        context.getSource().sendSuccess(() -> Component.literal("Side config overlay enabled."), false);
+                                        return 1;
+                                    }
+                                    return 0;
+                                }))
+                                .then(Commands.literal("off").executes(context -> {
+                                    if (context.getSource().getPlayer() instanceof ServerPlayer player) {
+                                        PacketDistributor.sendToPlayer(player, new SetSideConfigDebugOverlayPayload(false));
+                                        context.getSource().sendSuccess(() -> Component.literal("Side config overlay disabled."), false);
+                                        return 1;
+                                    }
+                                    return 0;
+                                }))
+                                .executes(context -> {
+                                    ServerPlayer player = context.getSource().getPlayerOrException();
+                                    return dumpLookedAtSideConfig(player);
+                                }))
         );
     }
 
@@ -411,5 +445,122 @@ public final class MatterValueManager {
 
     private static boolean isConfigured(ItemStack stack, Set<ResourceLocation> configuredIds) {
         return configuredIds.contains(BuiltInRegistries.ITEM.getKey(stack.getItem()));
+    }
+
+    private static int dumpLookedAtSideConfig(ServerPlayer player) {
+        HitResult hitResult = player.pick(8.0D, 0.0F, false);
+        if (!(hitResult instanceof BlockHitResult blockHitResult) || blockHitResult.getType() != HitResult.Type.BLOCK) {
+            player.sendSystemMessage(Component.literal("[Matter Debug] Look at a side-configurable block."));
+            return 0;
+        }
+
+        BlockPos pos = blockHitResult.getBlockPos();
+        BlockEntity blockEntity = player.level().getBlockEntity(pos);
+        if (!(blockEntity instanceof SideConfigurableBlockEntity configurable)) {
+            player.sendSystemMessage(Component.literal("[Matter Debug] That block does not use side configuration."));
+            return 0;
+        }
+
+        BlockState state = player.level().getBlockState(pos);
+        Direction frontFacing = SideConfigOrientation.resolveFrontFacing(state);
+        player.sendSystemMessage(Component.literal("[Matter Debug] Side config for ")
+                .append(blockEntity.getBlockState().getBlock().getName())
+                .append(Component.literal(" at " + pos.getX() + ", " + pos.getY() + ", " + pos.getZ())));
+        if (state.hasProperty(HorizontalDirectionalBlock.FACING)) {
+            player.sendSystemMessage(Component.literal("[Matter Debug] Front facing: " + getDirectionName(frontFacing)));
+        }
+
+        for (DebugSide side : DebugSide.values()) {
+            Direction worldSide = side.resolve(frontFacing);
+            MutableComponent line = Component.literal(side.label + " (" + getDirectionName(worldSide) + "): ").withColor(0xD0D4DB);
+            boolean appendedAny = false;
+            for (SideConfigType type : SideConfigType.values()) {
+                if (!configurable.supportsSideConfigType(type)) {
+                    continue;
+                }
+                if (appendedAny) {
+                    line.append(Component.literal("  "));
+                }
+                line.append(Component.literal(getShortTypeLabel(type) + "=").withColor(getTypeColor(type)));
+                line.append(Component.literal(configurable.getSideAccessMode(type, worldSide).getShortLabel()).withColor(0xFFD0D4DB));
+                appendedAny = true;
+            }
+            player.sendSystemMessage(line);
+        }
+        return 1;
+    }
+
+    private static int getTypeColor(SideConfigType type) {
+        return switch (type) {
+            case ITEMS -> 0xD9A441;
+            case FLUIDS -> 0x55A8FF;
+            case ENERGY -> 0xE35B47;
+        };
+    }
+
+    private static String getDirectionName(Direction direction) {
+        return switch (direction) {
+            case DOWN -> "Down";
+            case UP -> "Up";
+            case NORTH -> "North";
+            case SOUTH -> "South";
+            case WEST -> "West";
+            case EAST -> "East";
+        };
+    }
+
+    private static String getShortTypeLabel(SideConfigType type) {
+        return switch (type) {
+            case ITEMS -> "Items";
+            case FLUIDS -> "Fluids";
+            case ENERGY -> "Energy";
+        };
+    }
+
+    private enum DebugSide {
+        FRONT("Front") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return frontFacing;
+            }
+        },
+        BACK("Back") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return frontFacing.getOpposite();
+            }
+        },
+        LEFT("Left") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return frontFacing.getCounterClockWise();
+            }
+        },
+        RIGHT("Right") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return frontFacing.getClockWise();
+            }
+        },
+        UP("Up") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return Direction.UP;
+            }
+        },
+        DOWN("Down") {
+            @Override
+            Direction resolve(Direction frontFacing) {
+                return Direction.DOWN;
+            }
+        };
+
+        private final String label;
+
+        DebugSide(String label) {
+            this.label = label;
+        }
+
+        abstract Direction resolve(Direction frontFacing);
     }
 }

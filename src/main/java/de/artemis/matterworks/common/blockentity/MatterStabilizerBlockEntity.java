@@ -165,7 +165,7 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
 
     @Override
     public Component getDisplayName() {
-        return getDefaultName();
+        return super.getDisplayName();
     }
 
     @Override
@@ -174,7 +174,7 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
     }
 
     @Override
-    public @Nullable IFluidHandler getFluidAutomationHandler(@Nullable Direction side) {
+    protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
     }
 

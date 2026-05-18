@@ -1,6 +1,15 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
+      "model": "matterworks:block/power_crystal_charger"
+    },
+    "facing=east": {
+      "model": "matterworks:block/power_crystal_charger"
+    },
+    "facing=south": {
+      "model": "matterworks:block/power_crystal_charger"
+    },
+    "facing=west": {
       "model": "matterworks:block/power_crystal_charger"
     }
   }

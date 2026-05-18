@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
+import de.artemis.matterworks.common.network.SetMatterNetworkTrackingPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Containers;
@@ -17,9 +18,10 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterStorageBarrelBlock extends BaseEntityBlock {
+public class MatterStorageBarrelBlock extends HorizontalFacingMachineBlock {
     public static final MapCodec<MatterStorageBarrelBlock> CODEC = simpleCodec(MatterStorageBarrelBlock::new);
 
     public MatterStorageBarrelBlock(Properties properties) {
@@ -44,6 +46,9 @@ public class MatterStorageBarrelBlock extends BaseEntityBlock {
                 if (player.isShiftKeyDown()) {
                     storageBarrelBlockEntity.handleLinkUse(player);
                 } else {
+                    if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, pos, ""));
+                    }
                     player.openMenu((MenuProvider) storageBarrelBlockEntity, pos);
                 }
             }

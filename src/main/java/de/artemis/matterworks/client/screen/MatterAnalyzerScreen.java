@@ -1,15 +1,14 @@
 package de.artemis.matterworks.client.screen;
 
-import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.menu.MatterAnalyzerMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
+import java.util.List;
+
 public class MatterAnalyzerScreen extends AbstractContainerScreen<MatterAnalyzerMenu> {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/matter_analyzer.png");
     private static final int ENERGY_BAR_X = 8;
     private static final int ENERGY_BAR_Y = 39;
     private static final int ENERGY_BAR_WIDTH = 16;
@@ -18,6 +17,7 @@ public class MatterAnalyzerScreen extends AbstractContainerScreen<MatterAnalyzer
     private static final int PROGRESS_BAR_Y = 18;
     private static final int PROGRESS_BAR_WIDTH = 16;
     private static final int PROGRESS_BAR_HEIGHT = 85;
+    private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public MatterAnalyzerScreen(MatterAnalyzerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
@@ -27,41 +27,50 @@ public class MatterAnalyzerScreen extends AbstractContainerScreen<MatterAnalyzer
     }
 
     @Override
-    protected void init() {
-        super.init();
-        this.topPos -= 2;
-    }
-
-    @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         int left = this.leftPos;
         int top = this.topPos;
         int progressColor = menu.getProgressBarColor();
 
-        guiGraphics.blit(TEXTURE, left, top, 0, 0, this.imageWidth, this.imageHeight, 256, 256);
-        drawEnergyBar(guiGraphics, left + ENERGY_BAR_X, top + ENERGY_BAR_Y, menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT));
-        drawProgress(guiGraphics, left + PROGRESS_BAR_X, top + PROGRESS_BAR_Y, menu.getScaledProgress(PROGRESS_BAR_HEIGHT), progressColor);
+        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, this.imageWidth, this.imageHeight);
+        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
+        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + ENERGY_BAR_X, top + ENERGY_BAR_Y, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT);
+        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + ENERGY_BAR_X + 2, top + ENERGY_BAR_Y + 2, ENERGY_BAR_WIDTH - 4, ENERGY_BAR_HEIGHT - 4, menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT - 4), 0xFFE23D2D);
+        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + PROGRESS_BAR_X, top + PROGRESS_BAR_Y, PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT);
+        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + PROGRESS_BAR_X + 2, top + PROGRESS_BAR_Y + 2, PROGRESS_BAR_WIDTH - 4, PROGRESS_BAR_HEIGHT - 4, menu.getScaledProgress(PROGRESS_BAR_HEIGHT - 4), progressColor);
+        sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
+    }
+
+    @Override
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
+        guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        renderEnergyTooltip(guiGraphics, mouseX, mouseY);
-        renderProgressTooltip(guiGraphics, mouseX, mouseY);
+        if (sideConfig.isShowing()) {
+            sideConfig.renderTooltip(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
+        } else {
+            renderEnergyTooltip(guiGraphics, mouseX, mouseY);
+            renderProgressTooltip(guiGraphics, mouseX, mouseY);
+        }
+        TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
-    private void drawEnergyBar(GuiGraphics guiGraphics, int x, int y, int filledHeight) {
-        if (filledHeight > 0) {
-            guiGraphics.fill(x, y + ENERGY_BAR_HEIGHT - filledHeight, x + ENERGY_BAR_WIDTH, y + ENERGY_BAR_HEIGHT, 0xFFE23D2D);
+    @Override
+    public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (TopCategoryTabs.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, buildTabs())) {
+            return true;
         }
-    }
-
-    private void drawProgress(GuiGraphics guiGraphics, int x, int y, int filledHeight, int color) {
-        if (filledHeight > 0) {
-            guiGraphics.fill(x, y + PROGRESS_BAR_HEIGHT - filledHeight, x + PROGRESS_BAR_WIDTH, y + PROGRESS_BAR_HEIGHT, color);
+        if (sideConfig.mouseClicked(menu, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight)) {
+            return true;
         }
+        return super.mouseClicked(mouseX, mouseY, button);
     }
 
     private void renderEnergyTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -88,5 +97,9 @@ public class MatterAnalyzerScreen extends AbstractContainerScreen<MatterAnalyzer
                     mouseY
             );
         }
+    }
+
+    private List<TopCategoryTabs.Tab> buildTabs() {
+        return sideConfig.buildTabs(menu, null);
     }
 }

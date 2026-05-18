@@ -2,10 +2,12 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
+import de.artemis.matterworks.common.network.SetMatterNetworkTrackingPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.world.InteractionResult;
+import net.minecraft.world.Containers;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
@@ -20,6 +22,7 @@ import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BlockStateProperties;
 import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 public class MatterPylonBlock extends BaseEntityBlock {
@@ -78,6 +81,9 @@ public class MatterPylonBlock extends BaseEntityBlock {
                 if (player.isShiftKeyDown()) {
                     pylonBlockEntity.handleLinkUse(player);
                 } else {
+                    if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, pos, ""));
+                    }
                     pylonBlockEntity.openMatterNetworkMenu(player);
                 }
             }
@@ -102,6 +108,7 @@ public class MatterPylonBlock extends BaseEntityBlock {
             if (blockEntity instanceof MatterPylonBlockEntity pylonBlockEntity) {
                 pylonBlockEntity.releaseChunkLoadingTickets();
                 pylonBlockEntity.unlinkAll();
+                Containers.dropContents(level, pos, pylonBlockEntity.createDropInventory());
             }
         }
         super.onRemove(state, level, pos, newState, movedByPiston);

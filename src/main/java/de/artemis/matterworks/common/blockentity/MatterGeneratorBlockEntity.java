@@ -1,5 +1,12 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
+import de.artemis.matterworks.common.io.ConfiguredEnergyStorage;
+import de.artemis.matterworks.common.io.ConfiguredItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.io.SideConfigurationData;
 import de.artemis.matterworks.common.menu.MatterGeneratorMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -8,6 +15,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -24,7 +34,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvider {
+public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvider, CustomNamedBlockEntity, SideConfigurableBlockEntity {
     public static final int FUEL_SLOT = 0;
     public static final int DATA_BURN_REMAINING = 0;
     public static final int DATA_BURN_TOTAL = 1;
@@ -150,13 +160,31 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
             return DATA_COUNT;
         }
     };
+    private final SideConfigurationData sideConfiguration = new SideConfigurationData(SideAccessMode.INPUT, SideAccessMode.DISABLED, SideAccessMode.OUTPUT);
+    private final IItemHandler[] configuredItemHandlers = createConfiguredItemHandlers();
+    private final IEnergyStorage[] configuredEnergyHandlers = createConfiguredEnergyHandlers();
 
     private int burnTimeRemaining;
     private int burnTimeTotal;
     private int energyStored;
+    private String customName = "";
 
     public MatterGeneratorBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATTER_GENERATOR.get(), pos, blockState);
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide()) {
+            SideConfigDebugTracker.onClientLoad(this);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        SideConfigDebugTracker.onClientUnload(this);
+        super.setRemoved();
     }
 
     public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, MatterGeneratorBlockEntity blockEntity) {
@@ -172,11 +200,11 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
     }
 
     public @Nullable IItemHandler getAutomationHandler(@Nullable Direction side) {
-        return inputAutomationHandler;
+        return side == null ? itemHandler : configuredItemHandlers[side.ordinal()];
     }
 
     public IEnergyStorage getEnergyStorage(@Nullable Direction side) {
-        return energyStorage;
+        return side == null ? energyStorage : configuredEnergyHandlers[side.ordinal()];
     }
 
     public void serverTick() {
@@ -223,12 +251,43 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable(ModBlocks.MATTER_GENERATOR.get().getDescriptionId());
+        return customName.isEmpty() ? getDefaultName() : Component.literal(customName);
+    }
+
+    @Override
+    public String getCustomNameText() {
+        return customName;
+    }
+
+    @Override
+    public void setCustomNameText(String customName) {
+        String normalized = normalizeCustomName(customName);
+        if (this.customName.equals(normalized)) {
+            return;
+        }
+        this.customName = normalized;
+        setChanged();
+        syncCustomName();
     }
 
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
         return new MatterGeneratorMenu(containerId, playerInventory, this, data);
+    }
+
+    @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        sideConfiguration.writeToTag(tag);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
+        return tag;
     }
 
     @Override
@@ -238,6 +297,10 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
         tag.putInt("burn_time_remaining", burnTimeRemaining);
         tag.putInt("burn_time_total", burnTimeTotal);
         tag.putInt("energy", energyStored);
+        sideConfiguration.writeToTag(tag);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
     }
 
     @Override
@@ -246,9 +309,11 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
         if (tag.contains("inventory")) {
             itemHandler.deserializeNBT(registries, tag.getCompound("inventory"));
         }
+        sideConfiguration.readFromTag(tag, this::sanitizeSideAccessMode);
         burnTimeRemaining = tag.getInt("burn_time_remaining");
         burnTimeTotal = tag.getInt("burn_time_total");
         energyStored = tag.getInt("energy");
+        customName = normalizeCustomName(tag.getString("custom_name"));
     }
 
     private boolean pushEnergyToNeighbors() {
@@ -256,6 +321,9 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
         for (Direction direction : Direction.values()) {
             if (energyStored <= 0) {
                 break;
+            }
+            if (!getSideAccessMode(SideConfigType.ENERGY, direction).allowsOutput()) {
+                continue;
             }
 
             BlockPos targetPos = worldPosition.relative(direction);
@@ -280,5 +348,89 @@ public class MatterGeneratorBlockEntity extends BlockEntity implements MenuProvi
 
     private static int getFuelBurnTime(ItemStack stack) {
         return isFuel(stack) ? COAL_BURN_TIME : 0;
+    }
+
+    private Component getDefaultName() {
+        return Component.translatable(ModBlocks.MATTER_GENERATOR.get().getDescriptionId());
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return type != SideConfigType.FLUIDS;
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return type == SideConfigType.ITEMS;
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return type == SideConfigType.ENERGY;
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, Direction side) {
+        return sideConfiguration.get(type, side);
+    }
+
+    @Override
+    public void setSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (!supportsSideConfigType(type)) {
+            return;
+        }
+        if (sideConfiguration.set(type, side, sanitizeSideAccessMode(type, side, mode))) {
+            setChanged();
+            syncCustomName();
+        }
+    }
+
+    private static String normalizeCustomName(String customName) {
+        String normalized = customName.strip();
+        return normalized.length() > 64 ? normalized.substring(0, 64) : normalized;
+    }
+
+    private void syncCustomName() {
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private SideAccessMode sanitizeSideAccessMode(SideConfigType type, Direction side, SideAccessMode requestedMode) {
+        boolean canInput = supportsSideConfigInput(type);
+        boolean canOutput = supportsSideConfigOutput(type);
+        if (requestedMode == SideAccessMode.BOTH && !(canInput && canOutput)) {
+            return canInput ? SideAccessMode.INPUT : canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.INPUT && !canInput) {
+            return canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.OUTPUT && !canOutput) {
+            return canInput ? SideAccessMode.INPUT : SideAccessMode.DISABLED;
+        }
+        return requestedMode;
+    }
+
+    private IItemHandler[] createConfiguredItemHandlers() {
+        IItemHandler[] handlers = new IItemHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredItemHandler(
+                    () -> getSideAccessMode(SideConfigType.ITEMS, side),
+                    () -> inputAutomationHandler,
+                    () -> inputAutomationHandler
+            );
+        }
+        return handlers;
+    }
+
+    private IEnergyStorage[] createConfiguredEnergyHandlers() {
+        IEnergyStorage[] handlers = new IEnergyStorage[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredEnergyStorage(
+                    () -> getSideAccessMode(SideConfigType.ENERGY, side),
+                    () -> energyStorage
+            );
+        }
+        return handlers;
     }
 }

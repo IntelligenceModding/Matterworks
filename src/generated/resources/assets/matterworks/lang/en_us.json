@@ -8,6 +8,7 @@
   "block.matterworks.matter_fluid_tank": "Matter Fluid Tank",
   "block.matterworks.matter_generator": "Matter Generator",
   "block.matterworks.matter_network_controller": "Matter Network Controller",
+  "block.matterworks.matter_network_monitor": "Matter Network Monitor",
   "block.matterworks.matter_pylon": "Matter Pylon",
   "block.matterworks.matter_recycler": "Matter Recycler",
   "block.matterworks.matter_separator": "Matter Separator",

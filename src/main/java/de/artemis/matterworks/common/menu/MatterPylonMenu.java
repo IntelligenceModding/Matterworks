@@ -1,10 +1,12 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
+import de.artemis.matterworks.common.menu.slot.CrystalSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.transport.PylonMode;
+import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
@@ -13,31 +15,46 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.DyeColor;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 import java.util.Arrays;
 
-public class MatterPylonMenu extends AbstractContainerMenu {
+public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlockMenu {
     public static final int BUTTON_CYCLE_MODE_CHANNEL_1 = 0;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_2 = 1;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_3 = 2;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_4 = 3;
-    private static final int PLAYER_INVENTORY_START = 8;
+    private static final int CRYSTAL_SLOT_START = 8;
+    private static final int CRYSTAL_SLOT_END = CRYSTAL_SLOT_START + MatterPylonBlockEntity.CRYSTAL_SLOT_COUNT;
+    private static final int PLAYER_INVENTORY_START = CRYSTAL_SLOT_END;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
     private static final int PLAYER_HOTBAR_END = PLAYER_HOTBAR_START + 9;
 
     private final MatterPylonBlockEntity blockEntity;
     private final ContainerData data;
+    private final boolean remoteAccess;
 
     public MatterPylonMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
-        this(containerId, playerInventory, resolveBlockEntity(playerInventory, extraData.readBlockPos()), createUnsyncedData());
+        this(
+                containerId,
+                playerInventory,
+                resolveBlockEntity(playerInventory, extraData.readBlockPos()),
+                createUnsyncedData(),
+                extraData.readableBytes() > 0 && extraData.readBoolean()
+        );
     }
 
     public MatterPylonMenu(int containerId, Inventory playerInventory, MatterPylonBlockEntity blockEntity, ContainerData data) {
+        this(containerId, playerInventory, blockEntity, data, false);
+    }
+
+    public MatterPylonMenu(int containerId, Inventory playerInventory, MatterPylonBlockEntity blockEntity, ContainerData data, boolean remoteAccess) {
         super(ModMenuTypes.MATTER_PYLON.get(), containerId);
         this.blockEntity = blockEntity;
         this.data = data;
+        this.remoteAccess = remoteAccess;
 
         addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST, 16, 86, MatterPylonBlockEntity.CHANNEL_ITEMS));
         addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_BLACKLIST, 34, 86, MatterPylonBlockEntity.CHANNEL_ITEMS));
@@ -47,6 +64,9 @@ public class MatterPylonMenu extends AbstractContainerMenu {
         addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_BLACKLIST, 106, 86, MatterPylonBlockEntity.CHANNEL_FLUIDS));
         addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST, 88, 104, MatterPylonBlockEntity.CHANNEL_FLUIDS));
         addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST, 106, 104, MatterPylonBlockEntity.CHANNEL_FLUIDS));
+        for (int slot = 0; slot < MatterPylonBlockEntity.CRYSTAL_SLOT_COUNT; slot++) {
+            addSlot(new CrystalSlot(blockEntity.getCrystalHandler(), slot, 16 + slot * 18, 140));
+        }
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
         addDataSlots(data);
@@ -56,12 +76,33 @@ public class MatterPylonMenu extends AbstractContainerMenu {
         return blockEntity.getBlockPos();
     }
 
+    public MatterPylonBlockEntity getBlockEntity() {
+        return blockEntity;
+    }
+
+    public boolean isRemoteAccess() {
+        return remoteAccess;
+    }
+
+    @Override
+    public String getBlockDisplayName() {
+        return blockEntity.getDisplayName().getString();
+    }
+
     public boolean supportsChannel(int channel) {
         return blockEntity.supportsConfiguredChannel(channel);
     }
 
     public boolean supportsFilterChannel(int channel) {
         return blockEntity.supportsFilterChannel(channel);
+    }
+
+    public boolean supportsUpgradeCrystals() {
+        return blockEntity.supportsUpgradeCrystals();
+    }
+
+    public DyeColor getNetworkColor(int index) {
+        return blockEntity.getNetworkColor(index);
     }
 
     public int getFirstSupportedChannel() {
@@ -97,7 +138,7 @@ public class MatterPylonMenu extends AbstractContainerMenu {
 
     @Override
     public boolean stillValid(Player player) {
-        return blockEntity.isMatterNetworkMenuStillValid(player);
+        return blockEntity.isMatterNetworkMenuStillValid(player) || (remoteAccess && player.level().getBlockEntity(blockEntity.getBlockPos()) == blockEntity);
     }
 
     @Override
@@ -130,6 +171,10 @@ public class MatterPylonMenu extends AbstractContainerMenu {
             if (!moved) {
                 return ItemStack.EMPTY;
             }
+        } else if (supportsUpgradeCrystals() && PowerCrystalEffects.isPowerCrystal(sourceStack)) {
+            if (!moveItemStackTo(sourceStack, CRYSTAL_SLOT_START, CRYSTAL_SLOT_END, false)) {
+                return ItemStack.EMPTY;
+            }
         } else {
             return ItemStack.EMPTY;
         }
@@ -151,14 +196,14 @@ public class MatterPylonMenu extends AbstractContainerMenu {
     private void addPlayerInventory(Inventory inventory) {
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 112 + row * 18));
+                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 134 + row * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory inventory) {
         for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 170));
+            addSlot(new Slot(inventory, slot, 8 + slot * 18, 192));
         }
     }
 

@@ -2,7 +2,6 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
-import de.artemis.matterworks.common.item.MatterNetworkLocatorManager;
 import de.artemis.matterworks.common.network.SetMatterNetworkTrackingPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -38,8 +37,8 @@ public class MatterNetworkControllerBlock extends MatterPylonBlock {
                 if (player.isShiftKeyDown()) {
                     controllerBlockEntity.handleLinkUse(player);
                 } else {
-                    if (MatterNetworkLocatorManager.clearLocatorCompassForTarget(player, pos) && player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, BlockPos.ZERO, ""));
+                    if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, pos, ""));
                     }
                     player.openMenu((MenuProvider) controllerBlockEntity, pos);
                 }

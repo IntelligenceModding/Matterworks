@@ -72,6 +72,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         addBlock(ModBlocks.MATTER_FLUID_TANK, "Matter Fluid Tank");
         addBlock(ModBlocks.MATTER_STORAGE_BARREL, "Matter Storage Barrel");
         addBlock(ModBlocks.MATTER_PYLON, "Matter Pylon");
+        addBlock(ModBlocks.MATTER_NETWORK_CONTROLLER, "Matter Network Controller");
         addBlock(ModBlocks.CREATIVE_SOURCE, "Creative Source");
         addBlock(ModBlocks.CREATIVE_SINK, "Creative Sink");
         addBlock(ModBlocks.MATTER_SEPARATOR, "Matter Separator");
@@ -120,6 +121,16 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("screen.matterworks.matter_network.energy_cell", "Matter Energy Cell Network");
         add("screen.matterworks.matter_network.fluid_tank", "Matter Fluid Tank Network");
         add("screen.matterworks.matter_network.storage_barrel", "Matter Storage Barrel Network");
+        add("screen.matterworks.matter_network_controller.connected_nodes", "Connected Nodes: %s");
+        add("screen.matterworks.matter_network_controller.details", "Details");
+        add("screen.matterworks.matter_network_controller.no_selection", "Select a connected node.");
+        add("screen.matterworks.matter_network_controller.position", "Pos: %s, %s, %s");
+        add("screen.matterworks.matter_network_controller.status.active", "Status: Active");
+        add("screen.matterworks.matter_network_controller.status.idle", "Status: Idle");
+        add("screen.matterworks.matter_network_controller.links", "Links: %s");
+        add("screen.matterworks.matter_network_controller.open_gui", "Open GUI");
+        add("screen.matterworks.matter_network_controller.locate", "Locate");
+        add("screen.matterworks.matter_network_controller.inactive", "Inactive");
         add("screen.matterworks.matter_filter.entries", "Filter Entries");
         add("screen.matterworks.matter_filter.clear", "Clear");
     }

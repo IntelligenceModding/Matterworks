@@ -31,7 +31,7 @@ public record SetMatterNetworkTrackingPayload(boolean tracking, BlockPos targetP
         context.enqueueWork(() -> {
             if (payload.tracking()) {
                 MatterNetworkTrackingState.setTarget(payload.targetPos(), payload.label());
-            } else {
+            } else if (payload.targetPos().equals(BlockPos.ZERO) || MatterNetworkTrackingState.isTrackingTarget(payload.targetPos())) {
                 MatterNetworkTrackingState.clear();
             }
         });

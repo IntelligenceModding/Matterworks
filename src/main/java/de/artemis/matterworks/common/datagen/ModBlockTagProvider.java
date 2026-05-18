@@ -23,6 +23,7 @@ public class ModBlockTagProvider extends BlockTagsProvider {
         pickaxeTag.add(ModBlocks.POWER_CRYSTAL_CHARGER.get());
         pickaxeTag.add(ModBlocks.MATTER_ENERGY_CELL.get());
         pickaxeTag.add(ModBlocks.MATTER_PYLON.get());
+        pickaxeTag.add(ModBlocks.MATTER_NETWORK_CONTROLLER.get());
         pickaxeTag.add(ModBlocks.CREATIVE_SOURCE.get());
         pickaxeTag.add(ModBlocks.CREATIVE_SINK.get());
         ModDatagenEntries.CORE_PAIRS.forEach(pair -> {

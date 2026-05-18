@@ -7,6 +7,8 @@ import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -69,6 +71,9 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
 
     public MatterRecyclerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATTER_RECYCLER.get(), pos, blockState, TANK_CAPACITY, ModFluids::isRawMatter, ENERGY_CAPACITY);
+        for (Direction side : Direction.values()) {
+            initializeSideAccessMode(SideConfigType.FLUIDS, side, SideAccessMode.OUTPUT);
+        }
     }
 
     public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, MatterRecyclerBlockEntity blockEntity) {
@@ -129,7 +134,7 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
 
     @Override
     public Component getDisplayName() {
-        return getDefaultName();
+        return super.getDisplayName();
     }
 
     @Override
@@ -138,7 +143,17 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
     }
 
     @Override
-    public @Nullable IFluidHandler getFluidAutomationHandler(@Nullable Direction side) {
+    protected boolean supportsFluidSideConfigInput() {
+        return false;
+    }
+
+    @Override
+    protected boolean supportsFluidSideConfigOutput() {
+        return true;
+    }
+
+    @Override
+    protected @Nullable IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
     }
 

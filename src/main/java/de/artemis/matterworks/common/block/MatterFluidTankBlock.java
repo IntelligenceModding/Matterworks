@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
+import de.artemis.matterworks.common.network.SetMatterNetworkTrackingPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.util.Mth;
@@ -17,9 +18,10 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterFluidTankBlock extends BaseEntityBlock {
+public class MatterFluidTankBlock extends HorizontalFacingMachineBlock {
     public static final MapCodec<MatterFluidTankBlock> CODEC = simpleCodec(MatterFluidTankBlock::new);
 
     public MatterFluidTankBlock(Properties properties) {
@@ -44,6 +46,9 @@ public class MatterFluidTankBlock extends BaseEntityBlock {
                 if (player.isShiftKeyDown()) {
                     fluidTankBlockEntity.handleLinkUse(player);
                 } else {
+                    if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
+                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, pos, ""));
+                    }
                     player.openMenu((MenuProvider) fluidTankBlockEntity, pos);
                 }
             }

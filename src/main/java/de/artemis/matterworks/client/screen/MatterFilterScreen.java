@@ -44,17 +44,17 @@ public class MatterFilterScreen extends AbstractContainerScreen<MatterFilterMenu
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         int left = leftPos;
         int top = topPos;
-        guiGraphics.fill(left, top, left + imageWidth, top + imageHeight, 0xFF2B2B31);
-        guiGraphics.fill(left + 2, top + 2, left + imageWidth - 2, top + imageHeight - 2, 0xFF3A3A42);
-        guiGraphics.fill(left + 7, top + 17, left + 169, top + 71, 0xFF1B1B1F);
-        guiGraphics.fill(left + 7, top + 85, left + 169, top + 139, 0xFF1B1B1F);
+        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, imageWidth, imageHeight);
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 6, top + 16, 164, 56);
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 6, top + 84, 164, 56);
+        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
     }
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0xE0E0E0, false);
-        guiGraphics.drawString(font, Component.translatable("screen.matterworks.matter_filter.entries"), 8, 6, 0xC5C7CC, false);
-        guiGraphics.drawString(font, playerInventoryTitle, 8, 74, 0xC5C7CC, false);
+        guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
+        guiGraphics.drawString(font, Component.translatable("screen.matterworks.matter_filter.entries"), 8, 6, 0x404040, false);
+        guiGraphics.drawString(font, playerInventoryTitle, 8, 74, 0x404040, false);
     }
 
     @Override

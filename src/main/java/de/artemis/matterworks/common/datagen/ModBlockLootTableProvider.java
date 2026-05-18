@@ -15,6 +15,7 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_FLUID_TANK.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_STORAGE_BARREL.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_PYLON.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MATTER_NETWORK_CONTROLLER.get(),
             de.artemis.matterworks.common.registry.ModBlocks.CREATIVE_SOURCE.get(),
             de.artemis.matterworks.common.registry.ModBlocks.CREATIVE_SINK.get()
     );

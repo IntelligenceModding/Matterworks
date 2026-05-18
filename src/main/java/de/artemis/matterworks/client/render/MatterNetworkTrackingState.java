@@ -22,6 +22,10 @@ public final class MatterNetworkTrackingState {
         return label;
     }
 
+    public static boolean isTrackingTarget(BlockPos pos) {
+        return tracking && targetPos.equals(pos);
+    }
+
     public static void setTarget(BlockPos pos, String label) {
         MatterNetworkTrackingState.tracking = true;
         MatterNetworkTrackingState.targetPos = pos.immutable();

@@ -1,6 +1,13 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.ConfiguredEnergyStorage;
+import de.artemis.matterworks.common.io.ConfiguredItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
+import de.artemis.matterworks.common.io.SideConfigurationData;
 import de.artemis.matterworks.common.matter.MatterValueManager;
 import de.artemis.matterworks.common.menu.MatterAnalyzerMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
@@ -15,6 +22,9 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.network.protocol.Packet;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
+import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -29,7 +39,7 @@ import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvider {
+public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvider, CustomNamedBlockEntity, SideConfigurableBlockEntity {
     public static final int ENERGY_ITEM_INPUT_SLOT = 0;
     public static final int ENERGY_ITEM_OUTPUT_SLOT = 1;
     public static final int TEMPLATE_SLOT = 2;
@@ -99,6 +109,9 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             return DATA_COUNT;
         }
     };
+    private final SideConfigurationData sideConfiguration = new SideConfigurationData(SideAccessMode.INPUT, SideAccessMode.DISABLED, SideAccessMode.INPUT);
+    private final IItemHandler[] configuredItemHandlers = createConfiguredItemHandlers();
+    private final IEnergyStorage[] configuredEnergyHandlers = createConfiguredEnergyHandlers();
 
     private final IItemHandler inputAutomationHandler = new IItemHandler() {
         @Override
@@ -246,9 +259,25 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     private int energyStored;
     private ItemStack activeProcessCrystal = ItemStack.EMPTY;
     private boolean processCrystalLatched;
+    private String customName = "";
 
     public MatterAnalyzerBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MATTER_ANALYZER.get(), pos, blockState);
+        initializeDefaults();
+    }
+
+    @Override
+    public void onLoad() {
+        super.onLoad();
+        if (level != null && level.isClientSide()) {
+            SideConfigDebugTracker.onClientLoad(this);
+        }
+    }
+
+    @Override
+    public void setRemoved() {
+        SideConfigDebugTracker.onClientUnload(this);
+        super.setRemoved();
     }
 
     public static void tick(net.minecraft.world.level.Level level, BlockPos pos, BlockState state, MatterAnalyzerBlockEntity blockEntity) {
@@ -264,14 +293,11 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     }
 
     public @Nullable IItemHandler getAutomationHandler(@Nullable Direction side) {
-        if (side == null) {
-            return itemHandler;
-        }
-        return side == Direction.DOWN ? outputAutomationHandler : inputAutomationHandler;
+        return side == null ? itemHandler : configuredItemHandlers[side.ordinal()];
     }
 
     public IEnergyStorage getEnergyStorage(@Nullable Direction side) {
-        return externalEnergyStorage;
+        return side == null ? externalEnergyStorage : configuredEnergyHandlers[side.ordinal()];
     }
 
     public void serverTick() {
@@ -322,7 +348,23 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
 
     @Override
     public Component getDisplayName() {
-        return Component.translatable(ModBlocks.MATTER_ANALYZER.get().getDescriptionId());
+        return customName.isEmpty() ? getDefaultName() : Component.literal(customName);
+    }
+
+    @Override
+    public String getCustomNameText() {
+        return customName;
+    }
+
+    @Override
+    public void setCustomNameText(String customName) {
+        String normalized = normalizeCustomName(customName);
+        if (this.customName.equals(normalized)) {
+            return;
+        }
+        this.customName = normalized;
+        setChanged();
+        syncCustomName();
     }
 
     @Override
@@ -331,16 +373,35 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     }
 
     @Override
+    public @Nullable Packet<ClientGamePacketListener> getUpdatePacket() {
+        return ClientboundBlockEntityDataPacket.create(this);
+    }
+
+    @Override
+    public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
+        CompoundTag tag = super.getUpdateTag(registries);
+        sideConfiguration.writeToTag(tag);
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
+        }
+        return tag;
+    }
+
+    @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("inventory", itemHandler.serializeNBT(registries));
         tag.putInt("energy", energyStored);
         tag.putInt("progress", progress);
+        sideConfiguration.writeToTag(tag);
         if (processCrystalLatched) {
             tag.putBoolean("process_crystal_latched", true);
         }
         if (!activeProcessCrystal.isEmpty()) {
             tag.put("active_process_crystal", activeProcessCrystal.saveOptional(registries));
+        }
+        if (!customName.isEmpty()) {
+            tag.putString("custom_name", customName);
         }
     }
 
@@ -350,6 +411,7 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         if (tag.contains("inventory")) {
             itemHandler.deserializeNBT(registries, tag.getCompound("inventory"));
         }
+        sideConfiguration.readFromTag(tag, this::sanitizeSideAccessMode);
         if (tag.contains("energy")) {
             energyStored = tag.getInt("energy");
             clampEnergyToCurrentCapacity();
@@ -360,6 +422,42 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             activeProcessCrystal = ItemStack.parseOptional(registries, tag.getCompound("active_process_crystal"));
         } else {
             activeProcessCrystal = ItemStack.EMPTY;
+        }
+        customName = normalizeCustomName(tag.getString("custom_name"));
+    }
+
+    protected Component getDefaultName() {
+        return Component.translatable(ModBlocks.MATTER_ANALYZER.get().getDescriptionId());
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return type != SideConfigType.FLUIDS;
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return type == SideConfigType.ITEMS || type == SideConfigType.ENERGY;
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return type == SideConfigType.ITEMS;
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, Direction side) {
+        return sideConfiguration.get(type, side);
+    }
+
+    @Override
+    public void setSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (!supportsSideConfigType(type)) {
+            return;
+        }
+        if (sideConfiguration.set(type, side, sanitizeSideAccessMode(type, mode))) {
+            setChanged();
+            syncCustomName();
         }
     }
 
@@ -577,5 +675,62 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     private void clearLatchedProcessCrystal() {
         activeProcessCrystal = ItemStack.EMPTY;
         processCrystalLatched = false;
+    }
+
+    private static String normalizeCustomName(String customName) {
+        String normalized = customName.strip();
+        return normalized.length() > 64 ? normalized.substring(0, 64) : normalized;
+    }
+
+    private void syncCustomName() {
+        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            serverLevel.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private void initializeDefaults() {
+        sideConfiguration.set(SideConfigType.ITEMS, Direction.DOWN, SideAccessMode.OUTPUT);
+    }
+
+    private SideAccessMode sanitizeSideAccessMode(SideConfigType type, Direction side, SideAccessMode requestedMode) {
+        return sanitizeSideAccessMode(type, requestedMode);
+    }
+
+    private SideAccessMode sanitizeSideAccessMode(SideConfigType type, SideAccessMode requestedMode) {
+        boolean canInput = supportsSideConfigInput(type);
+        boolean canOutput = supportsSideConfigOutput(type);
+        if (requestedMode == SideAccessMode.BOTH && !(canInput && canOutput)) {
+            return canInput ? SideAccessMode.INPUT : canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.INPUT && !canInput) {
+            return canOutput ? SideAccessMode.OUTPUT : SideAccessMode.DISABLED;
+        }
+        if (requestedMode == SideAccessMode.OUTPUT && !canOutput) {
+            return canInput ? SideAccessMode.INPUT : SideAccessMode.DISABLED;
+        }
+        return requestedMode;
+    }
+
+    private IItemHandler[] createConfiguredItemHandlers() {
+        IItemHandler[] handlers = new IItemHandler[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredItemHandler(
+                    () -> getSideAccessMode(SideConfigType.ITEMS, side),
+                    () -> inputAutomationHandler,
+                    () -> outputAutomationHandler
+            );
+        }
+        return handlers;
+    }
+
+    private IEnergyStorage[] createConfiguredEnergyHandlers() {
+        IEnergyStorage[] handlers = new IEnergyStorage[Direction.values().length];
+        for (Direction side : Direction.values()) {
+            handlers[side.ordinal()] = new ConfiguredEnergyStorage(
+                    () -> getSideAccessMode(SideConfigType.ENERGY, side),
+                    () -> externalEnergyStorage
+            );
+        }
+        return handlers;
     }
 }

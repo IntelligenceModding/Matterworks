@@ -1,6 +1,15 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
+      "model": "matterworks:block/matter_constructor"
+    },
+    "facing=east": {
+      "model": "matterworks:block/matter_constructor"
+    },
+    "facing=south": {
+      "model": "matterworks:block/matter_constructor"
+    },
+    "facing=west": {
       "model": "matterworks:block/matter_constructor"
     }
   }

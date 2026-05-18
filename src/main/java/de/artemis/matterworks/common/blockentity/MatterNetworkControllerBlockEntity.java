@@ -1,9 +1,9 @@
 package de.artemis.matterworks.common.blockentity;
 
-import de.artemis.matterworks.common.item.MatterNetworkLocatorManager;
 import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
 import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
+import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import de.artemis.matterworks.common.menu.MatterStorageBarrelMenu;
 import de.artemis.matterworks.common.network.MatterNetworkControllerActionPayload;
@@ -69,8 +69,7 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
 
         if (action == MatterNetworkControllerActionPayload.ACTION_LOCATE) {
             if (player instanceof ServerPlayer serverPlayer) {
-                MatterNetworkLocatorManager.giveLocatorCompass(player, serverLevel, targetPos, getLocatorLabel(target));
-                PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(true, targetPos, getLocatorLabel(target)));
+                PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(true, target.getControllerTrackedPos(), getLocatorLabel(target)));
             }
             return;
         }
@@ -80,8 +79,7 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
             if (menuProvider == null) {
                 return;
             }
-            MatterNetworkLocatorManager.clearLocatorCompasses(player);
-            PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, BlockPos.ZERO, ""));
+            PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, target.getControllerTrackedPos(), ""));
             serverPlayer.openMenu(menuProvider, buffer -> {
                 buffer.writeBlockPos(targetPos);
                 buffer.writeBoolean(true);
@@ -98,7 +96,7 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
     }
 
     @Override
-    public Component getDisplayName() {
+    protected Component getDefaultName() {
         return Component.translatable(ModBlocks.MATTER_NETWORK_CONTROLLER.get().getDescriptionId());
     }
 
@@ -142,6 +140,9 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 entries.add(new ControllerEntry(
                         pos.immutable(),
                         node.getDisplayName().getString(),
+                        node.getNetworkColor(0).getId(),
+                        node.getNetworkColor(1).getId(),
+                        node.getNetworkColor(2).getId(),
                         hasRecentTransfers(node),
                         node.getLinkedNodePositions().size(),
                         node.getTransferDisplayAmount(CHANNEL_ENERGY),
@@ -176,7 +177,7 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
     }
 
     private String getLocatorLabel(MatterPylonBlockEntity target) {
-        return target.getDisplayName().getString() + " [" + target.getBlockPos().toShortString() + "]";
+        return target.getControllerTrackedDisplayName() + " [" + target.getControllerTrackedPos().toShortString() + "]";
     }
 
     private RemoteMenuProvider createRemoteMenuProvider(MatterPylonBlockEntity target) {
@@ -201,6 +202,14 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 @Override
                 public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
                     return new MatterFluidTankMenu(containerId, inventory, fluidTank, fluidTank.getData(), true);
+                }
+            };
+        }
+        if (target instanceof MatterNetworkMonitorBlockEntity monitor) {
+            return new RemoteMenuProvider(monitor.getDisplayName()) {
+                @Override
+                public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+                    return new MatterNetworkMonitorMenu(containerId, inventory, monitor, true);
                 }
             };
         }
@@ -231,6 +240,9 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
             entryTag.putInt("y", entry.pos().getY());
             entryTag.putInt("z", entry.pos().getZ());
             entryTag.putString("display_name", entry.displayName());
+            entryTag.putInt("color_1", entry.colorOneId());
+            entryTag.putInt("color_2", entry.colorTwoId());
+            entryTag.putInt("color_3", entry.colorThreeId());
             entryTag.putBoolean("active", entry.active());
             entryTag.putInt("link_count", entry.linkCount());
             entryTag.putInt("energy_amount", entry.energyAmount());
@@ -254,6 +266,9 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 entries.add(new ControllerEntry(
                         new BlockPos(entryTag.getInt("x"), entryTag.getInt("y"), entryTag.getInt("z")),
                         entryTag.getString("display_name"),
+                        entryTag.contains("color_1") ? entryTag.getInt("color_1") : net.minecraft.world.item.DyeColor.WHITE.getId(),
+                        entryTag.contains("color_2") ? entryTag.getInt("color_2") : net.minecraft.world.item.DyeColor.WHITE.getId(),
+                        entryTag.contains("color_3") ? entryTag.getInt("color_3") : net.minecraft.world.item.DyeColor.WHITE.getId(),
                         entryTag.getBoolean("active"),
                         entryTag.getInt("link_count"),
                         entryTag.getInt("energy_amount"),
@@ -273,6 +288,9 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
     public record ControllerEntry(
             BlockPos pos,
             String displayName,
+            int colorOneId,
+            int colorTwoId,
+            int colorThreeId,
             boolean active,
             int linkCount,
             int energyAmount,

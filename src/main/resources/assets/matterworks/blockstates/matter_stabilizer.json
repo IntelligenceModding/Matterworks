@@ -1,6 +1,15 @@
 {
   "variants": {
-    "": {
+    "facing=north": {
+      "model": "matterworks:block/matter_stabilizer"
+    },
+    "facing=east": {
+      "model": "matterworks:block/matter_stabilizer"
+    },
+    "facing=south": {
+      "model": "matterworks:block/matter_stabilizer"
+    },
+    "facing=west": {
       "model": "matterworks:block/matter_stabilizer"
     }
   }
