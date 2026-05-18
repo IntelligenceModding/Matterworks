@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "g": {
+      "item": "minecraft:glass_pane"
+    },
+    "o": {
+      "item": "minecraft:observer"
+    },
+    "p": {
+      "item": "matterworks:matter_pylon"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    "rgr",
+    "opo",
+    "rgr"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:matter_network_monitor"
+  }
+}

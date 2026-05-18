@@ -5,6 +5,7 @@
     "matterworks:power_crystal_charger",
     "matterworks:matter_energy_cell",
     "matterworks:matter_pylon",
+    "matterworks:matter_network_controller",
     "matterworks:creative_source",
     "matterworks:creative_sink"
   ]

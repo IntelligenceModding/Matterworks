@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "minecraft:comparator"
+    },
+    "g": {
+      "item": "minecraft:glass_pane"
+    },
+    "p": {
+      "item": "matterworks:matter_pylon"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    "rgr",
+    "cpc",
+    "rgr"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:matter_network_controller"
+  }
+}
