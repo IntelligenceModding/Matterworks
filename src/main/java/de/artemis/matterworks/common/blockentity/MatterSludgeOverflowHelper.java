@@ -1,6 +1,5 @@
 package de.artemis.matterworks.common.blockentity;
 
-import de.artemis.matterworks.common.block.HardenedSludgeBlock;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import net.minecraft.core.BlockPos;
@@ -9,7 +8,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
-import net.minecraft.util.Mth;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.fluids.FluidType;
@@ -134,29 +132,18 @@ public final class MatterSludgeOverflowHelper {
 
     private static boolean canAcceptDeposit(Level level, BlockPos pos) {
         BlockState state = level.getBlockState(pos);
-        if (state.is(ModBlocks.HARDENED_SLUDGE.get())) {
-            return state.getValue(HardenedSludgeBlock.LAYERS) < 8;
-        }
-        if (!state.canBeReplaced()) {
-            return false;
-        }
-
-        BlockState depositState = ModBlocks.HARDENED_SLUDGE.get().defaultBlockState();
-        return depositState.canSurvive(level, pos);
+        return state.canBeReplaced();
     }
 
     private static int getSludgeUnits(BlockState state) {
-        return state.is(ModBlocks.HARDENED_SLUDGE.get())
-                ? Mth.clamp(state.getValue(HardenedSludgeBlock.LAYERS), 1, 8)
-                : 0;
+        return state.is(ModBlocks.MATTER_SLUDGE_BLOCK.get()) ? 8 : 0;
     }
 
     private static void setSludgeUnits(ServerLevel level, BlockPos targetPos, int units) {
-        int clampedUnits = Mth.clamp(units, 1, 8);
-        BlockState sludgeState = ModBlocks.HARDENED_SLUDGE.get()
-                .defaultBlockState()
-                .setValue(HardenedSludgeBlock.LAYERS, clampedUnits);
-        level.setBlock(targetPos, sludgeState, 3);
+        if (units <= 0) {
+            return;
+        }
+        level.setBlock(targetPos, ModBlocks.MATTER_SLUDGE_BLOCK.get().defaultBlockState(), 3);
     }
 
     private static void spawnSprayEffects(ServerLevel level, BlockPos machinePos, Map<Direction, Integer> usedDirections) {

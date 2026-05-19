@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "a": {
+      "item": "matterworks:battery_core_assembly"
+    },
+    "c": {
+      "item": "matterworks:matter_capacitor_cell"
+    },
+    "f": {
+      "item": "matterworks:multiblock_frame"
+    },
+    "p": {
+      "item": "matterworks:multiblock_port"
+    }
+  },
+  "pattern": [
+    "fpf",
+    "aca",
+    "fcf"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:matter_battery_core"
+  }
+}

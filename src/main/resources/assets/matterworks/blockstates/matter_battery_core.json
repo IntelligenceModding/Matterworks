@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "matterworks:block/matter_battery_core"
+    },
+    "facing=east": {
+      "model": "matterworks:block/matter_battery_core"
+    },
+    "facing=south": {
+      "model": "matterworks:block/matter_battery_core"
+    },
+    "facing=west": {
+      "model": "matterworks:block/matter_battery_core"
+    }
+  }
+}

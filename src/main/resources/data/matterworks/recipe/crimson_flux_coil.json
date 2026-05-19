@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "matterworks:conductive_matter_coil"
+    },
+    "p": {
+      "item": "matterworks:crimson_power_crystal"
+    },
+    "r": {
+      "item": "minecraft:redstone"
+    }
+  },
+  "pattern": [
+    "rcr",
+    "cpc",
+    "rcr"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:crimson_flux_coil"
+  }
+}

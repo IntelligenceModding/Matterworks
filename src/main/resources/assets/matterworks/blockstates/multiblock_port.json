@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "matterworks:block/multiblock_port"
+    }
+  }
+}

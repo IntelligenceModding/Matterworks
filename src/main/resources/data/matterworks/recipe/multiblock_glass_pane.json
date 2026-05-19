@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "g": {
+      "item": "minecraft:glass_pane"
+    },
+    "m": {
+      "item": "matterworks:matter_dust"
+    }
+  },
+  "pattern": [
+    "gmg",
+    "g g",
+    "gmg"
+  ],
+  "result": {
+    "count": 4,
+    "id": "matterworks:multiblock_glass_pane"
+  }
+}

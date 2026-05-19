@@ -218,6 +218,20 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         setChanged();
     }
 
+    public void setMode(int channel, PylonMode mode) {
+        if (!isValidChannel(channel) || !supportsChannel(channel)) {
+            return;
+        }
+        PylonMode sanitized = mode == null ? PylonMode.DISABLED : mode;
+        if (modes[channel] == sanitized) {
+            return;
+        }
+        modes[channel] = sanitized;
+        markNetworkDirty();
+        setChanged();
+        syncVisualState();
+    }
+
     public PylonMode getMode(int channel) {
         return isValidChannel(channel) && supportsChannel(channel) ? modes[channel] : PylonMode.DISABLED;
     }
@@ -1677,11 +1691,19 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     protected void refreshChunkLoadingTickets(ServerLevel serverLevel) {
-        PylonChunkLoading.forcePylonTickets(serverLevel, worldPosition, getBlockState().getValue(MatterPylonBlock.FACING));
+        if (getBlockState().hasProperty(MatterPylonBlock.FACING)) {
+            PylonChunkLoading.forcePylonTickets(serverLevel, worldPosition, getBlockState().getValue(MatterPylonBlock.FACING));
+            return;
+        }
+        PylonChunkLoading.forceNodeTickets(serverLevel, worldPosition);
     }
 
     protected void releaseChunkLoadingTickets(ServerLevel serverLevel) {
-        PylonChunkLoading.releasePylonTickets(serverLevel, worldPosition, getBlockState().getValue(MatterPylonBlock.FACING));
+        if (getBlockState().hasProperty(MatterPylonBlock.FACING)) {
+            PylonChunkLoading.releasePylonTickets(serverLevel, worldPosition, getBlockState().getValue(MatterPylonBlock.FACING));
+            return;
+        }
+        PylonChunkLoading.releaseNodeTickets(serverLevel, worldPosition);
     }
 
     @Override

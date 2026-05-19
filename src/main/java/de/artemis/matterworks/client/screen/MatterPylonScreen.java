@@ -1,6 +1,7 @@
 package de.artemis.matterworks.client.screen;
 
-import de.artemis.matterworks.common.blockentity.MatterEnergyCellBlockEntity;
+import de.artemis.matterworks.common.blockentity.EnergyCellBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
 import de.artemis.matterworks.common.io.SideConfigType;
@@ -309,13 +310,14 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     }
 
     private boolean hasPrimaryTab() {
-        return menu.getBlockEntity() instanceof MatterEnergyCellBlockEntity
+        return menu.getBlockEntity() instanceof EnergyCellBlockEntity
+                || menu.getBlockEntity() instanceof MatterBatteryPortBlockEntity
                 || menu.getBlockEntity() instanceof MatterFluidTankBlockEntity
                 || menu.getBlockEntity() instanceof MatterStorageBarrelBlockEntity;
     }
 
     private List<SideConfigType> getPrimarySideConfigTypes() {
-        if (menu.getBlockEntity() instanceof MatterEnergyCellBlockEntity) {
+        if (menu.getBlockEntity() instanceof EnergyCellBlockEntity) {
             return List.of(SideConfigType.ITEMS, SideConfigType.ENERGY);
         }
         if (menu.getBlockEntity() instanceof MatterFluidTankBlockEntity) {

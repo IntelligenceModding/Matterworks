@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "e": {
+      "item": "matterworks:matter_energy_cell"
+    },
+    "p": {
+      "item": "matterworks:stabilized_matter_plate"
+    },
+    "s": {
+      "item": "matterworks:multiblock_casing"
+    },
+    "v": {
+      "item": "matterworks:verdant_crystal_lattice"
+    }
+  },
+  "pattern": [
+    "pvp",
+    "ses",
+    "pvp"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:matter_capacitor_cell"
+  }
+}

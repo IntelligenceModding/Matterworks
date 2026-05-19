@@ -1,0 +1,30 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "matterworks:matter_energy_cell"
+    },
+    "e": {
+      "item": "matterworks:matter_power_bank"
+    },
+    "p": {
+      "item": "matterworks:crimson_power_crystal"
+    },
+    "r": {
+      "item": "minecraft:redstone_block"
+    },
+    "v": {
+      "item": "matterworks:verdant_power_crystal"
+    }
+  },
+  "pattern": [
+    "vcp",
+    "ere",
+    "prv"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:battery_core_assembly"
+  }
+}

@@ -15,6 +15,13 @@ public final class PowerCrystalEffects {
     public static final int ANALYZER_VERDANT_ENERGY_PER_TICK = 15;
     public static final int ANALYZER_BASE_ENERGY_CAPACITY = 10000;
     public static final int ANALYZER_VERDANT_ENERGY_CAPACITY = 20000;
+    public static final int CHARGER_BASE_PROCESS_TIME = 10;
+    public static final int CHARGER_CRIMSON_PROCESS_TIME = 6;
+    public static final int CHARGER_BASE_ENERGY_PER_TICK = 50;
+    public static final int CHARGER_CRIMSON_ENERGY_PER_TICK = 80;
+    public static final int CHARGER_VERDANT_ENERGY_PER_TICK = 35;
+    public static final int CHARGER_BASE_ENERGY_CAPACITY = 20000;
+    public static final int CHARGER_VERDANT_ENERGY_CAPACITY = 40000;
     public static final int CONSTRUCTOR_BASE_ENERGY_CAPACITY = 10000;
     public static final int CONSTRUCTOR_VERDANT_ENERGY_CAPACITY = 20000;
 
@@ -51,6 +58,23 @@ public final class PowerCrystalEffects {
 
     public static int getAnalyzerProgressPerProcess(ItemStack crystalStack) {
         return 1;
+    }
+
+    public static int getChargerProcessTime(ItemStack crystalStack) {
+        return getModifiedProcessTime(CHARGER_BASE_PROCESS_TIME, crystalStack);
+    }
+
+    public static int getChargerEnergyPerTick(ItemStack crystalStack) {
+        return getModifiedEnergyPerTick(CHARGER_BASE_ENERGY_PER_TICK, CHARGER_CRIMSON_ENERGY_PER_TICK, CHARGER_VERDANT_ENERGY_PER_TICK, crystalStack);
+    }
+
+    public static int getChargerEnergyCapacity(ItemStack crystalStack) {
+        return getModifiedEnergyCapacity(CHARGER_BASE_ENERGY_CAPACITY, CHARGER_VERDANT_ENERGY_CAPACITY, crystalStack);
+    }
+
+    public static boolean hasChargerEffect(ItemStack crystalStack) {
+        return crystalStack.is(ModItems.CRIMSON_POWER_CRYSTAL.get())
+                || crystalStack.is(ModItems.VERDANT_POWER_CRYSTAL.get());
     }
 
     public static int getConstructorEnergyPerTick(int baseEnergyPerTick, ItemStack crystalStack) {

@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "minecraft:copper_ingot"
+    },
+    "i": {
+      "item": "minecraft:iron_ingot"
+    },
+    "m": {
+      "item": "matterworks:matter_dust"
+    }
+  },
+  "pattern": [
+    "ici",
+    "cmc",
+    "ici"
+  ],
+  "result": {
+    "count": 4,
+    "id": "matterworks:stabilized_matter_plate"
+  }
+}

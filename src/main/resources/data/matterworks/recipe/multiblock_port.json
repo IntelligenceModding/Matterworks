@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "matterworks:conductive_matter_coil"
+    },
+    "p": {
+      "item": "matterworks:multiblock_casing"
+    },
+    "r": {
+      "item": "minecraft:redstone_block"
+    }
+  },
+  "pattern": [
+    " c ",
+    "p p",
+    " r "
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:multiblock_port"
+  }
+}

@@ -16,6 +16,7 @@ public final class MultiblockPartState {
     private String definitionId = "";
     private BlockPos controllerPos = BlockPos.ZERO;
     private BlockPos originPos = BlockPos.ZERO;
+    private BlockPos localPos = BlockPos.ZERO;
     private Direction front = Direction.NORTH;
     private MultiblockRole role = MultiblockRole.CASING;
 
@@ -39,6 +40,10 @@ public final class MultiblockPartState {
         return originPos;
     }
 
+    public BlockPos getLocalPos() {
+        return localPos;
+    }
+
     public Direction getFront() {
         return front;
     }
@@ -51,8 +56,8 @@ public final class MultiblockPartState {
         return formed && controllerPos.equals(pos);
     }
 
-    public boolean applyAssembly(MultiblockStructure structure, MultiblockRole assignedRole) {
-        if (structure == null || assignedRole == null) {
+    public boolean applyAssembly(MultiblockStructure structure, MultiblockRole assignedRole, BlockPos assignedLocalPos) {
+        if (structure == null || assignedRole == null || assignedLocalPos == null) {
             return false;
         }
         boolean changed = !formed
@@ -60,6 +65,7 @@ public final class MultiblockPartState {
                 || !Objects.equals(definitionId, structure.definitionId())
                 || !Objects.equals(controllerPos, structure.controllerPos())
                 || !Objects.equals(originPos, structure.originPos())
+                || !Objects.equals(localPos, assignedLocalPos)
                 || front != structure.front()
                 || role != assignedRole;
         formed = true;
@@ -67,6 +73,7 @@ public final class MultiblockPartState {
         definitionId = structure.definitionId();
         controllerPos = structure.controllerPos().immutable();
         originPos = structure.originPos().immutable();
+        localPos = assignedLocalPos.immutable();
         front = structure.front();
         role = assignedRole;
         return changed;
@@ -81,6 +88,7 @@ public final class MultiblockPartState {
         definitionId = "";
         controllerPos = BlockPos.ZERO;
         originPos = BlockPos.ZERO;
+        localPos = BlockPos.ZERO;
         front = Direction.NORTH;
         role = MultiblockRole.CASING;
         return true;
@@ -101,6 +109,9 @@ public final class MultiblockPartState {
         multiblockTag.putInt("origin_x", originPos.getX());
         multiblockTag.putInt("origin_y", originPos.getY());
         multiblockTag.putInt("origin_z", originPos.getZ());
+        multiblockTag.putInt("local_x", localPos.getX());
+        multiblockTag.putInt("local_y", localPos.getY());
+        multiblockTag.putInt("local_z", localPos.getZ());
         multiblockTag.putString("front", front.getName());
         multiblockTag.putString("role", role.name().toLowerCase());
         tag.put(TAG_ROOT, multiblockTag);
@@ -117,6 +128,7 @@ public final class MultiblockPartState {
         definitionId = multiblockTag.getString("definition_id");
         controllerPos = new BlockPos(multiblockTag.getInt("controller_x"), multiblockTag.getInt("controller_y"), multiblockTag.getInt("controller_z"));
         originPos = new BlockPos(multiblockTag.getInt("origin_x"), multiblockTag.getInt("origin_y"), multiblockTag.getInt("origin_z"));
+        localPos = new BlockPos(multiblockTag.getInt("local_x"), multiblockTag.getInt("local_y"), multiblockTag.getInt("local_z"));
         front = Direction.byName(multiblockTag.getString("front"));
         if (front == null || !front.getAxis().isHorizontal()) {
             front = Direction.NORTH;

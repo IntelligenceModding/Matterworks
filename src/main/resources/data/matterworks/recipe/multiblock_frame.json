@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "c": {
+      "item": "matterworks:conductive_matter_coil"
+    },
+    "p": {
+      "item": "matterworks:stabilized_matter_plate"
+    }
+  },
+  "pattern": [
+    "pcp",
+    "c c",
+    "pcp"
+  ],
+  "result": {
+    "count": 4,
+    "id": "matterworks:multiblock_frame"
+  }
+}

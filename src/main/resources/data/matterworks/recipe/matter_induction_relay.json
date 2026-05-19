@@ -1,0 +1,27 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "b": {
+      "item": "matterworks:matter_power_bank"
+    },
+    "c": {
+      "item": "matterworks:conductive_matter_coil"
+    },
+    "p": {
+      "item": "matterworks:crimson_flux_coil"
+    },
+    "s": {
+      "item": "matterworks:multiblock_casing"
+    }
+  },
+  "pattern": [
+    "pcp",
+    "sbs",
+    "pcp"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:matter_induction_relay"
+  }
+}

@@ -32,7 +32,7 @@ public final class MultiblockAssembler {
             if (!requirement.predicate().matches(context) && !requirement.optional()) {
                 return MultiblockValidationResult.failure(worldPos, localPos, requirement.description());
             }
-            matchedParts.add(new MultiblockMatchedPart(localPos, worldPos, requirement));
+            matchedParts.add(new MultiblockMatchedPart(localPos, worldPos, requirement, state, blockEntity));
         }
 
         MultiblockMatch match = new MultiblockMatch(definition, controllerPos, originPos, front, matchedParts);

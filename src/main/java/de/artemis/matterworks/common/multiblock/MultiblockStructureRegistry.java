@@ -67,12 +67,13 @@ public final class MultiblockStructureRegistry {
                 Map.copyOf(members)
         );
 
-        state.structuresById.put(structure.structureId(), structure);
+            state.structuresById.put(structure.structureId(), structure);
         for (var entry : structure.members().entrySet()) {
             state.memberToStructure.put(entry.getKey(), structure.structureId());
             BlockEntity blockEntity = level.getBlockEntity(entry.getKey());
             if (blockEntity instanceof MultiblockPartEntity multiblockPartEntity) {
-                multiblockPartEntity.getMultiblockPartState().applyAssembly(structure, entry.getValue());
+                BlockPos localPos = findLocalPos(match, entry.getKey());
+                multiblockPartEntity.getMultiblockPartState().applyAssembly(structure, entry.getValue(), localPos);
                 multiblockPartEntity.getMultiblockPartState().sync(blockEntity);
                 multiblockPartEntity.onMultiblockAssembled(structure, entry.getValue());
             }
@@ -111,6 +112,15 @@ public final class MultiblockStructureRegistry {
 
     public static void clearServerLevelState(ServerLevel level) {
         STATES.remove(level);
+    }
+
+    private static BlockPos findLocalPos(MultiblockMatch match, BlockPos worldPos) {
+        for (MultiblockMatchedPart part : match.getParts()) {
+            if (part.worldPos().equals(worldPos)) {
+                return part.localPos();
+            }
+        }
+        return BlockPos.ZERO;
     }
 
     private static final class DimensionState {

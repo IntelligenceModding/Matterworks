@@ -61,6 +61,42 @@ public class ModItems {
             properties -> properties.rarity(Rarity.UNCOMMON)
     );
 
+    public static final DeferredItem<Item> STABILIZED_MATTER_PLATE = register(
+            "stabilized_matter_plate",
+            Item::new,
+            UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<Item> CONDUCTIVE_MATTER_COIL = register(
+            "conductive_matter_coil",
+            Item::new,
+            properties -> properties.rarity(Rarity.UNCOMMON)
+    );
+
+    public static final DeferredItem<Item> VERDANT_CRYSTAL_LATTICE = register(
+            "verdant_crystal_lattice",
+            Item::new,
+            properties -> properties.rarity(Rarity.UNCOMMON)
+    );
+
+    public static final DeferredItem<Item> CRIMSON_FLUX_COIL = register(
+            "crimson_flux_coil",
+            Item::new,
+            properties -> properties.rarity(Rarity.UNCOMMON)
+    );
+
+    public static final DeferredItem<Item> MULTIBLOCK_GLASS_PANE = register(
+            "multiblock_glass_pane",
+            Item::new,
+            UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<Item> BATTERY_CORE_ASSEMBLY = register(
+            "battery_core_assembly",
+            Item::new,
+            properties -> properties.rarity(Rarity.RARE)
+    );
+
     public static final DeferredItem<Item> EMPTY_TEMPLATE = register(
             "empty_template",
             Item::new,

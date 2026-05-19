@@ -1,0 +1,21 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "g": {
+      "item": "matterworks:multiblock_glass_pane"
+    },
+    "p": {
+      "item": "matterworks:multiblock_casing"
+    }
+  },
+  "pattern": [
+    "ggg",
+    "gpg",
+    "ggg"
+  ],
+  "result": {
+    "count": 4,
+    "id": "matterworks:multiblock_glass"
+  }
+}

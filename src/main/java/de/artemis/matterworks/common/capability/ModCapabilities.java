@@ -94,6 +94,11 @@ public class ModCapabilities {
                 (blockEntity, side) -> blockEntity.getEnergyStorage(side)
         );
         event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.MULTIBLOCK_PORT.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage(side)
+        );
+        event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.MATTER_FLUID_TANK.get(),
                 (blockEntity, side) -> blockEntity.getAutomationHandler(side)
@@ -154,14 +159,14 @@ public class ModCapabilities {
                 (blockEntity, side) -> blockEntity.getEnergyStorage(side)
         );
         event.registerBlockEntity(
-                Capabilities.ItemHandler.BLOCK,
-                ModBlockEntities.POWER_CRYSTAL_CHARGER.get(),
-                (blockEntity, side) -> blockEntity.getAutomationHandler(side)
-        );
-        event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,
                 ModBlockEntities.POWER_CRYSTAL_CHARGER.get(),
                 (blockEntity, side) -> blockEntity.getEnergyStorage(side)
+        );
+        event.registerBlockEntity(
+                Capabilities.ItemHandler.BLOCK,
+                ModBlockEntities.POWER_CRYSTAL_CHARGER.get(),
+                (blockEntity, side) -> blockEntity.getItemHandler()
         );
     }
 }

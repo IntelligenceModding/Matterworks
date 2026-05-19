@@ -1,0 +1,24 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "category": "misc",
+  "key": {
+    "g": {
+      "item": "minecraft:gold_ingot"
+    },
+    "m": {
+      "item": "matterworks:matter_dust"
+    },
+    "v": {
+      "item": "matterworks:verdant_power_crystal"
+    }
+  },
+  "pattern": [
+    "gmg",
+    "mvm",
+    "gmg"
+  ],
+  "result": {
+    "count": 1,
+    "id": "matterworks:verdant_crystal_lattice"
+  }
+}

@@ -12,6 +12,13 @@ import java.util.stream.Stream;
 public class ModBlockLootTableProvider extends BlockLootSubProvider {
     private static final Set<Block> DIRECT_BLOCKS = Set.of(
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_ENERGY_CELL.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MATTER_BATTERY_CORE.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MULTIBLOCK_FRAME.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MULTIBLOCK_CASING.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MULTIBLOCK_PORT.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MULTIBLOCK_GLASS.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MATTER_CAPACITOR_CELL.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.MATTER_INDUCTION_RELAY.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_FLUID_TANK.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_STORAGE_BARREL.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_PYLON.get(),

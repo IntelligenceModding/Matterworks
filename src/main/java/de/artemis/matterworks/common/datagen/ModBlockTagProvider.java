@@ -22,6 +22,13 @@ public class ModBlockTagProvider extends BlockTagsProvider {
         pickaxeTag.add(ModBlocks.MATTER_SEPARATOR.get());
         pickaxeTag.add(ModBlocks.POWER_CRYSTAL_CHARGER.get());
         pickaxeTag.add(ModBlocks.MATTER_ENERGY_CELL.get());
+        pickaxeTag.add(ModBlocks.MATTER_BATTERY_CORE.get());
+        pickaxeTag.add(ModBlocks.MULTIBLOCK_FRAME.get());
+        pickaxeTag.add(ModBlocks.MULTIBLOCK_CASING.get());
+        pickaxeTag.add(ModBlocks.MULTIBLOCK_PORT.get());
+        pickaxeTag.add(ModBlocks.MULTIBLOCK_GLASS.get());
+        pickaxeTag.add(ModBlocks.MATTER_CAPACITOR_CELL.get());
+        pickaxeTag.add(ModBlocks.MATTER_INDUCTION_RELAY.get());
         pickaxeTag.add(ModBlocks.MATTER_PYLON.get());
         pickaxeTag.add(ModBlocks.MATTER_NETWORK_CONTROLLER.get());
         pickaxeTag.add(ModBlocks.CREATIVE_SOURCE.get());
@@ -52,7 +59,5 @@ public class ModBlockTagProvider extends BlockTagsProvider {
             axeTag.add(pair.base().get());
             axeTag.add(pair.glowing().get());
         }));
-
-        tag(BlockTags.MINEABLE_WITH_SHOVEL).add(ModBlocks.HARDENED_SLUDGE.get());
     }
 }

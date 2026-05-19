@@ -3,7 +3,7 @@ package de.artemis.matterworks.common.registry;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.block.MatterAnalyzerBlock;
 import de.artemis.matterworks.common.block.MatterConstructorBlock;
-import de.artemis.matterworks.common.block.MatterEnergyCellBlock;
+import de.artemis.matterworks.common.block.EnergyCellBlock;
 import de.artemis.matterworks.common.block.MatterFluidTankBlock;
 import de.artemis.matterworks.common.block.MatterGeneratorBlock;
 import de.artemis.matterworks.common.block.MatterNetworkControllerBlock;
@@ -16,10 +16,16 @@ import de.artemis.matterworks.common.block.MatterSludgeBlock;
 import de.artemis.matterworks.common.block.MatterStabilizerBlock;
 import de.artemis.matterworks.common.block.CreativeSinkBlock;
 import de.artemis.matterworks.common.block.CreativeSourceBlock;
-import de.artemis.matterworks.common.block.HardenedSludgeBlock;
+import de.artemis.matterworks.common.block.CrystalViewportBlock;
+import de.artemis.matterworks.common.block.MatterBatteryCasingBlock;
+import de.artemis.matterworks.common.block.MatterBatteryCoreBlock;
+import de.artemis.matterworks.common.block.MatterBatteryFrameBlock;
+import de.artemis.matterworks.common.block.MatterBatteryPortBlock;
 import de.artemis.matterworks.common.block.PowerCrystalChargerBlock;
 import de.artemis.matterworks.common.block.PowerCrystalOreBlock;
 import de.artemis.matterworks.common.block.PowerCrystalRevealBlock;
+import de.artemis.matterworks.common.block.MatterCapacitorCellBlock;
+import de.artemis.matterworks.common.block.MatterInductionRelayBlock;
 import de.artemis.matterworks.common.block.RawMatterBlock;
 import de.artemis.matterworks.common.block.RefinedMatterBlock;
 import de.artemis.matterworks.common.block.UnstableMatterBlock;
@@ -132,12 +138,6 @@ public class ModBlocks {
                     .sound(SoundType.EMPTY)
                     .noLootTable()));
 
-    public static final DeferredBlock<HardenedSludgeBlock> HARDENED_SLUDGE = register(
-            "hardened_sludge",
-            HardenedSludgeBlock::new,
-            properties -> properties.mapColor(MapColor.COLOR_BROWN).strength(0.8F).sound(SoundType.MUD).noOcclusion()
-    );
-
     public static final DeferredBlock<MatterAnalyzerBlock> MATTER_ANALYZER = register(
             "matter_analyzer",
             MatterAnalyzerBlock::new,
@@ -156,10 +156,52 @@ public class ModBlocks {
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
     );
 
-    public static final DeferredBlock<MatterEnergyCellBlock> MATTER_ENERGY_CELL = register(
+    public static final DeferredBlock<EnergyCellBlock> MATTER_ENERGY_CELL = register(
             "matter_energy_cell",
-            MatterEnergyCellBlock::new,
+            EnergyCellBlock::new,
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterBatteryCoreBlock> MATTER_BATTERY_CORE = register(
+            "matter_battery_core",
+            MatterBatteryCoreBlock::new,
+            properties -> properties.strength(4.5F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterBatteryFrameBlock> MULTIBLOCK_FRAME = register(
+            "multiblock_frame",
+            MatterBatteryFrameBlock::new,
+            properties -> properties.strength(4.5F).sound(SoundType.NETHERITE_BLOCK)
+    );
+
+    public static final DeferredBlock<MatterBatteryCasingBlock> MULTIBLOCK_CASING = register(
+            "multiblock_casing",
+            MatterBatteryCasingBlock::new,
+            properties -> properties.strength(4.0F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterBatteryPortBlock> MULTIBLOCK_PORT = register(
+            "multiblock_port",
+            MatterBatteryPortBlock::new,
+            properties -> properties.strength(4.0F).sound(SoundType.COPPER)
+    );
+
+    public static final DeferredBlock<CrystalViewportBlock> MULTIBLOCK_GLASS = register(
+            "multiblock_glass",
+            CrystalViewportBlock::new,
+            properties -> properties.strength(3.0F).sound(SoundType.GLASS).noOcclusion()
+    );
+
+    public static final DeferredBlock<MatterCapacitorCellBlock> MATTER_CAPACITOR_CELL = register(
+            "matter_capacitor_cell",
+            MatterCapacitorCellBlock::new,
+            properties -> properties.strength(4.0F).sound(SoundType.METAL)
+    );
+
+    public static final DeferredBlock<MatterInductionRelayBlock> MATTER_INDUCTION_RELAY = register(
+            "matter_induction_relay",
+            MatterInductionRelayBlock::new,
+            properties -> properties.strength(4.0F).sound(SoundType.METAL)
     );
 
     public static final DeferredBlock<MatterFluidTankBlock> MATTER_FLUID_TANK = register(

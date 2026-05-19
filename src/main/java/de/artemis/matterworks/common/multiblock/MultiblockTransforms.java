@@ -20,4 +20,14 @@ public final class MultiblockTransforms {
         BlockPos transformedOffset = localToWorld(BlockPos.ZERO, front, controllerOffset);
         return controllerPos.offset(-transformedOffset.getX(), -transformedOffset.getY(), -transformedOffset.getZ());
     }
+
+    public static BlockPos worldToLocal(BlockPos originPos, Direction front, BlockPos worldPos) {
+        Direction right = front.getClockWise();
+        int deltaX = worldPos.getX() - originPos.getX();
+        int deltaY = worldPos.getY() - originPos.getY();
+        int deltaZ = worldPos.getZ() - originPos.getZ();
+        int localX = deltaX * right.getStepX() + deltaZ * right.getStepZ();
+        int localZ = deltaX * front.getStepX() + deltaZ * front.getStepZ();
+        return new BlockPos(localX, deltaY, localZ);
+    }
 }

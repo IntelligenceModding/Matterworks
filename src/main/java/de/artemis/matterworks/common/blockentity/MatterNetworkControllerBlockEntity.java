@@ -1,6 +1,6 @@
 package de.artemis.matterworks.common.blockentity;
 
-import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
+import de.artemis.matterworks.common.menu.EnergyCellMenu;
 import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
@@ -189,11 +189,11 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 }
             };
         }
-        if (target instanceof MatterEnergyCellBlockEntity energyCell) {
+        if (target instanceof EnergyCellBlockEntity energyCell) {
             return new RemoteMenuProvider(energyCell.getDisplayName()) {
                 @Override
                 public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
-                    return new MatterEnergyCellMenu(containerId, inventory, energyCell, energyCell.getData(), true);
+                    return new EnergyCellMenu(containerId, inventory, energyCell, energyCell.getData(), true);
                 }
             };
         }
@@ -218,6 +218,14 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 @Override
                 public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
                     return new MatterStorageBarrelMenu(containerId, inventory, storageBarrel, true);
+                }
+            };
+        }
+        if (target instanceof MatterBatteryPortBlockEntity batteryPort) {
+            return new RemoteMenuProvider(batteryPort.getDisplayName()) {
+                @Override
+                public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
+                    return new MatterPylonMenu(containerId, inventory, batteryPort, batteryPort.getData(), true);
                 }
             };
         }

@@ -35,6 +35,12 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.UNSTABLE_MATTER_BUCKET.get());
                         output.accept(ModItems.MATTER_DUST.get());
                         output.accept(ModItems.ENTROPIC_MATTER.get());
+                        output.accept(ModItems.STABILIZED_MATTER_PLATE.get());
+                        output.accept(ModItems.CONDUCTIVE_MATTER_COIL.get());
+                        output.accept(ModItems.VERDANT_CRYSTAL_LATTICE.get());
+                        output.accept(ModItems.CRIMSON_FLUX_COIL.get());
+                        output.accept(ModItems.MULTIBLOCK_GLASS_PANE.get());
+                        output.accept(ModItems.BATTERY_CORE_ASSEMBLY.get());
                         output.accept(ModItems.EMPTY_TEMPLATE.get());
                         output.accept(ModItems.MATTER_ITEM_FILTER.get());
                         output.accept(ModItems.MATTER_FLUID_FILTER.get());
@@ -56,6 +62,12 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.MATTER_CONSTRUCTOR.get());
                         output.accept(ModBlocks.MATTER_GENERATOR.get());
                         output.accept(ModBlocks.MATTER_ENERGY_CELL.get());
+                        output.accept(ModBlocks.MATTER_BATTERY_CORE.get());
+                        output.accept(ModBlocks.MULTIBLOCK_FRAME.get());
+                        output.accept(ModBlocks.MULTIBLOCK_CASING.get());
+                        output.accept(ModBlocks.MULTIBLOCK_PORT.get());
+                        output.accept(ModBlocks.MULTIBLOCK_GLASS.get());
+                        output.accept(ModBlocks.MATTER_CAPACITOR_CELL.get());
                         output.accept(ModBlocks.MATTER_FLUID_TANK.get());
                         output.accept(ModBlocks.MATTER_STORAGE_BARREL.get());
                         output.accept(ModBlocks.MATTER_PYLON.get());
@@ -64,7 +76,6 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.CREATIVE_SOURCE.get());
                         output.accept(ModBlocks.CREATIVE_SINK.get());
                         output.accept(ModBlocks.MATTER_SEPARATOR.get());
-                        output.accept(ModBlocks.HARDENED_SLUDGE.get());
                         output.accept(ModBlocks.POWER_CRYSTAL_CHARGER.get());
                         output.accept(ModBlocks.POWER_CRYSTAL_ORE.get());
                     })

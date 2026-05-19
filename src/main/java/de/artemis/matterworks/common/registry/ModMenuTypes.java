@@ -2,8 +2,10 @@ package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.menu.MatterAnalyzerMenu;
+import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
+import de.artemis.matterworks.common.menu.MatterBatteryPreviewMenu;
 import de.artemis.matterworks.common.menu.MatterConstructorMenu;
-import de.artemis.matterworks.common.menu.MatterEnergyCellMenu;
+import de.artemis.matterworks.common.menu.EnergyCellMenu;
 import de.artemis.matterworks.common.menu.MatterFilterMenu;
 import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterGeneratorMenu;
@@ -46,9 +48,17 @@ public class ModMenuTypes {
             MENU_TYPES.register("matter_generator",
                     () -> IMenuTypeExtension.create(MatterGeneratorMenu::new));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<MatterEnergyCellMenu>> MATTER_ENERGY_CELL =
+    public static final DeferredHolder<MenuType<?>, MenuType<EnergyCellMenu>> MATTER_ENERGY_CELL =
             MENU_TYPES.register("matter_energy_cell",
-                    () -> IMenuTypeExtension.create(MatterEnergyCellMenu::new));
+                    () -> IMenuTypeExtension.create(EnergyCellMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterBatteryCoreMenu>> MATTER_BATTERY_CORE =
+            MENU_TYPES.register("matter_battery_core",
+                    () -> IMenuTypeExtension.create(MatterBatteryCoreMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterBatteryPreviewMenu>> MATTER_BATTERY_PREVIEW =
+            MENU_TYPES.register("matter_battery_preview",
+                    () -> IMenuTypeExtension.create(MatterBatteryPreviewMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<MatterFluidTankMenu>> MATTER_FLUID_TANK =
             MENU_TYPES.register("matter_fluid_tank",

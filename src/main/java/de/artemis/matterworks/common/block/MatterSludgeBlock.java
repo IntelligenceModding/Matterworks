@@ -6,7 +6,6 @@ import net.minecraft.core.particles.ParticleTypes;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.RandomSource;
 import de.artemis.matterworks.common.registry.ModMobEffects;
-import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.effect.MobEffectInstance;
@@ -22,40 +21,10 @@ import net.minecraft.world.level.material.FlowingFluid;
 import net.minecraft.world.phys.Vec3;
 
 public class MatterSludgeBlock extends LiquidBlock {
-    public static final int HARDEN_TIME_TICKS = 6000;
     private static final Vec3 MOVEMENT_DRAG = new Vec3(0.82D, 0.72D, 0.82D);
 
     public MatterSludgeBlock(FlowingFluid fluid, Properties properties) {
         super(fluid, properties);
-    }
-
-    @Override
-    protected void onPlace(BlockState state, Level level, BlockPos pos, BlockState oldState, boolean movedByPiston) {
-        super.onPlace(state, level, pos, oldState, movedByPiston);
-        level.scheduleTick(pos, this, HARDEN_TIME_TICKS);
-    }
-
-    @Override
-    protected BlockState updateShape(BlockState state, Direction direction, BlockState neighborState, LevelAccessor level, BlockPos currentPos, BlockPos neighborPos) {
-        level.scheduleTick(currentPos, this, HARDEN_TIME_TICKS);
-        return super.updateShape(state, direction, neighborState, level, currentPos, neighborPos);
-    }
-
-    @Override
-    protected void tick(BlockState state, ServerLevel level, BlockPos pos, RandomSource random) {
-        if (!state.is(this)) {
-            return;
-        }
-
-        FluidState fluidState = level.getFluidState(pos);
-        if (!fluidState.isEmpty() && canHardenAt(level, pos)) {
-            int layers = getHardenedLayers(level, pos, fluidState);
-            spawnHardeningEffects(level, pos, fluidState);
-            level.setBlock(pos, ModBlocks.HARDENED_SLUDGE.get().defaultBlockState().setValue(HardenedSludgeBlock.LAYERS, layers), 3);
-            return;
-        }
-
-        level.scheduleTick(pos, this, HARDEN_TIME_TICKS);
     }
 
     @Override
@@ -210,27 +179,4 @@ public class MatterSludgeBlock extends LiquidBlock {
     private record SurfaceSample(double x, double y, double z) {
     }
 
-    private boolean canHardenAt(Level level, BlockPos pos) {
-        BlockState belowState = level.getBlockState(pos.below());
-        return Block.isFaceFull(belowState.getCollisionShape(level, pos.below()), Direction.UP)
-                || belowState.is(ModBlocks.HARDENED_SLUDGE.get()) && belowState.getValue(HardenedSludgeBlock.LAYERS) == 8;
-    }
-
-    private int getHardenedLayers(Level level, BlockPos pos, FluidState fluidState) {
-        return Math.max(1, Math.min(8, (int) Math.ceil(fluidState.getHeight(level, pos) * 8.0F)));
-    }
-
-    private void spawnHardeningEffects(ServerLevel level, BlockPos pos, FluidState fluidState) {
-        float surfaceHeight = Math.min(0.98F, fluidState.getHeight(level, pos));
-        double centerX = pos.getX() + 0.5D;
-        double centerY = pos.getY() + surfaceHeight * 0.5D;
-        double centerZ = pos.getZ() + 0.5D;
-
-        level.sendParticles(ParticleTypes.SMOKE, centerX, pos.getY() + surfaceHeight + 0.02D, centerZ, 8, 0.22D, 0.08D, 0.22D, 0.01D);
-        level.sendParticles(ParticleTypes.ASH, centerX, pos.getY() + surfaceHeight + 0.03D, centerZ, 6, 0.2D, 0.04D, 0.2D, 0.005D);
-        level.sendParticles(ParticleTypes.WHITE_ASH, centerX, pos.getY() + surfaceHeight + 0.02D, centerZ, 4, 0.18D, 0.03D, 0.18D, 0.003D);
-        level.playSound(null, centerX, centerY, centerZ, SoundEvents.MUD_PLACE, SoundSource.BLOCKS, 0.45F, 0.75F);
-        level.playSound(null, centerX, centerY, centerZ, SoundEvents.MUD_BREAK, SoundSource.BLOCKS, 0.22F, 0.55F);
-        level.playSound(null, centerX, centerY, centerZ, SoundEvents.FIRE_EXTINGUISH, SoundSource.BLOCKS, 0.18F, 1.6F);
-    }
 }
