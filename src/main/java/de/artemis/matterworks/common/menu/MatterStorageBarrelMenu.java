@@ -45,12 +45,12 @@ public class MatterStorageBarrelMenu extends AbstractContainerMenu implements Na
 
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(playerInventory, column + row * 9 + 9, 8 + column * 18, 162 + row * 18));
+                this.addSlot(new Slot(playerInventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
             }
         }
 
         for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(playerInventory, slot, 8 + slot * 18, 220));
+            this.addSlot(new Slot(playerInventory, slot, 8 + slot * 18, 198));
         }
     }
 

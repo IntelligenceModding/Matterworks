@@ -22,6 +22,10 @@ public final class PowerCrystalEffects {
     public static final int CHARGER_VERDANT_ENERGY_PER_TICK = 35;
     public static final int CHARGER_BASE_ENERGY_CAPACITY = 20000;
     public static final int CHARGER_VERDANT_ENERGY_CAPACITY = 40000;
+    public static final int COMBUSTION_GENERATOR_BASE_ENERGY_PER_TICK = 40;
+    public static final int COMBUSTION_GENERATOR_CRIMSON_ENERGY_PER_TICK = 64;
+    public static final int COMBUSTION_GENERATOR_BASE_ENERGY_CAPACITY = 40000;
+    public static final int COMBUSTION_GENERATOR_VERDANT_ENERGY_CAPACITY = 80000;
     public static final int CONSTRUCTOR_BASE_ENERGY_CAPACITY = 10000;
     public static final int CONSTRUCTOR_VERDANT_ENERGY_CAPACITY = 20000;
 
@@ -73,6 +77,28 @@ public final class PowerCrystalEffects {
     }
 
     public static boolean hasChargerEffect(ItemStack crystalStack) {
+        return crystalStack.is(ModItems.CRIMSON_POWER_CRYSTAL.get())
+                || crystalStack.is(ModItems.VERDANT_POWER_CRYSTAL.get());
+    }
+
+    public static int getCombustionGeneratorEnergyPerTick(ItemStack crystalStack) {
+        return getModifiedEnergyPerTick(
+                COMBUSTION_GENERATOR_BASE_ENERGY_PER_TICK,
+                COMBUSTION_GENERATOR_CRIMSON_ENERGY_PER_TICK,
+                COMBUSTION_GENERATOR_BASE_ENERGY_PER_TICK,
+                crystalStack
+        );
+    }
+
+    public static int getCombustionGeneratorEnergyCapacity(ItemStack crystalStack) {
+        return getModifiedEnergyCapacity(
+                COMBUSTION_GENERATOR_BASE_ENERGY_CAPACITY,
+                COMBUSTION_GENERATOR_VERDANT_ENERGY_CAPACITY,
+                crystalStack
+        );
+    }
+
+    public static boolean hasCombustionGeneratorEffect(ItemStack crystalStack) {
         return crystalStack.is(ModItems.CRIMSON_POWER_CRYSTAL.get())
                 || crystalStack.is(ModItems.VERDANT_POWER_CRYSTAL.get());
     }

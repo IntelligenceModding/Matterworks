@@ -1,7 +1,7 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.menu.EnergyCellMenu;
-import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
+import de.artemis.matterworks.common.menu.FluidTankMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
@@ -197,11 +197,11 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 }
             };
         }
-        if (target instanceof MatterFluidTankBlockEntity fluidTank) {
+        if (target instanceof FluidTankBlockEntity fluidTank) {
             return new RemoteMenuProvider(fluidTank.getDisplayName()) {
                 @Override
                 public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
-                    return new MatterFluidTankMenu(containerId, inventory, fluidTank, fluidTank.getData(), true);
+                    return new FluidTankMenu(containerId, inventory, fluidTank, fluidTank.getData(), true);
                 }
             };
         }
@@ -325,3 +325,4 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
         }
     }
 }
+

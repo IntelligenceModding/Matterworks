@@ -15,6 +15,15 @@ public enum PylonMode {
         };
     }
 
+    public PylonMode previous() {
+        return switch (this) {
+            case DISABLED -> IMPORT_EXPORT;
+            case EXPORT -> DISABLED;
+            case IMPORT -> EXPORT;
+            case IMPORT_EXPORT -> IMPORT;
+        };
+    }
+
     public boolean canExport() {
         return this == EXPORT || this == IMPORT_EXPORT;
     }

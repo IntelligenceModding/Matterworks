@@ -11,11 +11,11 @@
       "entries": [
         {
           "type": "minecraft:item",
-          "name": "matterworks:matter_fluid_tank"
+          "name": "matterworks:fluid_tank"
         }
       ],
       "rolls": 1.0
     }
   ],
-  "random_sequence": "matterworks:blocks/matter_fluid_tank"
+  "random_sequence": "matterworks:blocks/fluid_tank"
 }

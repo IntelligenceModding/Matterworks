@@ -32,21 +32,22 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
 import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvider, CustomNamedBlockEntity, SideConfigurableBlockEntity {
-    public static final int ENERGY_ITEM_INPUT_SLOT = 0;
-    public static final int ENERGY_ITEM_OUTPUT_SLOT = 1;
-    public static final int TEMPLATE_SLOT = 2;
-    public static final int ITEM_SLOT = 3;
-    public static final int OUTPUT_SLOT = 4;
-    public static final int REJECTED_OUTPUT_SLOT = 5;
-    public static final int CRYSTAL_SLOT = 6;
+public class MatterAnalyzerBlockEntity extends net.minecraft.world.level.block.entity.BlockEntity implements MenuProvider, CustomNamedBlockEntity, SideConfigurableBlockEntity {
+    public static final int SLOT_POWER_INPUT = 0;
+    public static final int SLOT_EMPTY_TEMPLATE = 1;
+    public static final int SLOT_ACTIVE_TEMPLATE = 2;
+    public static final int SLOT_ITEM_INPUT = 3;
+    public static final int SLOT_OUTPUT = 4;
+    public static final int SLOT_CRYSTAL = 5;
+    private static final int SLOT_LEGACY_OVERFLOW = 6;
+    private static final int SLOT_COUNT = 7;
+
     public static final int DATA_PROGRESS = 0;
     public static final int DATA_MAX_PROGRESS = 1;
     public static final int DATA_TEMPLATE_PROGRESS = 2;
@@ -56,10 +57,10 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     public static final int DATA_PROGRESS_COLOR = 6;
     public static final int DATA_COUNT = 7;
 
-    private final ItemStackHandler itemHandler = new ItemStackHandler(7) {
+    private final ItemStackHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
         @Override
         protected void onContentsChanged(int slot) {
-            if (slot == CRYSTAL_SLOT) {
+            if (slot == SLOT_CRYSTAL) {
                 clampEnergyToCurrentCapacity();
             }
             setChanged();
@@ -73,8 +74,9 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         @Override
         public int getSlotLimit(int slot) {
             return switch (slot) {
-                case ENERGY_ITEM_INPUT_SLOT, ENERGY_ITEM_OUTPUT_SLOT, TEMPLATE_SLOT, CRYSTAL_SLOT -> 1;
-                case ITEM_SLOT, OUTPUT_SLOT, REJECTED_OUTPUT_SLOT -> 64;
+                case SLOT_POWER_INPUT, SLOT_ACTIVE_TEMPLATE, SLOT_CRYSTAL -> 1;
+                case SLOT_EMPTY_TEMPLATE -> 64;
+                case SLOT_ITEM_INPUT, SLOT_OUTPUT, SLOT_LEGACY_OVERFLOW -> 64;
                 default -> 64;
             };
         }
@@ -86,9 +88,9 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             return switch (index) {
                 case DATA_PROGRESS -> progress;
                 case DATA_MAX_PROGRESS -> getCurrentProcessTime();
-                case DATA_TEMPLATE_PROGRESS -> EncodedTemplateData.getAnalysisProgress(itemHandler.getStackInSlot(TEMPLATE_SLOT));
-                case DATA_TEMPLATE_REQUIRED -> EncodedTemplateData.hasEncodedItem(itemHandler.getStackInSlot(TEMPLATE_SLOT))
-                        ? EncodedTemplateData.getRequiredCount(itemHandler.getStackInSlot(TEMPLATE_SLOT))
+                case DATA_TEMPLATE_PROGRESS -> EncodedTemplateData.getAnalysisProgress(itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE));
+                case DATA_TEMPLATE_REQUIRED -> EncodedTemplateData.hasEncodedItem(itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE))
+                        ? EncodedTemplateData.getRequiredCount(itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE))
                         : 0;
                 case DATA_ENERGY -> energyStored;
                 case DATA_ENERGY_CAPACITY -> getCurrentEnergyCapacity();
@@ -109,6 +111,7 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             return DATA_COUNT;
         }
     };
+
     private final SideConfigurationData sideConfiguration = new SideConfigurationData(SideAccessMode.INPUT, SideAccessMode.DISABLED, SideAccessMode.INPUT);
     private final IItemHandler[] configuredItemHandlers = createConfiguredItemHandlers();
     private final IEnergyStorage[] configuredEnergyHandlers = createConfiguredEnergyHandlers();
@@ -116,16 +119,17 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     private final IItemHandler inputAutomationHandler = new IItemHandler() {
         @Override
         public int getSlots() {
-            return 4;
+            return 5;
         }
 
         @Override
         public ItemStack getStackInSlot(int slot) {
             return switch (slot) {
-                case 0 -> itemHandler.getStackInSlot(ENERGY_ITEM_INPUT_SLOT);
-                case 1 -> itemHandler.getStackInSlot(TEMPLATE_SLOT);
-                case 2 -> itemHandler.getStackInSlot(ITEM_SLOT);
-                case 3 -> itemHandler.getStackInSlot(CRYSTAL_SLOT);
+                case 0 -> itemHandler.getStackInSlot(SLOT_POWER_INPUT);
+                case 1 -> itemHandler.getStackInSlot(SLOT_EMPTY_TEMPLATE);
+                case 2 -> itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE);
+                case 3 -> itemHandler.getStackInSlot(SLOT_ITEM_INPUT);
+                case 4 -> itemHandler.getStackInSlot(SLOT_CRYSTAL);
                 default -> ItemStack.EMPTY;
             };
         }
@@ -133,10 +137,11 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             return switch (slot) {
-                case 0 -> itemHandler.insertItem(ENERGY_ITEM_INPUT_SLOT, stack, simulate);
-                case 1 -> itemHandler.insertItem(TEMPLATE_SLOT, stack, simulate);
-                case 2 -> itemHandler.insertItem(ITEM_SLOT, stack, simulate);
-                case 3 -> itemHandler.insertItem(CRYSTAL_SLOT, stack, simulate);
+                case 0 -> itemHandler.insertItem(SLOT_POWER_INPUT, stack, simulate);
+                case 1 -> itemHandler.insertItem(SLOT_EMPTY_TEMPLATE, stack, simulate);
+                case 2 -> itemHandler.insertItem(SLOT_ACTIVE_TEMPLATE, stack, simulate);
+                case 3 -> itemHandler.insertItem(SLOT_ITEM_INPUT, stack, simulate);
+                case 4 -> itemHandler.insertItem(SLOT_CRYSTAL, stack, simulate);
                 default -> stack;
             };
         }
@@ -149,8 +154,9 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         @Override
         public int getSlotLimit(int slot) {
             return switch (slot) {
-                case 0, 1, 3 -> 1;
-                case 2 -> 64;
+                case 0, 2, 4 -> 1;
+                case 1 -> 64;
+                case 3 -> 64;
                 default -> 0;
             };
         }
@@ -158,10 +164,11 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return switch (slot) {
-                case 0 -> itemHandler.isItemValid(ENERGY_ITEM_INPUT_SLOT, stack);
-                case 1 -> itemHandler.isItemValid(TEMPLATE_SLOT, stack);
-                case 2 -> itemHandler.isItemValid(ITEM_SLOT, stack);
-                case 3 -> itemHandler.isItemValid(CRYSTAL_SLOT, stack);
+                case 0 -> itemHandler.isItemValid(SLOT_POWER_INPUT, stack);
+                case 1 -> itemHandler.isItemValid(SLOT_EMPTY_TEMPLATE, stack);
+                case 2 -> itemHandler.isItemValid(SLOT_ACTIVE_TEMPLATE, stack);
+                case 3 -> itemHandler.isItemValid(SLOT_ITEM_INPUT, stack);
+                case 4 -> itemHandler.isItemValid(SLOT_CRYSTAL, stack);
                 default -> false;
             };
         }
@@ -170,17 +177,12 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     private final IItemHandler outputAutomationHandler = new IItemHandler() {
         @Override
         public int getSlots() {
-            return 3;
+            return 1;
         }
 
         @Override
         public ItemStack getStackInSlot(int slot) {
-            return switch (slot) {
-                case 0 -> itemHandler.getStackInSlot(ENERGY_ITEM_OUTPUT_SLOT);
-                case 1 -> itemHandler.getStackInSlot(OUTPUT_SLOT);
-                case 2 -> itemHandler.getStackInSlot(REJECTED_OUTPUT_SLOT);
-                default -> ItemStack.EMPTY;
-            };
+            return slot == 0 ? itemHandler.getStackInSlot(SLOT_OUTPUT) : ItemStack.EMPTY;
         }
 
         @Override
@@ -190,22 +192,12 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
-            return switch (slot) {
-                case 0 -> itemHandler.extractItem(ENERGY_ITEM_OUTPUT_SLOT, amount, simulate);
-                case 1 -> itemHandler.extractItem(OUTPUT_SLOT, amount, simulate);
-                case 2 -> itemHandler.extractItem(REJECTED_OUTPUT_SLOT, amount, simulate);
-                default -> ItemStack.EMPTY;
-            };
+            return slot == 0 ? itemHandler.extractItem(SLOT_OUTPUT, amount, simulate) : ItemStack.EMPTY;
         }
 
         @Override
         public int getSlotLimit(int slot) {
-            return switch (slot) {
-                case 0 -> itemHandler.getSlotLimit(ENERGY_ITEM_OUTPUT_SLOT);
-                case 1 -> itemHandler.getSlotLimit(OUTPUT_SLOT);
-                case 2 -> itemHandler.getSlotLimit(REJECTED_OUTPUT_SLOT);
-                default -> 0;
-            };
+            return slot == 0 ? itemHandler.getSlotLimit(SLOT_OUTPUT) : 0;
         }
 
         @Override
@@ -305,37 +297,35 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
             return;
         }
 
-        transferEnergyFromInputItem();
+        transferEnergyFromPowerInputItem();
         moveCompletedTemplateToOutput();
+        promoteEmptyTemplateToActive();
 
-        if (moveRejectedInputToOutput()) {
-            if (progress != 0) {
-                progress = 0;
-                clearLatchedProcessCrystal();
-            }
-            setChanged();
-            return;
-        }
-
+        boolean changed = false;
         if (canProcess() && hasEnoughEnergy()) {
             if (progress == 0) {
                 latchProcessCrystal();
             }
             energyStored -= getCurrentEnergyPerTick();
             progress++;
+            changed = true;
             if (progress >= getCurrentProcessTime()) {
                 progress = 0;
                 processItem();
                 clearLatchedProcessCrystal();
-                setChanged();
+                promoteEmptyTemplateToActive();
+                changed = true;
             }
         } else if (progress != 0) {
             progress = 0;
             clearLatchedProcessCrystal();
-            setChanged();
+            changed = true;
         }
 
         moveCompletedTemplateToOutput();
+        if (changed) {
+            setChanged();
+        }
     }
 
     public SimpleContainer createDropInventory() {
@@ -409,7 +399,7 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         if (tag.contains("inventory")) {
-            itemHandler.deserializeNBT(registries, tag.getCompound("inventory"));
+            loadInventory(tag.getCompound("inventory"), registries);
         }
         sideConfiguration.readFromTag(tag, this::sanitizeSideAccessMode);
         if (tag.contains("energy")) {
@@ -462,110 +452,92 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     }
 
     private boolean isItemValid(int slot, ItemStack stack) {
-        if (slot == ENERGY_ITEM_INPUT_SLOT) {
-            return EnergyItemHelper.canProvideEnergy(stack);
-        }
-
-        if (slot == ENERGY_ITEM_OUTPUT_SLOT || slot == OUTPUT_SLOT || slot == REJECTED_OUTPUT_SLOT) {
-            return false;
-        }
-
-        if (slot == TEMPLATE_SLOT) {
-            return stack.is(ModItems.EMPTY_TEMPLATE.get())
-                    || (stack.is(ModItems.ENCODED_TEMPLATE.get()) && EncodedTemplateData.hasEncodedItem(stack));
-        }
-
-        if (slot == ITEM_SLOT) {
-            return canAcceptAnalyzerInput(stack);
-        }
-
-        if (slot == CRYSTAL_SLOT) {
-            return PowerCrystalEffects.isPowerCrystal(stack);
-        }
-
-        return false;
+        return switch (slot) {
+            case SLOT_POWER_INPUT -> EnergyItemHelper.canProvideEnergy(stack);
+            case SLOT_EMPTY_TEMPLATE -> stack.is(ModItems.EMPTY_TEMPLATE.get());
+            case SLOT_ACTIVE_TEMPLATE -> stack.is(ModItems.ENCODED_TEMPLATE.get())
+                    && EncodedTemplateData.hasEncodedItem(stack)
+                    && !EncodedTemplateData.isComplete(stack);
+            case SLOT_ITEM_INPUT -> canAcceptAnalyzerInput(stack);
+            case SLOT_OUTPUT, SLOT_LEGACY_OVERFLOW -> false;
+            case SLOT_CRYSTAL -> PowerCrystalEffects.isPowerCrystal(stack);
+            default -> false;
+        };
     }
 
     private boolean canProcess() {
-        ItemStack templateStack = itemHandler.getStackInSlot(TEMPLATE_SLOT);
-        ItemStack itemStack = itemHandler.getStackInSlot(ITEM_SLOT);
-        if (!canEncode(itemStack) || !isTemplateReadyFor(itemStack, templateStack)) {
+        ItemStack activeTemplateStack = itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE);
+        ItemStack itemStack = itemHandler.getStackInSlot(SLOT_ITEM_INPUT);
+        if (!canEncode(itemStack)) {
             return false;
         }
-        return !EncodedTemplateData.isComplete(templateStack);
+        if (!activeTemplateStack.is(ModItems.ENCODED_TEMPLATE.get()) || !EncodedTemplateData.hasEncodedItem(activeTemplateStack)) {
+            return false;
+        }
+        if (EncodedTemplateData.isComplete(activeTemplateStack)
+                || EncodedTemplateData.getEncodedItem(activeTemplateStack) != itemStack.getItem()) {
+            return false;
+        }
+
+        int nextProgress = EncodedTemplateData.getAnalysisProgress(activeTemplateStack)
+                + PowerCrystalEffects.getAnalyzerProgressPerProcess(getEffectiveCrystalStack());
+        return nextProgress < EncodedTemplateData.getRequiredCount(activeTemplateStack)
+                || canMoveCompletedTemplateToOutput(activeTemplateStack);
     }
 
     private void processItem() {
-        ItemStack templateStack = itemHandler.getStackInSlot(TEMPLATE_SLOT);
-        ItemStack itemStack = itemHandler.getStackInSlot(ITEM_SLOT);
-        ItemStack crystalStack = getEffectiveCrystalStack();
-        if (!canEncode(itemStack) || !isTemplateReadyFor(itemStack, templateStack)) {
+        ItemStack activeTemplateStack = itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE);
+        ItemStack itemStack = itemHandler.getStackInSlot(SLOT_ITEM_INPUT);
+        if (!canProcess()) {
             return;
         }
 
-        if (templateStack.is(ModItems.EMPTY_TEMPLATE.get())) {
-            int requiredCount = TemplateAnalysisManager.getRequiredItemCount(itemStack, level);
-            templateStack = EncodedTemplateData.createEncodedTemplate(itemStack.getItem(), requiredCount);
-            itemHandler.setStackInSlot(TEMPLATE_SLOT, templateStack);
-        }
-
-        EncodedTemplateData.addAnalysisProgress(templateStack, PowerCrystalEffects.getAnalyzerProgressPerProcess(crystalStack));
-        itemHandler.getStackInSlot(ITEM_SLOT).shrink(1);
+        EncodedTemplateData.addAnalysisProgress(activeTemplateStack, PowerCrystalEffects.getAnalyzerProgressPerProcess(getEffectiveCrystalStack()));
+        itemStack.shrink(1);
         moveCompletedTemplateToOutput();
     }
 
-    private boolean isTemplateReadyFor(ItemStack itemStack, ItemStack templateStack) {
-        if (templateStack.is(ModItems.EMPTY_TEMPLATE.get())) {
-            return true;
-        }
-
-        if (!templateStack.is(ModItems.ENCODED_TEMPLATE.get()) || !EncodedTemplateData.hasEncodedItem(templateStack)) {
-            return false;
-        }
-
-        return EncodedTemplateData.getEncodedItem(templateStack) == itemStack.getItem();
-    }
-
     private void moveCompletedTemplateToOutput() {
-        ItemStack templateStack = itemHandler.getStackInSlot(TEMPLATE_SLOT);
-        if (!templateStack.is(ModItems.ENCODED_TEMPLATE.get()) || !EncodedTemplateData.isComplete(templateStack)) {
+        ItemStack activeTemplateStack = itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE);
+        if (!activeTemplateStack.is(ModItems.ENCODED_TEMPLATE.get()) || !EncodedTemplateData.isComplete(activeTemplateStack)) {
             return;
         }
 
-        ItemStack outputStack = itemHandler.getStackInSlot(OUTPUT_SLOT);
+        if (!canMoveCompletedTemplateToOutput(activeTemplateStack)) {
+            return;
+        }
+
+        ItemStack outputStack = itemHandler.getStackInSlot(SLOT_OUTPUT);
         if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(OUTPUT_SLOT, templateStack.copy());
-            itemHandler.setStackInSlot(TEMPLATE_SLOT, ItemStack.EMPTY);
-            return;
-        }
-
-        if (ItemStack.isSameItemSameComponents(outputStack, templateStack) && outputStack.getCount() < outputStack.getMaxStackSize()) {
+            itemHandler.setStackInSlot(SLOT_OUTPUT, activeTemplateStack.copy());
+        } else {
             outputStack.grow(1);
-            itemHandler.setStackInSlot(TEMPLATE_SLOT, ItemStack.EMPTY);
         }
+        itemHandler.setStackInSlot(SLOT_ACTIVE_TEMPLATE, ItemStack.EMPTY);
     }
 
-    private boolean moveRejectedInputToOutput() {
-        ItemStack inputStack = itemHandler.getStackInSlot(ITEM_SLOT);
-        if (inputStack.isEmpty() || canEncode(inputStack)) {
-            return false;
+    private boolean canMoveCompletedTemplateToOutput(ItemStack templateStack) {
+        ItemStack outputStack = itemHandler.getStackInSlot(SLOT_OUTPUT);
+        return outputStack.isEmpty()
+                || (ItemStack.isSameItemSameComponents(outputStack, templateStack)
+                && outputStack.getCount() < outputStack.getMaxStackSize());
+    }
+
+    private void promoteEmptyTemplateToActive() {
+        if (!itemHandler.getStackInSlot(SLOT_ACTIVE_TEMPLATE).isEmpty()) {
+            return;
         }
 
-        ItemStack rejectedOutputStack = itemHandler.getStackInSlot(REJECTED_OUTPUT_SLOT);
-        if (!rejectedOutputStack.isEmpty()
-                && (!ItemStack.isSameItemSameComponents(rejectedOutputStack, inputStack)
-                || rejectedOutputStack.getCount() >= rejectedOutputStack.getMaxStackSize())) {
-            return false;
+        ItemStack emptyTemplateStack = itemHandler.getStackInSlot(SLOT_EMPTY_TEMPLATE);
+        ItemStack itemStack = itemHandler.getStackInSlot(SLOT_ITEM_INPUT);
+        if (!emptyTemplateStack.is(ModItems.EMPTY_TEMPLATE.get()) || !canEncode(itemStack) || level == null) {
+            return;
         }
 
-        ItemStack movedStack = inputStack.copy();
-        itemHandler.setStackInSlot(ITEM_SLOT, ItemStack.EMPTY);
-        if (rejectedOutputStack.isEmpty()) {
-            itemHandler.setStackInSlot(REJECTED_OUTPUT_SLOT, movedStack);
-        } else {
-            rejectedOutputStack.grow(movedStack.getCount());
-        }
-        return true;
+        int requiredCount = TemplateAnalysisManager.getRequiredItemCount(itemStack, level);
+        ItemStack activeTemplate = EncodedTemplateData.createEncodedTemplate(itemStack.getItem(), requiredCount);
+        emptyTemplateStack.shrink(1);
+        itemHandler.setStackInSlot(SLOT_ACTIVE_TEMPLATE, activeTemplate);
     }
 
     private boolean canAcceptAnalyzerInput(ItemStack stack) {
@@ -573,7 +545,8 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
                 && !stack.is(ModItems.EMPTY_TEMPLATE.get())
                 && !stack.is(ModItems.ENCODED_TEMPLATE.get())
                 && !PowerCrystalEffects.isPowerCrystal(stack)
-                && !EnergyItemHelper.canProvideEnergy(stack);
+                && !EnergyItemHelper.canProvideEnergy(stack)
+                && canEncode(stack);
     }
 
     private boolean canEncode(ItemStack stack) {
@@ -586,7 +559,7 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
 
     public int getEffectiveProgressBarColor() {
         ItemStack crystalStack = getEffectiveCrystalStack();
-        return crystalStack.isEmpty() ? 0x57C7FF : PowerCrystalEffects.getBarColor(crystalStack);
+        return PowerCrystalEffects.isActive(crystalStack) ? PowerCrystalEffects.getBarColor(crystalStack) : 0xB67CFF;
     }
 
     private boolean hasEnoughEnergy() {
@@ -605,11 +578,8 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
         energyStored = Math.min(energyStored, getCurrentEnergyCapacity());
     }
 
-    private void drainCrystalCharge() {
-    }
-
-    private void transferEnergyFromInputItem() {
-        ItemStack energyStack = itemHandler.getStackInSlot(ENERGY_ITEM_INPUT_SLOT);
+    private void transferEnergyFromPowerInputItem() {
+        ItemStack energyStack = itemHandler.getStackInSlot(SLOT_POWER_INPUT);
         if (energyStack.isEmpty()) {
             return;
         }
@@ -626,35 +596,10 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
                 setChanged();
             }
         }
-
-        if (EnergyItemHelper.isDepleted(energyStack)) {
-            moveEnergyItemToOutput();
-        }
-    }
-
-    private void moveEnergyItemToOutput() {
-        ItemStack inputStack = itemHandler.getStackInSlot(ENERGY_ITEM_INPUT_SLOT);
-        if (inputStack.isEmpty()) {
-            return;
-        }
-
-        ItemStack outputStack = itemHandler.getStackInSlot(ENERGY_ITEM_OUTPUT_SLOT);
-        if (!outputStack.isEmpty() && (!ItemStack.isSameItemSameComponents(outputStack, inputStack) || outputStack.getCount() >= outputStack.getMaxStackSize())) {
-            return;
-        }
-
-        ItemStack movedStack = inputStack.copy();
-        itemHandler.setStackInSlot(ENERGY_ITEM_INPUT_SLOT, ItemStack.EMPTY);
-        if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(ENERGY_ITEM_OUTPUT_SLOT, movedStack);
-        } else {
-            outputStack.grow(movedStack.getCount());
-        }
-        setChanged();
     }
 
     private ItemStack getCrystalStack() {
-        return itemHandler.getSlots() > CRYSTAL_SLOT ? itemHandler.getStackInSlot(CRYSTAL_SLOT) : ItemStack.EMPTY;
+        return itemHandler.getStackInSlot(SLOT_CRYSTAL);
     }
 
     private ItemStack getEffectiveCrystalStack() {
@@ -675,6 +620,76 @@ public class MatterAnalyzerBlockEntity extends BlockEntity implements MenuProvid
     private void clearLatchedProcessCrystal() {
         activeProcessCrystal = ItemStack.EMPTY;
         processCrystalLatched = false;
+    }
+
+    private void loadInventory(CompoundTag inventoryTag, HolderLookup.Provider registries) {
+        int serializedSize = inventoryTag.contains("Size") ? inventoryTag.getInt("Size") : SLOT_COUNT;
+        if (serializedSize > 6) {
+            migrateLegacyInventory(inventoryTag, registries);
+            return;
+        }
+
+        itemHandler.deserializeNBT(registries, inventoryTag);
+    }
+
+    private void migrateLegacyInventory(CompoundTag inventoryTag, HolderLookup.Provider registries) {
+        ItemStackHandler legacyHandler = new ItemStackHandler(7);
+        legacyHandler.deserializeNBT(registries, inventoryTag);
+
+        itemHandler.setStackInSlot(SLOT_POWER_INPUT, legacyHandler.getStackInSlot(0).copy());
+        moveLegacyTemplateStack(legacyHandler.getStackInSlot(2).copy());
+        itemHandler.setStackInSlot(SLOT_ITEM_INPUT, legacyHandler.getStackInSlot(3).copy());
+        mergeTemplateIntoOutput(legacyHandler.getStackInSlot(4).copy());
+        itemHandler.setStackInSlot(SLOT_CRYSTAL, legacyHandler.getStackInSlot(6).copy());
+
+        ItemStack legacyEnergyOutput = legacyHandler.getStackInSlot(1).copy();
+        if (!legacyEnergyOutput.isEmpty()) {
+            if (itemHandler.getStackInSlot(SLOT_POWER_INPUT).isEmpty()) {
+                itemHandler.setStackInSlot(SLOT_POWER_INPUT, legacyEnergyOutput);
+            } else {
+                itemHandler.setStackInSlot(SLOT_LEGACY_OVERFLOW, legacyEnergyOutput);
+            }
+        }
+
+        ItemStack legacyRejected = legacyHandler.getStackInSlot(5).copy();
+        if (!legacyRejected.isEmpty()) {
+            if (itemHandler.getStackInSlot(SLOT_LEGACY_OVERFLOW).isEmpty()) {
+                itemHandler.setStackInSlot(SLOT_LEGACY_OVERFLOW, legacyRejected);
+            } else {
+                itemHandler.getStackInSlot(SLOT_LEGACY_OVERFLOW).grow(legacyRejected.getCount());
+            }
+        }
+    }
+
+    private void moveLegacyTemplateStack(ItemStack legacyTemplate) {
+        if (legacyTemplate.isEmpty()) {
+            return;
+        }
+        if (legacyTemplate.is(ModItems.EMPTY_TEMPLATE.get())) {
+            itemHandler.setStackInSlot(SLOT_EMPTY_TEMPLATE, legacyTemplate);
+            return;
+        }
+        if (legacyTemplate.is(ModItems.ENCODED_TEMPLATE.get()) && EncodedTemplateData.isComplete(legacyTemplate)) {
+            mergeTemplateIntoOutput(legacyTemplate);
+            return;
+        }
+        itemHandler.setStackInSlot(SLOT_ACTIVE_TEMPLATE, legacyTemplate);
+    }
+
+    private void mergeTemplateIntoOutput(ItemStack templateStack) {
+        if (templateStack.isEmpty()) {
+            return;
+        }
+        ItemStack outputStack = itemHandler.getStackInSlot(SLOT_OUTPUT);
+        if (outputStack.isEmpty()) {
+            itemHandler.setStackInSlot(SLOT_OUTPUT, templateStack);
+            return;
+        }
+        if (ItemStack.isSameItemSameComponents(outputStack, templateStack)) {
+            outputStack.grow(templateStack.getCount());
+        } else if (itemHandler.getStackInSlot(SLOT_LEGACY_OVERFLOW).isEmpty()) {
+            itemHandler.setStackInSlot(SLOT_LEGACY_OVERFLOW, templateStack);
+        }
     }
 
     private static String normalizeCustomName(String customName) {

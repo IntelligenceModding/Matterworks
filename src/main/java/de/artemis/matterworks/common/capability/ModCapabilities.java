@@ -75,12 +75,12 @@ public class ModCapabilities {
         );
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
-                ModBlockEntities.MATTER_GENERATOR.get(),
+                ModBlockEntities.COMBUSTION_GENERATOR.get(),
                 (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
         event.registerBlockEntity(
                 Capabilities.EnergyStorage.BLOCK,
-                ModBlockEntities.MATTER_GENERATOR.get(),
+                ModBlockEntities.COMBUSTION_GENERATOR.get(),
                 (blockEntity, side) -> blockEntity.getEnergyStorage(side)
         );
         event.registerBlockEntity(
@@ -100,12 +100,12 @@ public class ModCapabilities {
         );
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
-                ModBlockEntities.MATTER_FLUID_TANK.get(),
+                ModBlockEntities.FLUID_TANK.get(),
                 (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
         event.registerBlockEntity(
                 Capabilities.FluidHandler.BLOCK,
-                ModBlockEntities.MATTER_FLUID_TANK.get(),
+                ModBlockEntities.FLUID_TANK.get(),
                 (blockEntity, side) -> blockEntity.getFluidStorage(side)
         );
         event.registerBlockEntity(
@@ -166,7 +166,8 @@ public class ModCapabilities {
         event.registerBlockEntity(
                 Capabilities.ItemHandler.BLOCK,
                 ModBlockEntities.POWER_CRYSTAL_CHARGER.get(),
-                (blockEntity, side) -> blockEntity.getItemHandler()
+                (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
     }
 }
+

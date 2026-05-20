@@ -1,10 +1,12 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
+import de.artemis.matterworks.common.upgrade.PowerCrystalData;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -19,6 +21,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -27,11 +30,14 @@ import net.neoforged.neoforge.items.IItemHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity implements MenuProvider {
-    public static final int DUST_OUTPUT_SLOT = INPUT_SLOT;
-    public static final int SLUDGE_BUCKET_INPUT_SLOT = INVALID_OUTPUT_SLOT;
-    public static final int REFINED_BUCKET_INPUT_SLOT = FLUID_BUCKET_INPUT_SLOT;
-    public static final int REFINED_BUCKET_OUTPUT_SLOT = FLUID_BUCKET_OUTPUT_SLOT;
-    public static final int SLUDGE_BUCKET_OUTPUT_SLOT = 7;
+    public static final int SLOT_POWER_INPUT = ENERGY_ITEM_INPUT_SLOT;
+    public static final int OUTPUT_SLOT_START = 2;
+    public static final int OUTPUT_SLOT_COUNT = 12;
+    public static final int REFINED_BUCKET_INPUT_SLOT = 14;
+    public static final int REFINED_BUCKET_OUTPUT_SLOT = 15;
+    public static final int SLOT_CRYSTAL = 16;
+    public static final int SLUDGE_BUCKET_INPUT_SLOT = 17;
+    public static final int SLUDGE_BUCKET_OUTPUT_SLOT = 18;
 
     public static final int DATA_SLUDGE_AMOUNT = DATA_COUNT;
     public static final int DATA_SLUDGE_CAPACITY = DATA_COUNT + 1;
@@ -45,7 +51,7 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     public static final int REFINED_MATTER_COST = 125;
     public static final int MATTER_SLUDGE_OUTPUT = 1000;
     public static final int DUST_OUTPUT_COUNT = 1;
-    private static final int SLOT_COUNT = 8;
+    private static final int SLOT_COUNT = 19;
 
     private int sludgeOverflowBuffer;
 
@@ -95,10 +101,10 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         @Override
         public ItemStack getStackInSlot(int slot) {
             return switch (slot) {
-                case 0 -> itemHandler.getStackInSlot(ENERGY_ITEM_INPUT_SLOT);
+                case 0 -> itemHandler.getStackInSlot(SLOT_POWER_INPUT);
                 case 1 -> itemHandler.getStackInSlot(REFINED_BUCKET_INPUT_SLOT);
                 case 2 -> itemHandler.getStackInSlot(SLUDGE_BUCKET_INPUT_SLOT);
-                case 3 -> itemHandler.getStackInSlot(CRYSTAL_SLOT);
+                case 3 -> itemHandler.getStackInSlot(SLOT_CRYSTAL);
                 default -> ItemStack.EMPTY;
             };
         }
@@ -106,10 +112,10 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         @Override
         public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
             return switch (slot) {
-                case 0 -> itemHandler.insertItem(ENERGY_ITEM_INPUT_SLOT, stack, simulate);
+                case 0 -> itemHandler.insertItem(SLOT_POWER_INPUT, stack, simulate);
                 case 1 -> itemHandler.insertItem(REFINED_BUCKET_INPUT_SLOT, stack, simulate);
                 case 2 -> itemHandler.insertItem(SLUDGE_BUCKET_INPUT_SLOT, stack, simulate);
-                case 3 -> itemHandler.insertItem(CRYSTAL_SLOT, stack, simulate);
+                case 3 -> itemHandler.insertItem(SLOT_CRYSTAL, stack, simulate);
                 default -> stack;
             };
         }
@@ -121,19 +127,16 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
         @Override
         public int getSlotLimit(int slot) {
-            return switch (slot) {
-                case 0, 1, 2, 3 -> 1;
-                default -> 0;
-            };
+            return 1;
         }
 
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return switch (slot) {
-                case 0 -> itemHandler.isItemValid(ENERGY_ITEM_INPUT_SLOT, stack);
+                case 0 -> itemHandler.isItemValid(SLOT_POWER_INPUT, stack);
                 case 1 -> itemHandler.isItemValid(REFINED_BUCKET_INPUT_SLOT, stack);
                 case 2 -> itemHandler.isItemValid(SLUDGE_BUCKET_INPUT_SLOT, stack);
-                case 3 -> itemHandler.isItemValid(CRYSTAL_SLOT, stack);
+                case 3 -> itemHandler.isItemValid(SLOT_CRYSTAL, stack);
                 default -> false;
             };
         }
@@ -142,16 +145,17 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     private final IItemHandler automationOutputHandler = new IItemHandler() {
         @Override
         public int getSlots() {
-            return 4;
+            return OUTPUT_SLOT_COUNT + 2;
         }
 
         @Override
         public ItemStack getStackInSlot(int slot) {
+            if (slot < OUTPUT_SLOT_COUNT) {
+                return itemHandler.getStackInSlot(OUTPUT_SLOT_START + slot);
+            }
             return switch (slot) {
-                case 0 -> itemHandler.getStackInSlot(ENERGY_ITEM_OUTPUT_SLOT);
-                case 1 -> itemHandler.getStackInSlot(DUST_OUTPUT_SLOT);
-                case 2 -> itemHandler.getStackInSlot(REFINED_BUCKET_OUTPUT_SLOT);
-                case 3 -> itemHandler.getStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT);
+                case OUTPUT_SLOT_COUNT -> itemHandler.getStackInSlot(REFINED_BUCKET_OUTPUT_SLOT);
+                case OUTPUT_SLOT_COUNT + 1 -> itemHandler.getStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT);
                 default -> ItemStack.EMPTY;
             };
         }
@@ -163,22 +167,24 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
         @Override
         public ItemStack extractItem(int slot, int amount, boolean simulate) {
+            if (slot < OUTPUT_SLOT_COUNT) {
+                return itemHandler.extractItem(OUTPUT_SLOT_START + slot, amount, simulate);
+            }
             return switch (slot) {
-                case 0 -> itemHandler.extractItem(ENERGY_ITEM_OUTPUT_SLOT, amount, simulate);
-                case 1 -> itemHandler.extractItem(DUST_OUTPUT_SLOT, amount, simulate);
-                case 2 -> itemHandler.extractItem(REFINED_BUCKET_OUTPUT_SLOT, amount, simulate);
-                case 3 -> itemHandler.extractItem(SLUDGE_BUCKET_OUTPUT_SLOT, amount, simulate);
+                case OUTPUT_SLOT_COUNT -> itemHandler.extractItem(REFINED_BUCKET_OUTPUT_SLOT, amount, simulate);
+                case OUTPUT_SLOT_COUNT + 1 -> itemHandler.extractItem(SLUDGE_BUCKET_OUTPUT_SLOT, amount, simulate);
                 default -> ItemStack.EMPTY;
             };
         }
 
         @Override
         public int getSlotLimit(int slot) {
+            if (slot < OUTPUT_SLOT_COUNT) {
+                return itemHandler.getSlotLimit(OUTPUT_SLOT_START + slot);
+            }
             return switch (slot) {
-                case 0 -> itemHandler.getSlotLimit(ENERGY_ITEM_OUTPUT_SLOT);
-                case 1 -> itemHandler.getSlotLimit(DUST_OUTPUT_SLOT);
-                case 2 -> itemHandler.getSlotLimit(REFINED_BUCKET_OUTPUT_SLOT);
-                case 3 -> itemHandler.getSlotLimit(SLUDGE_BUCKET_OUTPUT_SLOT);
+                case OUTPUT_SLOT_COUNT -> itemHandler.getSlotLimit(REFINED_BUCKET_OUTPUT_SLOT);
+                case OUTPUT_SLOT_COUNT + 1 -> itemHandler.getSlotLimit(SLUDGE_BUCKET_OUTPUT_SLOT);
                 default -> 0;
             };
         }
@@ -250,6 +256,10 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         blockEntity.serverTick();
     }
 
+    public FluidStack getSludgeFluidStack() {
+        return sludgeTank.getFluid().copy();
+    }
+
     @Override
     public Component getDisplayName() {
         return super.getDisplayName();
@@ -285,6 +295,7 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
+        migrateLegacyInventory();
         if (tag.contains("sludge_tank")) {
             sludgeTank.readFromNBT(registries, tag.getCompound("sludge_tank"));
         }
@@ -293,16 +304,15 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
     @Override
     protected void beforeProcessingTick() {
-        super.beforeProcessingTick();
+        syncFluidTankCapacities();
+        transferEnergyFromPowerInputItem();
         importRefinedMatterBucket();
         exportSludgeBucket();
     }
 
     @Override
     protected void afterProcessingTick() {
-        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel && sludgeOverflowBuffer > 0) {
-            sludgeOverflowBuffer = MatterSludgeOverflowHelper.spillBufferedOverflow(serverLevel, worldPosition, sludgeOverflowBuffer);
-        }
+        sludgeOverflowBuffer = 0;
     }
 
     @Override
@@ -318,20 +328,29 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
     @Override
     protected boolean isItemValid(int slot, ItemStack stack) {
-        if (slot == ENERGY_ITEM_INPUT_SLOT) {
+        if (slot == SLOT_POWER_INPUT) {
             return isEnergyItem(stack);
         }
-        if (slot == ENERGY_ITEM_OUTPUT_SLOT || slot == REFINED_BUCKET_OUTPUT_SLOT || slot == DUST_OUTPUT_SLOT || slot == SLUDGE_BUCKET_OUTPUT_SLOT) {
+        if (slot == ENERGY_ITEM_OUTPUT_SLOT) {
+            return false;
+        }
+        if (slot >= OUTPUT_SLOT_START && slot < OUTPUT_SLOT_START + OUTPUT_SLOT_COUNT) {
             return false;
         }
         if (slot == REFINED_BUCKET_INPUT_SLOT) {
-        return stack.is(ModItems.REFINED_MATTER_BUCKET.get());
+            return stack.is(ModItems.REFINED_MATTER_BUCKET.get());
+        }
+        if (slot == REFINED_BUCKET_OUTPUT_SLOT) {
+            return false;
+        }
+        if (slot == SLOT_CRYSTAL) {
+            return PowerCrystalEffects.isPowerCrystal(stack);
         }
         if (slot == SLUDGE_BUCKET_INPUT_SLOT) {
             return stack.is(Items.BUCKET);
         }
-        if (slot == CRYSTAL_SLOT) {
-            return PowerCrystalEffects.isPowerCrystal(stack);
+        if (slot == SLUDGE_BUCKET_OUTPUT_SLOT) {
+            return false;
         }
         return false;
     }
@@ -340,21 +359,23 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     protected boolean canProcess() {
         return fluidTank.getFluidAmount() >= REFINED_MATTER_COST
                 && level != null
-                && MatterSludgeOverflowHelper.canAcceptOutput(level, worldPosition, sludgeTank, MATTER_SLUDGE_OUTPUT, sludgeOverflowBuffer)
+                && sludgeTank.getSpace() >= MATTER_SLUDGE_OUTPUT
                 && canOutputDust();
     }
 
     @Override
     protected void processItem() {
         fluidTank.drain(REFINED_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
-        sludgeOverflowBuffer = MatterSludgeOverflowHelper.fillTankAndBufferOverflow(sludgeTank, MATTER_SLUDGE_OUTPUT, sludgeOverflowBuffer);
-        if (level instanceof net.minecraft.server.level.ServerLevel serverLevel && sludgeOverflowBuffer > 0) {
-            sludgeOverflowBuffer = MatterSludgeOverflowHelper.spillBufferedOverflow(serverLevel, worldPosition, sludgeOverflowBuffer);
+        sludgeTank.fill(new FluidStack(ModFluids.MATTER_SLUDGE.get(), MATTER_SLUDGE_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
+
+        int outputSlot = findDustOutputSlot();
+        if (outputSlot < 0) {
+            return;
         }
 
-        ItemStack dustStack = itemHandler.getStackInSlot(DUST_OUTPUT_SLOT);
+        ItemStack dustStack = itemHandler.getStackInSlot(outputSlot);
         if (dustStack.isEmpty()) {
-            itemHandler.setStackInSlot(DUST_OUTPUT_SLOT, ModItems.MATTER_DUST.get().getDefaultInstance().copyWithCount(DUST_OUTPUT_COUNT));
+            itemHandler.setStackInSlot(outputSlot, ModItems.MATTER_DUST.get().getDefaultInstance().copyWithCount(DUST_OUTPUT_COUNT));
         } else {
             dustStack.grow(DUST_OUTPUT_COUNT);
         }
@@ -370,10 +391,62 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         return PowerCrystalEffects.getConstructorEnergyPerTick(ENERGY_PER_TICK, getEffectiveCrystalStack());
     }
 
+    @Override
+    protected ItemStack getEffectiveCrystalStack() {
+        return progress > 0 && processCrystalLatched ? activeProcessCrystal : itemHandler.getStackInSlot(SLOT_CRYSTAL);
+    }
+
+    @Override
+    protected void latchProcessCrystal() {
+        processCrystalLatched = true;
+        ItemStack crystalStack = itemHandler.getStackInSlot(SLOT_CRYSTAL);
+        if (PowerCrystalEffects.isActive(crystalStack)) {
+            activeProcessCrystal = crystalStack.copy();
+            PowerCrystalData.drainCharge(crystalStack, PowerCrystalEffects.CRYSTAL_CHARGE_COST);
+        } else {
+            activeProcessCrystal = ItemStack.EMPTY;
+        }
+    }
+
+    private void transferEnergyFromPowerInputItem() {
+        ItemStack energyStack = itemHandler.getStackInSlot(SLOT_POWER_INPUT);
+        if (energyStack.isEmpty()) {
+            return;
+        }
+
+        IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(energyStack);
+        if (itemEnergy == null) {
+            return;
+        }
+
+        int missingEnergy = energyStorage.getMaxEnergyStored() - energyStorage.getEnergyStored();
+        if (missingEnergy > 0) {
+            int moved = EnergyItemHelper.transferEnergy(itemEnergy, energyStorage, missingEnergy);
+            if (moved > 0) {
+                setChanged();
+            }
+        }
+    }
+
     private boolean canOutputDust() {
-        ItemStack dustStack = itemHandler.getStackInSlot(DUST_OUTPUT_SLOT);
-        return dustStack.isEmpty()
-                || (dustStack.is(ModItems.MATTER_DUST.get()) && dustStack.getCount() <= dustStack.getMaxStackSize() - DUST_OUTPUT_COUNT);
+        return findDustOutputSlot() >= 0;
+    }
+
+    private int findDustOutputSlot() {
+        int emptySlot = -1;
+        for (int slot = OUTPUT_SLOT_START; slot < OUTPUT_SLOT_START + OUTPUT_SLOT_COUNT; slot++) {
+            ItemStack dustStack = itemHandler.getStackInSlot(slot);
+            if (dustStack.isEmpty()) {
+                if (emptySlot < 0) {
+                    emptySlot = slot;
+                }
+                continue;
+            }
+            if (dustStack.is(ModItems.MATTER_DUST.get()) && dustStack.getCount() <= dustStack.getMaxStackSize() - DUST_OUTPUT_COUNT) {
+                return slot;
+            }
+        }
+        return emptySlot;
     }
 
     private void importRefinedMatterBucket() {
@@ -414,5 +487,26 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         } else {
             outputStack.grow(1);
         }
+    }
+
+    private void migrateLegacyInventory() {
+        moveLegacySlot(4, REFINED_BUCKET_INPUT_SLOT, stack -> stack.is(ModItems.REFINED_MATTER_BUCKET.get()));
+        moveLegacySlot(5, REFINED_BUCKET_OUTPUT_SLOT, stack -> stack.is(Items.BUCKET));
+        moveLegacySlot(6, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
+        moveLegacySlot(7, SLUDGE_BUCKET_INPUT_SLOT, stack -> stack.is(Items.BUCKET) || stack.is(ModItems.MATTER_SLUDGE_BUCKET.get()));
+        if (itemHandler.getStackInSlot(SLUDGE_BUCKET_INPUT_SLOT).is(ModItems.MATTER_SLUDGE_BUCKET.get())
+                && itemHandler.getStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT).isEmpty()) {
+            itemHandler.setStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT, itemHandler.getStackInSlot(SLUDGE_BUCKET_INPUT_SLOT).copy());
+            itemHandler.setStackInSlot(SLUDGE_BUCKET_INPUT_SLOT, ItemStack.EMPTY);
+        }
+    }
+
+    private void moveLegacySlot(int fromSlot, int targetSlot, java.util.function.Predicate<ItemStack> predicate) {
+        ItemStack stack = itemHandler.getStackInSlot(fromSlot);
+        if (stack.isEmpty() || !predicate.test(stack) || !itemHandler.getStackInSlot(targetSlot).isEmpty()) {
+            return;
+        }
+        itemHandler.setStackInSlot(targetSlot, stack.copy());
+        itemHandler.setStackInSlot(fromSlot, ItemStack.EMPTY);
     }
 }

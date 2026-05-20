@@ -37,11 +37,11 @@ import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements SideConfigurableBlockEntity {
-    public static final int DISCHARGE_SLOT_START = 0;
-    public static final int DISCHARGE_SLOT_COUNT = 4;
-    public static final int CHARGE_SLOT_START = DISCHARGE_SLOT_START + DISCHARGE_SLOT_COUNT;
-    public static final int CHARGE_SLOT_COUNT = 4;
-    public static final int SLOT_COUNT = DISCHARGE_SLOT_COUNT + CHARGE_SLOT_COUNT;
+    public static final int SLOT_CRYSTAL = 0;
+    public static final int CHARGE_SLOT_START = 1;
+    public static final int CHARGE_SLOT_COUNT = 6;
+    public static final int SLOT_POWER_BANK = CHARGE_SLOT_START + CHARGE_SLOT_COUNT;
+    public static final int SLOT_COUNT = SLOT_POWER_BANK + 1;
     public static final int DATA_ENERGY = 0;
     public static final int DATA_ENERGY_CAPACITY = 1;
     public static final int DATA_COUNT = 2;
@@ -61,8 +61,9 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
         @Override
         public boolean isItemValid(int slot, ItemStack stack) {
             return switch (getSlotRole(slot)) {
-                case DISCHARGE -> isDischargeItem(stack);
+                case CRYSTAL -> PowerCrystalEffects.isPowerCrystal(stack);
                 case CHARGE -> isChargeItem(stack);
+                case POWER_BANK -> isPowerBankInputItem(stack);
                 case NONE -> false;
             };
         }
@@ -370,25 +371,21 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
     }
 
     private int transferEnergyFromInputItems() {
-        int movedTotal = 0;
-        for (int slot = DISCHARGE_SLOT_START; slot < DISCHARGE_SLOT_START + DISCHARGE_SLOT_COUNT; slot++) {
-            ItemStack stack = itemHandler.getStackInSlot(slot);
-            if (!isDischargeItem(stack)) {
-                continue;
-            }
-
-            IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(stack);
-            if (itemEnergy == null) {
-                continue;
-            }
-
-            int moved = EnergyItemHelper.transferEnergy(itemEnergy, energyStorage, MAX_SLOT_TRANSFER_PER_TICK);
-            if (moved > 0) {
-                movedTotal += moved;
-                setChanged();
-            }
+        ItemStack stack = itemHandler.getStackInSlot(SLOT_POWER_BANK);
+        if (!isPowerBankInputItem(stack)) {
+            return 0;
         }
-        return movedTotal;
+
+        IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(stack);
+        if (itemEnergy == null) {
+            return 0;
+        }
+
+        int moved = EnergyItemHelper.transferEnergy(itemEnergy, energyStorage, MAX_SLOT_TRANSFER_PER_TICK);
+        if (moved > 0) {
+            setChanged();
+        }
+        return moved;
     }
 
     private int transferEnergyToOutputItems() {
@@ -531,14 +528,46 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
         }
 
         if (serializedSize <= 2) {
-            copyIfPresent(serializedHandler, 0, DISCHARGE_SLOT_START);
+            copyIfPresent(serializedHandler, 0, SLOT_POWER_BANK);
             copyIfPresent(serializedHandler, 1, CHARGE_SLOT_START);
+            return;
+        }
+
+        if (serializedSize == 8) {
+            migrateLegacyEightSlotInventory(serializedHandler);
             return;
         }
 
         int slotsToCopy = Math.min(serializedHandler.getSlots(), itemHandler.getSlots());
         for (int slot = 0; slot < slotsToCopy; slot++) {
             itemHandler.setStackInSlot(slot, serializedHandler.getStackInSlot(slot));
+        }
+    }
+
+    private void migrateLegacyEightSlotInventory(ItemStackHandler sourceHandler) {
+        int nextChargeSlot = CHARGE_SLOT_START;
+
+        for (int sourceSlot = 4; sourceSlot < 8 && nextChargeSlot < CHARGE_SLOT_START + CHARGE_SLOT_COUNT; sourceSlot++) {
+            ItemStack stack = sourceHandler.getStackInSlot(sourceSlot);
+            if (isChargeItem(stack)) {
+                itemHandler.setStackInSlot(nextChargeSlot++, stack.copy());
+            }
+        }
+
+        for (int sourceSlot = 0; sourceSlot < 4; sourceSlot++) {
+            ItemStack stack = sourceHandler.getStackInSlot(sourceSlot);
+            if (stack.isEmpty()) {
+                continue;
+            }
+
+            if (itemHandler.getStackInSlot(SLOT_POWER_BANK).isEmpty() && isPowerBankInputItem(stack)) {
+                itemHandler.setStackInSlot(SLOT_POWER_BANK, stack.copy());
+                continue;
+            }
+
+            if (nextChargeSlot < CHARGE_SLOT_START + CHARGE_SLOT_COUNT && isChargeItem(stack)) {
+                itemHandler.setStackInSlot(nextChargeSlot++, stack.copy());
+            }
         }
     }
 
@@ -557,12 +586,12 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
         return history;
     }
 
-    private static boolean isDischargeItem(ItemStack stack) {
-        return isUsableEnergyItem(stack) && EnergyItemHelper.canProvideEnergy(stack);
-    }
-
     private static boolean isChargeItem(ItemStack stack) {
         return isUsableEnergyItem(stack) && EnergyItemHelper.canReceiveEnergy(stack);
+    }
+
+    private static boolean isPowerBankInputItem(ItemStack stack) {
+        return isUsableEnergyItem(stack) && EnergyItemHelper.canProvideEnergy(stack);
     }
 
     private static boolean isUsableEnergyItem(ItemStack stack) {
@@ -576,11 +605,14 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
     }
 
     private static SlotRole getSlotRole(int slot) {
-        if (slot >= DISCHARGE_SLOT_START && slot < DISCHARGE_SLOT_START + DISCHARGE_SLOT_COUNT) {
-            return SlotRole.DISCHARGE;
+        if (slot == SLOT_CRYSTAL) {
+            return SlotRole.CRYSTAL;
         }
         if (slot >= CHARGE_SLOT_START && slot < CHARGE_SLOT_START + CHARGE_SLOT_COUNT) {
             return SlotRole.CHARGE;
+        }
+        if (slot == SLOT_POWER_BANK) {
+            return SlotRole.POWER_BANK;
         }
         return SlotRole.NONE;
     }
@@ -654,8 +686,9 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
     }
 
     private enum SlotRole {
-        DISCHARGE,
+        CRYSTAL,
         CHARGE,
+        POWER_BANK,
         NONE
     }
 }

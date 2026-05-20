@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "matterworks:block/combustion_generator"
+    },
+    "facing=east": {
+      "model": "matterworks:block/combustion_generator"
+    },
+    "facing=south": {
+      "model": "matterworks:block/combustion_generator"
+    },
+    "facing=west": {
+      "model": "matterworks:block/combustion_generator"
+    }
+  }
+}

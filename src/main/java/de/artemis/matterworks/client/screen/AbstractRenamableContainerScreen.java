@@ -6,7 +6,6 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.neoforged.neoforge.network.PacketDistributor;
@@ -14,6 +13,7 @@ import org.lwjgl.glfw.GLFW;
 
 public abstract class AbstractRenamableContainerScreen<T extends AbstractContainerMenu & NamedBlockMenu> extends AbstractContainerScreen<T> {
     private static final int MAX_NAME_LENGTH = 64;
+    private static final String TITLE_TRUNCATION_SUFFIX = "(...)";
 
     private EditBox nameEditBox;
     private boolean editingName;
@@ -26,16 +26,18 @@ public abstract class AbstractRenamableContainerScreen<T extends AbstractContain
     @Override
     protected void init() {
         super.init();
-        nameEditBox = new EditBox(font, 0, 0, getEditableTitleWidth(), 14, Component.empty());
+        nameEditBox = GuiWidgets.textField(font, 0, 0, getEditableTitleWidth(), 14, Component.empty());
         nameEditBox.setMaxLength(MAX_NAME_LENGTH);
         nameEditBox.setVisible(false);
         refreshNameEditBoxBounds();
         addRenderableWidget(nameEditBox);
+        GuiWidgets.restoreRememberedMousePosition();
     }
 
     @Override
     public void containerTick() {
         super.containerTick();
+        refreshNameEditBoxBounds();
         if (!editingName && nameEditBox != null) {
             nameEditBox.setValue(menu.getBlockDisplayName());
         }
@@ -94,7 +96,7 @@ public abstract class AbstractRenamableContainerScreen<T extends AbstractContain
 
     protected void renderEditableTitle(GuiGraphics guiGraphics, int x, int y, int color) {
         if (!editingName) {
-            guiGraphics.drawString(font, menu.getBlockDisplayName(), x, y, color, false);
+            guiGraphics.drawString(font, getDisplayedTitleText(), x, y, color, false);
         }
     }
 
@@ -107,11 +109,19 @@ public abstract class AbstractRenamableContainerScreen<T extends AbstractContain
     }
 
     protected int getEditableTitleWidth() {
-        return Mth.clamp(imageWidth - getEditableTitleX() - 56, 72, 120);
+        return Math.max(24, getEditableTitleRightEdge() - getEditableTitleX());
+    }
+
+    protected int getEditableTitleRightEdge() {
+        return imageWidth - 8;
     }
 
     protected int getEditableTitleColor() {
         return 0x404040;
+    }
+
+    protected boolean isEditingName() {
+        return editingName;
     }
 
     protected void refreshNameEditBoxBounds() {
@@ -154,8 +164,23 @@ public abstract class AbstractRenamableContainerScreen<T extends AbstractContain
     private boolean isWithinTitleBounds(double mouseX, double mouseY) {
         int x = leftPos + getEditableTitleX();
         int y = topPos + getEditableTitleY();
-        int width = Math.min(font.width(menu.getBlockDisplayName()), getEditableTitleWidth());
+        int width = font.width(getDisplayedTitleText());
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + 10;
+    }
+
+    protected String getDisplayedTitleText() {
+        String title = menu.getBlockDisplayName();
+        int maxWidth = getEditableTitleWidth();
+        if (font.width(title) <= maxWidth) {
+            return title;
+        }
+
+        int suffixWidth = font.width(TITLE_TRUNCATION_SUFFIX);
+        if (suffixWidth >= maxWidth) {
+            return font.plainSubstrByWidth(TITLE_TRUNCATION_SUFFIX, maxWidth);
+        }
+
+        return font.plainSubstrByWidth(title, maxWidth - suffixWidth) + TITLE_TRUNCATION_SUFFIX;
     }
 
     private static String normalizeName(String value) {

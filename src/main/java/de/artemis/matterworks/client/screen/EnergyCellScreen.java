@@ -9,7 +9,6 @@ import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
-import net.minecraft.util.Mth;
 import net.minecraft.world.entity.player.Inventory;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -27,7 +26,6 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     private static final int CHARGE_BAR_Y = 63;
     private static final int CHARGE_BAR_WIDTH = 160;
     private static final int CHARGE_BAR_HEIGHT = 41;
-    private static final int HISTORY_SAMPLE_INTERVAL = 4;
     private static final int TOOLTIP_BAR_WIDTH = 40;
     private static final int GRAPH_COLOR = 0xFFE23D2D;
     private static final int GRAPH_AREA_COLOR = 0x35E23D2D;
@@ -40,7 +38,7 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
         super(menu, playerInventory, title);
         this.imageWidth = 176;
         this.imageHeight = 222;
-        this.inventoryLabelY = 129;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
@@ -52,17 +50,22 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        if (sideConfig.isShowing()) {
+            sideConfig.renderBackground(guiGraphics, leftPos, topPos);
+            return;
+        }
         renderTransferGraph(guiGraphics, mouseX, mouseY);
         renderChargeBar(guiGraphics);
-        sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
-        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (sideConfig.isShowing()) {
+            return;
+        }
         renderEditableTitle(guiGraphics, 8, 6, 0x404040);
 
-        String rateText = menu.getCurrentTotalTransferRate() + " FE/t";
+        String rateText = GuiWidgets.formatRateText(menu.getCurrentNetTransferRate(), "FE/t", true);
         guiGraphics.drawString(font, rateText, imageWidth - 8 - font.width(rateText), 6, 0x404040, false);
         guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
@@ -70,12 +73,15 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        sideConfig.syncSlotLayout(menu);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         if (sideConfig.isShowing()) {
+            sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, getEditableTitleX(), getEditableTitleY(), getEditableTitleColor(), isEditingName() ? "" : getDisplayedTitleText(), inventoryLabelX, inventoryLabelY, mouseX, mouseY);
             sideConfig.renderTooltip(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
         } else {
             renderDataTooltips(guiGraphics, mouseX, mouseY);
         }
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -92,103 +98,51 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     }
 
     @Override
-    protected int getEditableTitleWidth() {
-        return 110;
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        return TopCategoryTabs.keyPressed(keyCode, buildTabs());
+    }
+
+    @Override
+    protected int getEditableTitleRightEdge() {
+        if (sideConfig.isShowing()) {
+            return imageWidth - 8;
+        }
+        String rateText = GuiWidgets.formatRateText(menu.getCurrentNetTransferRate(), "FE/t", true);
+        return imageWidth - 8 - font.width(rateText) - 6;
     }
 
     private void renderTransferGraph(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int chartFrameLeft = leftPos + GRAPH_X;
-        int chartFrameTop = topPos + GRAPH_Y;
-        int chartFrameWidth = GRAPH_WIDTH;
-        int chartFrameHeight = GRAPH_HEIGHT;
-        int chartLeft = chartFrameLeft + 2;
-        int chartTop = chartFrameTop + 2;
-        int chartWidth = chartFrameWidth - 4;
-        int chartHeight = chartFrameHeight - 4;
-        int bottom = chartTop + chartHeight - 1;
-
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, chartFrameLeft, chartFrameTop, chartFrameWidth, chartFrameHeight);
-        guiGraphics.fill(chartLeft, chartTop, chartLeft + chartWidth, chartTop + chartHeight, 0xFF1F1F1F);
-        renderGraphGrid(guiGraphics, chartLeft, chartTop, chartWidth, chartHeight);
-
-        int historySize = menu.getHistorySize();
         int historyCapacity = menu.getHistoryCapacity();
-        if (historyCapacity <= 0) {
-            return;
-        }
-
-        int maxValue = 1;
-        for (int visibleIndex = 0; visibleIndex < historyCapacity; visibleIndex++) {
-            maxValue = Math.max(maxValue, getVisibleSample(visibleIndex).totalRate());
-        }
-        maxValue = Math.max(maxValue, menu.getCurrentTotalTransferRate());
-
-        for (int visibleIndex = 0; visibleIndex < historyCapacity - 1; visibleIndex++) {
-            EnergyCellBlockEntity.TransferHistorySample current = getVisibleSample(visibleIndex);
-            EnergyCellBlockEntity.TransferHistorySample next = getVisibleSample(visibleIndex + 1);
-            int x1 = getSampleX(visibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y1 = getSampleY(current.totalRate(), maxValue, chartTop, chartHeight);
-            int x2 = getSampleX(visibleIndex + 1, historyCapacity, chartLeft, chartWidth);
-            int y2 = getSampleY(next.totalRate(), maxValue, chartTop, chartHeight);
-            drawAreaSegment(guiGraphics, x1, y1, x2, y2, bottom, GRAPH_AREA_COLOR);
-            drawLineSegment(guiGraphics, x1, y1, x2, y2, GRAPH_COLOR);
-        }
-
-        if (historySize == 1) {
-            int x = getSampleX(historyCapacity - 1, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(menu.getHistorySample(0).totalRate(), maxValue, chartTop, chartHeight);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, GRAPH_COLOR);
-        } else if (historySize > 1) {
-            int latestVisibleIndex = historyCapacity - 1;
-            EnergyCellBlockEntity.TransferHistorySample latest = menu.getHistorySample(historySize - 1);
-            int x = getSampleX(latestVisibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(latest.totalRate(), maxValue, chartTop, chartHeight);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, GRAPH_COLOR);
-        }
-
-        int hoveredVisibleIndex = getHoveredSampleIndex(mouseX, mouseY, chartLeft, chartTop, chartWidth, chartHeight, historyCapacity);
-        if (hoveredVisibleIndex >= 0) {
-            EnergyCellBlockEntity.TransferHistorySample sample = getVisibleSample(hoveredVisibleIndex);
-            int x = getSampleX(hoveredVisibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(sample.totalRate(), maxValue, chartTop, chartHeight);
-            guiGraphics.fill(x, chartTop, x + 1, chartTop + chartHeight, 0x66FFFFFF);
-            guiGraphics.fill(x - 2, y - 2, x + 3, y + 3, 0xFFFFFFFF);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, GRAPH_COLOR);
-        }
+        GuiWidgets.drawInsetGraph(
+                guiGraphics,
+                leftPos + GRAPH_X,
+                topPos + GRAPH_Y,
+                GRAPH_WIDTH,
+                GRAPH_HEIGHT,
+                menu.getHistorySize(),
+                historyCapacity,
+                visibleIndex -> getVisibleSample(visibleIndex).netRate(),
+                menu.getCurrentNetTransferRate(),
+                GuiWidgets.getHoveredHistorySampleIndex(mouseX, mouseY, leftPos + GRAPH_X, topPos + GRAPH_Y, GRAPH_WIDTH, GRAPH_HEIGHT, historyCapacity),
+                GRAPH_COLOR,
+                GRAPH_AREA_COLOR
+        );
     }
 
     private void renderChargeBar(GuiGraphics guiGraphics) {
-        int barFrameLeft = leftPos + CHARGE_BAR_X;
-        int barFrameTop = topPos + CHARGE_BAR_Y;
-        int barFrameWidth = CHARGE_BAR_WIDTH;
-        int barFrameHeight = CHARGE_BAR_HEIGHT;
-        int barLeft = barFrameLeft + 2;
-        int barTop = barFrameTop + 2;
-        int barWidth = barFrameWidth - 4;
-        int barHeight = barFrameHeight - 4;
-        int filledHeight = menu.getScaledEnergyAmount(barHeight);
-        int barBottom = barTop + barHeight;
-
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, barFrameLeft, barFrameTop, barFrameWidth, barFrameHeight);
-        guiGraphics.fill(barLeft, barTop, barLeft + barWidth, barTop + barHeight, 0xFF1F1F1F);
-        if (filledHeight > 0) {
-            int fillTop = barBottom - filledHeight;
-            guiGraphics.fill(barLeft, fillTop, barLeft + barWidth, barBottom, CHARGE_FILL_COLOR);
-            guiGraphics.fill(barLeft, fillTop, barLeft + barWidth, Math.min(barBottom, fillTop + 2), CHARGE_FILL_TOP_COLOR);
-        }
-    }
-
-    private void renderGraphGrid(GuiGraphics guiGraphics, int left, int top, int width, int height) {
-        int right = left + width;
-        int bottom = top + height;
-        for (int step = 1; step < 4; step++) {
-            int y = top + Math.round(step * (height - 1) / 4.0F);
-            guiGraphics.fill(left, y, right, y + 1, 0x22373737);
-        }
-        for (int step = 1; step < 4; step++) {
-            int x = left + Math.round(step * (width - 1) / 4.0F);
-            guiGraphics.fill(x, top, x + 1, bottom, 0x22373737);
-        }
+        GuiWidgets.drawInsetVerticalFillBar(
+                guiGraphics,
+                leftPos + CHARGE_BAR_X,
+                topPos + CHARGE_BAR_Y,
+                CHARGE_BAR_WIDTH,
+                CHARGE_BAR_HEIGHT,
+                menu.getScaledEnergyAmount(CHARGE_BAR_HEIGHT - 4),
+                CHARGE_FILL_COLOR,
+                CHARGE_FILL_TOP_COLOR
+        );
     }
 
     private void renderDataTooltips(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -219,97 +173,37 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
             return null;
         }
 
-        int chartLeft = leftPos + GRAPH_X + 1;
-        int chartTop = topPos + GRAPH_Y + 1;
-        int chartWidth = GRAPH_WIDTH - 2;
-        int chartHeight = GRAPH_HEIGHT - 2;
-        int hoveredVisibleIndex = getHoveredSampleIndex(mouseX, mouseY, chartLeft, chartTop, chartWidth, chartHeight, historyCapacity);
+        int hoveredVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+                mouseX,
+                mouseY,
+                leftPos + GRAPH_X,
+                topPos + GRAPH_Y,
+                GRAPH_WIDTH,
+                GRAPH_HEIGHT,
+                historyCapacity
+        );
         if (hoveredVisibleIndex < 0) {
             return null;
         }
 
-        int historyIndex = getHistoryIndexForVisibleIndex(hoveredVisibleIndex, historySize, historyCapacity);
+        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(hoveredVisibleIndex, historySize, historyCapacity);
         if (historyIndex < 0) {
             return null;
         }
 
         EnergyCellBlockEntity.TransferHistorySample sample = menu.getHistorySample(historyIndex);
-        int ticksAgo = (historySize - 1 - historyIndex) * HISTORY_SAMPLE_INTERVAL;
-        return new GraphHover(List.of(Component.literal(formatSignedRate(sample.netRate()))));
+        return new GraphHover(List.of(GuiWidgets.formatRateComponent(sample.netRate(), "FE/t", true)));
     }
 
     private EnergyCellBlockEntity.TransferHistorySample getVisibleSample(int visibleIndex) {
-        int historyIndex = getHistoryIndexForVisibleIndex(visibleIndex, menu.getHistorySize(), menu.getHistoryCapacity());
+        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(visibleIndex, menu.getHistorySize(), menu.getHistoryCapacity());
         return historyIndex < 0
                 ? EnergyCellBlockEntity.TransferHistorySample.EMPTY
                 : menu.getHistorySample(historyIndex);
     }
 
-    private static int getHistoryIndexForVisibleIndex(int visibleIndex, int historySize, int historyCapacity) {
-        int leadingEmptySlots = Math.max(0, historyCapacity - historySize);
-        if (visibleIndex < leadingEmptySlots) {
-            return -1;
-        }
-        int historyIndex = visibleIndex - leadingEmptySlots;
-        return historyIndex >= 0 && historyIndex < historySize ? historyIndex : -1;
-    }
-
-    private static int getHoveredSampleIndex(int mouseX, int mouseY, int chartLeft, int chartTop, int chartWidth, int chartHeight, int historyCapacity) {
-        if (mouseX < chartLeft || mouseX >= chartLeft + chartWidth || mouseY < chartTop || mouseY >= chartTop + chartHeight) {
-            return -1;
-        }
-        if (historyCapacity <= 1) {
-            return 0;
-        }
-        float relative = (mouseX - chartLeft) / (float) Math.max(1, chartWidth - 1);
-        return Mth.clamp(Math.round(relative * (historyCapacity - 1)), 0, historyCapacity - 1);
-    }
-
-    private static int getSampleX(int sampleIndex, int historyCapacity, int chartLeft, int chartWidth) {
-        if (historyCapacity <= 1) {
-            return chartLeft + chartWidth - 1;
-        }
-        return chartLeft + Math.round(sampleIndex * (chartWidth - 1) / (float) (historyCapacity - 1));
-    }
-
-    private static int getSampleY(int value, int maxValue, int chartTop, int chartHeight) {
-        int bottom = chartTop + chartHeight - 1;
-        return bottom - Math.round((value / (float) Math.max(1, maxValue)) * (chartHeight - 1));
-    }
-
-    private static void drawAreaSegment(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int bottom, int color) {
-        int startX = Math.min(x1, x2);
-        int endX = Math.max(x1, x2);
-        for (int x = startX; x <= endX; x++) {
-            float delta = endX == startX ? 0.0F : (x - startX) / (float) (endX - startX);
-            int y = Math.round(Mth.lerp(delta, y1, y2));
-            guiGraphics.fill(x, y, x + 1, bottom + 1, color);
-        }
-    }
-
-    private static void drawLineSegment(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int color) {
-        int steps = Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1));
-        if (steps <= 0) {
-            guiGraphics.fill(x1, y1, x1 + 1, y1 + 1, color);
-            return;
-        }
-        for (int step = 0; step <= steps; step++) {
-            float delta = step / (float) steps;
-            int x = Math.round(Mth.lerp(delta, x1, x2));
-            int y = Math.round(Mth.lerp(delta, y1, y2));
-            guiGraphics.fill(x, y, x + 1, y + 1, color);
-        }
-    }
-
     private boolean isWithin(int mouseX, int mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
-    }
-
-    private static String formatTicksAgo(int ticksAgo) {
-        if (ticksAgo % 20 == 0) {
-            return (ticksAgo / 20) + "s ago";
-        }
-        return String.format("%.1fs ago", ticksAgo / 20.0F);
     }
 
     private float getEnergyRatio() {
@@ -319,10 +213,6 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
 
     private int getFillPercent() {
         return Math.round(getEnergyRatio() * 100.0F);
-    }
-
-    private static String formatSignedRate(int rate) {
-        return "(" + (rate > 0 ? "+" : "") + rate + "fe/t)";
     }
 
     private List<TopCategoryTabs.Tab> buildTabs() {

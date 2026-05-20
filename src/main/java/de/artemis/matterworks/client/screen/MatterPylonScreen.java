@@ -1,8 +1,9 @@
 package de.artemis.matterworks.client.screen;
 
+import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.EnergyCellBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
-import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
+import de.artemis.matterworks.common.blockentity.FluidTankBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
@@ -11,11 +12,11 @@ import de.artemis.matterworks.common.network.OpenMatterPrimaryMenuPayload;
 import de.artemis.matterworks.common.network.SetPylonColorCodePayload;
 import de.artemis.matterworks.common.network.SetPylonIdPayload;
 import de.artemis.matterworks.common.registry.ModBlocks;
-import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
@@ -27,22 +28,39 @@ import java.util.List;
 
 public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPylonMenu> {
     private static final int ID_SUBMIT_DEBOUNCE_TICKS = 8;
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/network_tab.png");
+    private static final int CHANNEL_BUTTONS_X = 7;
+    private static final int CHANNEL_BUTTONS_Y = 41;
+    private static final int CHANNEL_BUTTON_GAP = 6;
+    private static final int TEXTURE_SIZE = 256;
+    private static final int FILTER_LABEL_Y = 64;
+    private static final int FILTER_IMPORT_CENTER_X = 26;
+    private static final int FILTER_EXPORT_CENTER_X = 66;
+    private static final int NETWORK_CODE_CENTER_X = 130;
+    private static final int NETWORK_CODE_LABEL_Y = 64;
+    private static final int POWER_CRYSTALS_CENTER_X = 130;
+    private static final int POWER_CRYSTALS_LABEL_Y = 96;
+    private static final int FILTER_SECTION_X = 8;
+    private static final int FILTER_SECTION_Y = 75;
+    private static final int FILTER_SECTION_WIDTH = 76;
+    private static final int FILTER_SECTION_HEIGHT = 16;
+    private static final int NETWORK_BACKGROUND_FILL = 0xFFC6C6C6;
 
     private EditBox idBox;
     private Button modeButton;
-    private final List<Button> channelButtons = new ArrayList<>();
+    private final List<ChannelButtonEntry> channelButtons = new ArrayList<>();
     private String lastSubmittedId = "";
     private int pendingSubmitTicks = -1;
     private boolean userEditedIdBox;
     private boolean suppressIdResponder;
     private int selectedChannel = -1;
-    private final NetworkColorPickerOverlay colorPicker = new NetworkColorPickerOverlay(new int[]{88, 108, 128}, new int[]{138, 138, 138});
+    private final NetworkColorPickerOverlay colorPicker = new NetworkColorPickerOverlay(new int[]{92, 122, 152}, new int[]{75, 75, 75});
 
     public MatterPylonScreen(MatterPylonMenu menu, net.minecraft.world.entity.player.Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
-        this.imageHeight = 238;
-        this.inventoryLabelY = 1000;
+        this.imageHeight = 222;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
@@ -51,7 +69,8 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         if (selectedChannel < 0 || !menu.supportsChannel(selectedChannel)) {
             selectedChannel = menu.getFirstSupportedChannel();
         }
-        this.idBox = new EditBox(this.font, this.leftPos + 16, this.topPos + 36, 58, 18, Component.translatable("screen.matterworks.matter_pylon.id"));
+        menu.setActiveFilterChannel(selectedChannel);
+        this.idBox = GuiWidgets.textField(this.font, this.leftPos + 8, this.topPos + 18, 76, 16, Component.translatable("screen.matterworks.matter_pylon.id"));
         this.idBox.setMaxLength(10);
         this.idBox.setFilter(value -> value.isEmpty() || value.chars().allMatch(Character::isDigit));
         setIdBoxValue(menu.hasSyncedState(selectedChannel) ? Integer.toString(menu.getPylonId(selectedChannel)) : "");
@@ -66,20 +85,33 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         this.addRenderableWidget(this.idBox);
 
         this.channelButtons.clear();
-        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
-            final int channelIndex = channel;
-            Button channelButton = this.addRenderableWidget(Button.builder(getChannelButtonLabel(channel), button -> switchChannel(channelIndex))
-                    .bounds(this.leftPos + 16 + channel * 36, this.topPos + 60, 32, 20)
-                    .build());
-            this.channelButtons.add(channelButton);
+        List<Integer> supportedChannels = getSupportedChannels();
+        ChannelButtonSprite sprite = getChannelButtonSprite(supportedChannels.size());
+        float channelLabelScale = getChannelLabelScale(supportedChannels, sprite.width());
+        for (int index = 0; index < supportedChannels.size(); index++) {
+            int channel = supportedChannels.get(index);
+            int channelX = this.leftPos + CHANNEL_BUTTONS_X + index * (sprite.width() + CHANNEL_BUTTON_GAP);
+            GuiWidgets.SpriteSelectableButton channelButton = this.addRenderableWidget(GuiWidgets.spriteSelectableButton(
+                    channelX,
+                    this.topPos + CHANNEL_BUTTONS_Y,
+                    sprite.width(),
+                    sprite.height(),
+                    getChannelButtonLabel(channel),
+                    button -> switchChannel(channel),
+                    TEXTURE,
+                    sprite.u(),
+                    sprite.v(),
+                    TEXTURE_SIZE,
+                    TEXTURE_SIZE
+            ).setTextScale(channelLabelScale));
+            this.channelButtons.add(new ChannelButtonEntry(channel, channelButton));
         }
 
-        this.modeButton = this.addRenderableWidget(Button.builder(getModeButtonLabel(), button -> {
-            Minecraft minecraft = this.minecraft;
-            if (minecraft != null && minecraft.gameMode != null) {
-                minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, selectedChannel);
+        this.modeButton = this.addRenderableWidget(GuiWidgets.panelButton(this.leftPos + 91, this.topPos + 17, 78, 18, getModeButtonLabel(), button -> {
+            if (this.minecraft != null && this.minecraft.gameMode != null) {
+                this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, selectedChannel);
             }
-        }).bounds(this.leftPos + 88, this.topPos + 34, 72, 20).build());
+        }));
         this.modeButton.active = menu.hasSyncedState(selectedChannel);
         refreshChannelWidgets();
     }
@@ -126,7 +158,10 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
             submitId(true);
             return true;
         }
-        return super.keyPressed(keyCode, scanCode, modifiers);
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        return TopCategoryTabs.keyPressed(keyCode, buildTabs());
     }
 
     @Override
@@ -137,15 +172,8 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        int left = this.leftPos;
-        int top = this.topPos;
-        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, this.imageWidth, this.imageHeight);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 14, top + 34, 62, 22);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 7, top + 84, 54, 40);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 79, top + 84, 54, 40);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 7, top + 130, 72, 24);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left + 7, top + 156, 162, 50);
-        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
+        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        renderInactiveFilterCover(guiGraphics);
         colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, menu::getNetworkColor);
         TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
@@ -153,30 +181,16 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         renderEditableTitle(guiGraphics, this.titleLabelX, this.titleLabelY, 0x404040);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.id"), 16, 20, 0x404040, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.mode"), 88, 20, 0x404040, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.channel"), 16, 48, 0x404040, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.item_filter"), 16, 74, menu.supportsFilterChannel(MatterPylonBlockEntity.CHANNEL_ITEMS) ? 0x404040 : 0x707070, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.import_short"), 16, 84, 0x406090, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.whitelist_short"), 16, 94, 0x507D50, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.blacklist_short"), 34, 94, 0x8D5050, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.export_short"), 16, 102, 0x8B6A2B, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.whitelist_short"), 16, 112, 0x507D50, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.blacklist_short"), 34, 112, 0x8D5050, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.fluid_filter"), 88, 74, menu.supportsFilterChannel(MatterPylonBlockEntity.CHANNEL_FLUIDS) ? 0x404040 : 0x707070, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.import_short"), 88, 84, 0x406090, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.whitelist_short"), 88, 94, 0x507D50, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.blacklist_short"), 106, 94, 0x8D5050, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.export_short"), 88, 102, 0x8B6A2B, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.whitelist_short"), 88, 112, 0x507D50, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.blacklist_short"), 106, 112, 0x8D5050, false);
-        guiGraphics.drawString(this.font, Component.literal("Power Crystals"), 16, 120, menu.supportsUpgradeCrystals() ? 0x404040 : 0x707070, false);
-        guiGraphics.drawString(this.font, Component.literal("Code"), 88, 120, 0x404040, false);
-        guiGraphics.drawString(this.font, Component.literal("R"), 18, 132, 0xE14B4B, false);
-        guiGraphics.drawString(this.font, Component.literal("G"), 36, 132, 0x55D26A, false);
-        guiGraphics.drawString(this.font, Component.literal("B"), 54, 132, 0x4C86F5, false);
-        guiGraphics.drawString(this.font, this.playerInventoryTitle, 8, 146, 0x404040, false);
-        guiGraphics.drawString(this.font, Component.translatable("screen.matterworks.matter_network.link_hint"), 16, 228, 0x606060, false);
+        drawCenteredLabel(guiGraphics, Component.literal("Code"), NETWORK_CODE_CENTER_X, NETWORK_CODE_LABEL_Y);
+        if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_ITEMS
+                || menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_FLUIDS) {
+            drawCenteredLabel(guiGraphics, Component.literal("Import"), FILTER_IMPORT_CENTER_X, FILTER_LABEL_Y);
+            drawCenteredLabel(guiGraphics, Component.literal("Output"), FILTER_EXPORT_CENTER_X, FILTER_LABEL_Y);
+        }
+        if (menu.supportsUpgradeCrystals()) {
+            drawCenteredLabel(guiGraphics, Component.literal("Crystals"), POWER_CRYSTALS_CENTER_X, POWER_CRYSTALS_LABEL_Y);
+        }
+        guiGraphics.drawString(this.font, this.playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
 
     @Override
@@ -185,6 +199,9 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         colorPicker.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, menu::getNetworkColor);
         TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
+        if (renderFilterSlotTooltip(guiGraphics, mouseX, mouseY)) {
+            return;
+        }
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -193,10 +210,25 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         if (TopCategoryTabs.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, buildTabs())) {
             return true;
         }
-        if (colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor)) {
+        if (colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, menu::getNetworkColor)) {
+            return true;
+        }
+        if (button == 1 && modeButton != null && modeButton.isMouseOver(mouseX, mouseY)) {
+            if (this.minecraft != null && this.minecraft.gameMode != null) {
+                GuiWidgets.playButtonClickSound();
+                this.minecraft.gameMode.handleInventoryButtonClick(this.menu.containerId, MatterPylonMenu.BUTTON_CYCLE_MODE_CHANNEL_1_BACKWARD + selectedChannel);
+            }
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
+        if (colorPicker.mouseScrolled(mouseX, mouseY, scrollY, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, menu::getNetworkColor)) {
+            return true;
+        }
+        return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
     }
 
     private Component getModeButtonLabel() {
@@ -237,6 +269,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
 
         submitId(true);
         selectedChannel = channel;
+        menu.setActiveFilterChannel(selectedChannel);
         pendingSubmitTicks = -1;
         userEditedIdBox = false;
 
@@ -257,20 +290,50 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     }
 
     private void refreshChannelWidgets() {
-        for (int channel = 0; channel < channelButtons.size(); channel++) {
-            Button button = channelButtons.get(channel);
-            button.setMessage(getChannelButtonLabel(channel));
-            button.visible = menu.supportsChannel(channel);
-            button.active = menu.supportsChannel(channel) && channel != selectedChannel;
+        for (ChannelButtonEntry entry : channelButtons) {
+            entry.button().setMessage(getChannelButtonLabel(entry.channel()));
+            entry.button().active = true;
+            entry.button().visible = true;
+            entry.button().setSelected(entry.channel() == selectedChannel);
         }
+    }
+
+    private List<Integer> getSupportedChannels() {
+        List<Integer> supportedChannels = new ArrayList<>();
+        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
+            if (menu.supportsChannel(channel)) {
+                supportedChannels.add(channel);
+            }
+        }
+        return supportedChannels;
+    }
+
+    private float getChannelLabelScale(List<Integer> supportedChannels, int buttonWidth) {
+        int maxLabelWidth = 0;
+        for (int channel : supportedChannels) {
+            maxLabelWidth = Math.max(maxLabelWidth, this.font.width(getChannelButtonLabel(channel)));
+        }
+        if (maxLabelWidth <= 0) {
+            return 1.0F;
+        }
+        return Mth.clamp((buttonWidth - 6) / (float) maxLabelWidth, 0.35F, 1.0F);
+    }
+
+    private static ChannelButtonSprite getChannelButtonSprite(int channelCount) {
+        return switch (channelCount) {
+            case 1 -> new ChannelButtonSprite(0, 238, 162, 18);
+            case 2 -> new ChannelButtonSprite(178, 238, 78, 18);
+            case 3 -> new ChannelButtonSprite(206, 219, 50, 18);
+            default -> new ChannelButtonSprite(220, 200, 36, 18);
+        };
     }
 
     private static Component getChannelButtonLabel(int channel) {
         return switch (channel) {
-            case MatterPylonBlockEntity.CHANNEL_ENERGY -> Component.translatable("screen.matterworks.matter_pylon.channel.energy.short");
-            case MatterPylonBlockEntity.CHANNEL_ITEMS -> Component.translatable("screen.matterworks.matter_pylon.channel.items.short");
-            case MatterPylonBlockEntity.CHANNEL_FLUIDS -> Component.translatable("screen.matterworks.matter_pylon.channel.fluids.short");
-            case MatterPylonBlockEntity.CHANNEL_REDSTONE -> Component.translatable("screen.matterworks.matter_pylon.channel.redstone.short");
+            case MatterPylonBlockEntity.CHANNEL_ENERGY -> Component.literal("Energy");
+            case MatterPylonBlockEntity.CHANNEL_ITEMS -> Component.literal("Items");
+            case MatterPylonBlockEntity.CHANNEL_FLUIDS -> Component.literal("Liquids");
+            case MatterPylonBlockEntity.CHANNEL_REDSTONE -> Component.literal("Redstone");
             default -> Component.literal(Integer.toString(channel + 1));
         };
     }
@@ -312,7 +375,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     private boolean hasPrimaryTab() {
         return menu.getBlockEntity() instanceof EnergyCellBlockEntity
                 || menu.getBlockEntity() instanceof MatterBatteryPortBlockEntity
-                || menu.getBlockEntity() instanceof MatterFluidTankBlockEntity
+                || menu.getBlockEntity() instanceof FluidTankBlockEntity
                 || menu.getBlockEntity() instanceof MatterStorageBarrelBlockEntity;
     }
 
@@ -320,7 +383,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         if (menu.getBlockEntity() instanceof EnergyCellBlockEntity) {
             return List.of(SideConfigType.ITEMS, SideConfigType.ENERGY);
         }
-        if (menu.getBlockEntity() instanceof MatterFluidTankBlockEntity) {
+        if (menu.getBlockEntity() instanceof FluidTankBlockEntity) {
             return List.of(SideConfigType.ITEMS, SideConfigType.FLUIDS);
         }
         if (menu.getBlockEntity() instanceof MatterStorageBarrelBlockEntity) {
@@ -345,4 +408,72 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         }
         PacketDistributor.sendToServer(new OpenMatterPrimaryMenuPayload(menu.getBlockPos(), menu.isRemoteAccess()));
     }
+
+    private boolean renderFilterSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Component tooltip = null;
+        if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_ITEMS) {
+            if (isMouseOverSlot(mouseX, mouseY, 0)) {
+                tooltip = Component.literal("Whitelist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 1)) {
+                tooltip = Component.literal("Blacklist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 2)) {
+                tooltip = Component.literal("Whitelist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 3)) {
+                tooltip = Component.literal("Blacklist");
+            }
+        } else if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_FLUIDS) {
+            if (isMouseOverSlot(mouseX, mouseY, 4)) {
+                tooltip = Component.literal("Whitelist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 5)) {
+                tooltip = Component.literal("Blacklist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 6)) {
+                tooltip = Component.literal("Whitelist");
+            } else if (isMouseOverSlot(mouseX, mouseY, 7)) {
+                tooltip = Component.literal("Blacklist");
+            }
+        }
+
+        if (tooltip == null) {
+            return false;
+        }
+
+        guiGraphics.renderTooltip(this.font, tooltip, mouseX, mouseY);
+        return true;
+    }
+
+    private boolean isMouseOverSlot(int mouseX, int mouseY, int slotIndex) {
+        if (slotIndex < 0 || slotIndex >= menu.slots.size()) {
+            return false;
+        }
+        var slot = menu.slots.get(slotIndex);
+        int slotX = this.leftPos + slot.x;
+        int slotY = this.topPos + slot.y;
+        return mouseX >= slotX && mouseX < slotX + 16 && mouseY >= slotY && mouseY < slotY + 16;
+    }
+
+    private void drawCenteredLabel(GuiGraphics guiGraphics, Component label, int centerX, int y) {
+        guiGraphics.drawString(this.font, label, centerX - this.font.width(label) / 2, y, 0x404040, false);
+    }
+
+    private void renderInactiveFilterCover(GuiGraphics guiGraphics) {
+        if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_ITEMS
+                || menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_FLUIDS) {
+            return;
+        }
+
+        guiGraphics.fill(
+                leftPos + FILTER_SECTION_X - 1,
+                topPos + FILTER_SECTION_Y - 1,
+                leftPos + FILTER_SECTION_X + FILTER_SECTION_WIDTH + 1,
+                topPos + FILTER_SECTION_Y + FILTER_SECTION_HEIGHT + 1,
+                NETWORK_BACKGROUND_FILL
+        );
+    }
+
+    private record ChannelButtonEntry(int channel, GuiWidgets.SpriteSelectableButton button) {
+    }
+
+    private record ChannelButtonSprite(int u, int v, int width, int height) {
+    }
 }
+

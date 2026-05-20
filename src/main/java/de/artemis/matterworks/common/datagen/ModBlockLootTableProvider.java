@@ -19,7 +19,7 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
             de.artemis.matterworks.common.registry.ModBlocks.MULTIBLOCK_GLASS.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_CAPACITOR_CELL.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_INDUCTION_RELAY.get(),
-            de.artemis.matterworks.common.registry.ModBlocks.MATTER_FLUID_TANK.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.FLUID_TANK.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_STORAGE_BARREL.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_PYLON.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_NETWORK_CONTROLLER.get(),
@@ -68,3 +68,4 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
         ).flatMap(stream -> stream).map(block -> (Block) block).collect(java.util.stream.Collectors.toList());
     }
 }
+

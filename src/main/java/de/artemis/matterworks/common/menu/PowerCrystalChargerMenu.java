@@ -2,6 +2,8 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.PowerCrystalChargerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
@@ -16,7 +18,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class PowerCrystalChargerMenu extends AbstractContainerMenu implements NamedBlockMenu {
+public class PowerCrystalChargerMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int PLAYER_INVENTORY_START = PowerCrystalChargerBlockEntity.SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
@@ -78,6 +80,22 @@ public class PowerCrystalChargerMenu extends AbstractContainerMenu implements Na
         return 0xFF000000 | data.get(PowerCrystalChargerBlockEntity.DATA_PROGRESS_COLOR);
     }
 
+    public int getHistorySize() {
+        return blockEntity.getHistorySize();
+    }
+
+    public int getHistoryCapacity() {
+        return blockEntity.getHistoryCapacity();
+    }
+
+    public PowerCrystalChargerBlockEntity.ChargeHistorySample getHistorySample(int index) {
+        return blockEntity.getHistorySample(index);
+    }
+
+    public int getCurrentChargeRate() {
+        return blockEntity.getCurrentChargeRate();
+    }
+
     @Override
     public BlockPos getBlockPos() {
         return blockEntity.getBlockPos();
@@ -86,6 +104,36 @@ public class PowerCrystalChargerMenu extends AbstractContainerMenu implements Na
     @Override
     public String getBlockDisplayName() {
         return blockEntity.getDisplayName().getString();
+    }
+
+    @Override
+    public boolean supportsSideConfigType(SideConfigType type) {
+        return blockEntity.supportsSideConfigType(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigInput(SideConfigType type) {
+        return blockEntity.supportsSideConfigInput(type);
+    }
+
+    @Override
+    public boolean supportsSideConfigOutput(SideConfigType type) {
+        return blockEntity.supportsSideConfigOutput(type);
+    }
+
+    @Override
+    public SideAccessMode getSideAccessMode(SideConfigType type, net.minecraft.core.Direction side) {
+        return blockEntity.getSideAccessMode(type, side);
+    }
+
+    @Override
+    public net.minecraft.core.Direction getSideConfigFrontFacing() {
+        return SideConfigOrientation.resolveFrontFacing(blockEntity.getBlockState());
+    }
+
+    @Override
+    public ItemStack getPrimaryTabIcon() {
+        return blockEntity.getBlockState().getBlock().asItem().getDefaultInstance();
     }
 
     @Override
@@ -150,23 +198,23 @@ public class PowerCrystalChargerMenu extends AbstractContainerMenu implements Na
     private void addMachineSlots() {
         for (int column = 0; column < PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT; column++) {
             int slot = PowerCrystalChargerBlockEntity.SLOT_CHARGE_START + column;
-            addSlot(new ChargeTargetSlot(blockEntity.getItemHandler(), slot, 8 + column * 18, 18));
+            addSlot(new ChargeTargetSlot(blockEntity.getItemHandler(), slot, 8 + column * 18, 81));
         }
-        addSlot(new BoostCrystalSlot(blockEntity.getItemHandler(), PowerCrystalChargerBlockEntity.SLOT_BOOST, 8, 39));
-        addSlot(new EnergySourceSlot(blockEntity.getItemHandler(), PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT, 152, 39));
+        addSlot(new BoostCrystalSlot(blockEntity.getItemHandler(), PowerCrystalChargerBlockEntity.SLOT_BOOST, 8, 108));
+        addSlot(new EnergySourceSlot(blockEntity.getItemHandler(), PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT, 152, 108));
     }
 
     private void addPlayerInventory(Inventory inventory) {
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 71 + row * 18));
+                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory inventory) {
         for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 129));
+            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
         }
     }
 

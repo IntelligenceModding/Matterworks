@@ -30,7 +30,7 @@ public record MatterRuleConfig(
                         "matterworks:matter_stabilizer",
                         "matterworks:matter_analyzer",
                         "matterworks:matter_constructor",
-                        "matterworks:matter_generator",
+                        "matterworks:combustion_generator",
                         "matterworks:power_crystal_ore",
                         "matterworks:crimson_power_crystal",
                         "matterworks:azure_power_crystal",

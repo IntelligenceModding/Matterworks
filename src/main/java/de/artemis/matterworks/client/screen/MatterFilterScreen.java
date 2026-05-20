@@ -18,17 +18,18 @@ public class MatterFilterScreen extends AbstractContainerScreen<MatterFilterMenu
         super(menu, playerInventory, title);
         this.imageWidth = 176;
         this.imageHeight = 168;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
     protected void init() {
         super.init();
-        addRenderableWidget(Button.builder(Component.translatable("screen.matterworks.matter_filter.clear"), button -> {
+        addRenderableWidget(GuiWidgets.panelButton(leftPos + 94, topPos + 62, 74, 20, Component.translatable("screen.matterworks.matter_filter.clear"), button -> {
             Minecraft minecraft = this.minecraft;
             if (minecraft != null && minecraft.gameMode != null) {
                 minecraft.gameMode.handleInventoryButtonClick(menu.containerId, MatterFilterMenu.BUTTON_CLEAR);
             }
-        }).bounds(leftPos + 94, topPos + 62, 74, 20).build());
+        }));
     }
 
     @Override
@@ -54,7 +55,7 @@ public class MatterFilterScreen extends AbstractContainerScreen<MatterFilterMenu
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         guiGraphics.drawString(font, title, titleLabelX, titleLabelY, 0x404040, false);
         guiGraphics.drawString(font, Component.translatable("screen.matterworks.matter_filter.entries"), 8, 6, 0x404040, false);
-        guiGraphics.drawString(font, playerInventoryTitle, 8, 74, 0x404040, false);
+        guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
 
     @Override

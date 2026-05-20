@@ -1,5 +1,6 @@
 package de.artemis.matterworks.client.screen;
 
+import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.SideConfigMenuAccess;
@@ -8,6 +9,7 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.PacketDistributor;
 
@@ -15,11 +17,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class MachineSideConfigOverlay {
-    private static final int PANEL_MARGIN_X = 10;
-    private static final int PANEL_MARGIN_Y = 18;
-    private static final int NODE_SIZE = 22;
-    private static final int CORE_SIZE = 38;
-    private static final int LEGEND_WIDTH = 56;
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/side_configuration.png");
+    private static final int TEXTURE_WIDTH = 176;
+    private static final int TEXTURE_HEIGHT = 222;
     private static final RelativeSide[] RELATIVE_SIDES = {
             RelativeSide.UP,
             RelativeSide.FRONT,
@@ -28,6 +28,10 @@ public final class MachineSideConfigOverlay {
             RelativeSide.BACK,
             RelativeSide.DOWN
     };
+
+    public void renderBackground(GuiGraphics guiGraphics, int leftPos, int topPos) {
+        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, TEXTURE_WIDTH, TEXTURE_HEIGHT, 256, 256);
+    }
 
     public <T extends SideConfigMenuAccess> void render(
             GuiGraphics guiGraphics,
@@ -38,29 +42,26 @@ public final class MachineSideConfigOverlay {
             int topPos,
             int imageWidth,
             int imageHeight,
+            int titleX,
+            int titleY,
+            int titleColor,
+            String titleText,
+            int inventoryLabelX,
+            int inventoryLabelY,
             int mouseX,
             int mouseY
     ) {
-        int panelLeft = leftPos + PANEL_MARGIN_X;
-        int panelTop = topPos + PANEL_MARGIN_Y;
-        int panelWidth = imageWidth - PANEL_MARGIN_X * 2;
-        int panelHeight = imageHeight - PANEL_MARGIN_Y - 10;
-        int centerX = panelLeft + (panelWidth - LEGEND_WIDTH) / 2 - 6;
-        int centerY = panelTop + panelHeight / 2 + 6;
-        Direction frontFacing = menu.getSideConfigFrontFacing();
-
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, panelLeft, panelTop, panelWidth, panelHeight);
-        guiGraphics.fill(panelLeft + 5, panelTop + 5, panelLeft + panelWidth - 5, panelTop + 19, getTypeAccent(type));
-        guiGraphics.drawString(font, Component.literal(type.getLabel() + " Side Configuration"), panelLeft + 10, panelTop + 9, 0xFF202020, false);
-        guiGraphics.drawString(font, Component.literal("Front: " + getDirectionName(frontFacing)), panelLeft + 10, panelTop + 24, 0xFF404040, false);
-        guiGraphics.drawString(font, Component.literal("Click a side to cycle"), panelLeft + 10, panelTop + 35, 0xFF505050, false);
-
-        renderCore(guiGraphics, menu.getPrimaryTabIcon(), centerX, centerY, type);
-        renderConnectors(guiGraphics, centerX, centerY);
-        for (RelativeSide side : RELATIVE_SIDES) {
-            renderSideNode(guiGraphics, font, menu, type, side, frontFacing, centerX, centerY, mouseX, mouseY);
+        int[] centerBounds = getCenterBounds(leftPos, topPos);
+        renderCenterDisplay(guiGraphics, menu.getPrimaryTabIcon(), centerBounds[0], centerBounds[1], centerBounds[2], centerBounds[3]);
+        if (!titleText.isEmpty()) {
+            guiGraphics.drawString(font, titleText, leftPos + titleX, topPos + titleY, titleColor, false);
         }
-        renderLegend(guiGraphics, font, panelLeft + panelWidth - LEGEND_WIDTH + 4, panelTop + 48);
+        guiGraphics.drawString(font, Component.translatable("container.inventory"), leftPos + inventoryLabelX, topPos + inventoryLabelY, 0x404040, false);
+
+        Direction frontFacing = menu.getSideConfigFrontFacing();
+        for (RelativeSide side : RELATIVE_SIDES) {
+            renderSideNode(guiGraphics, font, menu, type, side, frontFacing, leftPos, topPos);
+        }
     }
 
     public <T extends SideConfigMenuAccess> void renderTooltip(
@@ -75,21 +76,18 @@ public final class MachineSideConfigOverlay {
             int mouseX,
             int mouseY
     ) {
-        int panelLeft = leftPos + PANEL_MARGIN_X;
-        int panelTop = topPos + PANEL_MARGIN_Y;
-        int panelWidth = imageWidth - PANEL_MARGIN_X * 2;
-        int panelHeight = imageHeight - PANEL_MARGIN_Y - 10;
-        int centerX = panelLeft + (panelWidth - LEGEND_WIDTH) / 2 - 6;
-        int centerY = panelTop + panelHeight / 2 + 6;
         Direction frontFacing = menu.getSideConfigFrontFacing();
         for (RelativeSide side : RELATIVE_SIDES) {
-            int[] node = getNodeBounds(centerX, centerY, side);
-            if (isInside(mouseX, mouseY, node[0], node[1], NODE_SIZE, NODE_SIZE)) {
+            int[] node = getNodeBounds(leftPos, topPos, side);
+            if (isInside(mouseX, mouseY, node[0], node[1], node[2], node[3])) {
                 Direction worldSide = resolveWorldDirection(frontFacing, side);
                 SideAccessMode mode = menu.getSideAccessMode(type, worldSide);
+                String sideText = shouldShowWorldDirection(side)
+                        ? side.label + " (" + getDirectionName(worldSide) + ")"
+                        : side.label;
                 guiGraphics.renderTooltip(
                         font,
-                        Component.literal(side.label + " (" + getDirectionName(worldSide) + "): " + mode.getShortLabel()),
+                        Component.literal(sideText + ": " + mode.getShortLabel()),
                         mouseX,
                         mouseY
                 );
@@ -109,43 +107,23 @@ public final class MachineSideConfigOverlay {
             int imageWidth,
             int imageHeight
     ) {
-        if (button != 0) {
+        if (button != 0 && button != 1) {
             return false;
         }
-        int panelLeft = leftPos + PANEL_MARGIN_X;
-        int panelTop = topPos + PANEL_MARGIN_Y;
-        int panelWidth = imageWidth - PANEL_MARGIN_X * 2;
-        int panelHeight = imageHeight - PANEL_MARGIN_Y - 10;
-        int centerX = panelLeft + (panelWidth - LEGEND_WIDTH) / 2 - 6;
-        int centerY = panelTop + panelHeight / 2 + 6;
         Direction frontFacing = menu.getSideConfigFrontFacing();
         for (RelativeSide side : RELATIVE_SIDES) {
-            int[] node = getNodeBounds(centerX, centerY, side);
-            if (isInside(mouseX, mouseY, node[0], node[1], NODE_SIZE, NODE_SIZE)) {
+            int[] node = getNodeBounds(leftPos, topPos, side);
+            if (isInside(mouseX, mouseY, node[0], node[1], node[2], node[3])) {
                 Direction worldSide = resolveWorldDirection(frontFacing, side);
-                SideAccessMode nextMode = getNextMode(menu, type, worldSide);
-                PacketDistributor.sendToServer(new SetSideConfigPayload(menu.getBlockPos(), type.ordinal(), worldSide.ordinal(), nextMode.ordinal()));
+                SideAccessMode targetMode = button == 1
+                        ? getPreviousMode(menu, type, worldSide)
+                        : getNextMode(menu, type, worldSide);
+                GuiWidgets.playButtonClickSound();
+                PacketDistributor.sendToServer(new SetSideConfigPayload(menu.getBlockPos(), type.ordinal(), worldSide.ordinal(), targetMode.ordinal()));
                 return true;
             }
         }
-        return isInside(mouseX, mouseY, panelLeft, panelTop, panelWidth, panelHeight);
-    }
-
-    private void renderCore(GuiGraphics guiGraphics, ItemStack icon, int centerX, int centerY, SideConfigType type) {
-        int left = centerX - CORE_SIZE / 2;
-        int top = centerY - CORE_SIZE / 2;
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, left, top, CORE_SIZE, CORE_SIZE);
-        guiGraphics.fill(left + 4, top + 4, left + CORE_SIZE - 4, top + CORE_SIZE - 4, getTypeAccent(type));
-        guiGraphics.renderItem(icon, centerX - 8, centerY - 8);
-    }
-
-    private void renderConnectors(GuiGraphics guiGraphics, int centerX, int centerY) {
-        guiGraphics.fill(centerX - 2, centerY - 42, centerX + 2, centerY - 18, 0xFF6A6A6A);
-        guiGraphics.fill(centerX - 2, centerY + 18, centerX + 2, centerY + 42, 0xFF6A6A6A);
-        guiGraphics.fill(centerX - 42, centerY - 2, centerX - 18, centerY + 2, 0xFF6A6A6A);
-        guiGraphics.fill(centerX + 18, centerY - 2, centerX + 42, centerY + 2, 0xFF6A6A6A);
-        guiGraphics.fill(centerX - 33, centerY - 33, centerX - 18, centerY - 18, 0xFF6A6A6A);
-        guiGraphics.fill(centerX + 18, centerY + 18, centerX + 33, centerY + 33, 0xFF6A6A6A);
+        return isInside(mouseX, mouseY, leftPos, topPos, TEXTURE_WIDTH, TEXTURE_HEIGHT);
     }
 
     private <T extends SideConfigMenuAccess> void renderSideNode(
@@ -155,65 +133,62 @@ public final class MachineSideConfigOverlay {
             SideConfigType type,
             RelativeSide side,
             Direction frontFacing,
-            int centerX,
-            int centerY,
-            int mouseX,
-            int mouseY
+            int leftPos,
+            int topPos
     ) {
-        int[] node = getNodeBounds(centerX, centerY, side);
+        int[] node = getNodeBounds(leftPos, topPos, side);
         Direction worldSide = resolveWorldDirection(frontFacing, side);
         SideAccessMode mode = menu.getSideAccessMode(type, worldSide);
-        boolean hovered = isInside(mouseX, mouseY, node[0], node[1], NODE_SIZE, NODE_SIZE);
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, node[0], node[1], NODE_SIZE, NODE_SIZE);
-        guiGraphics.fill(node[0] + 3, node[1] + 3, node[0] + NODE_SIZE - 3, node[1] + NODE_SIZE - 3, getModeColor(mode));
-        if (hovered) {
-            guiGraphics.fill(node[0] + 1, node[1] + 1, node[0] + NODE_SIZE - 1, node[1] + 2, 0xFFFFFFFF);
-        }
-        guiGraphics.drawCenteredString(font, side.shortLabel, node[0] + NODE_SIZE / 2, node[1] + 4, 0xFF202020);
-        guiGraphics.drawCenteredString(font, mode.getShortLabel(), node[0] + NODE_SIZE / 2, node[1] + 13, 0xFF202020);
+        GuiWidgets.tintSlotInterior(guiGraphics, node[0], node[1], node[2], node[3], getModeFillColor(mode), getModeHighlightColor(mode));
+        drawScaledCenteredString(
+                guiGraphics,
+                font,
+                getModeLabel(mode),
+                node[0] + node[2] / 2,
+                node[1] + (node[3] - font.lineHeight) / 2,
+                1.0F,
+                0xFFE0E0E0
+        );
     }
 
-    private void renderLegend(GuiGraphics guiGraphics, Font font, int left, int top) {
-        List<SideAccessMode> modes = new ArrayList<>(List.of(SideAccessMode.DISABLED, SideAccessMode.INPUT, SideAccessMode.OUTPUT, SideAccessMode.BOTH));
-        guiGraphics.drawString(font, Component.literal("Mode"), left, top - 14, 0xFF404040, false);
-        for (int index = 0; index < modes.size(); index++) {
-            SideAccessMode mode = modes.get(index);
-            int y = top + index * 16;
-            VanillaGuiHelper.drawInsetPanel(guiGraphics, left, y, 10, 10);
-            guiGraphics.fill(left + 2, y + 2, left + 8, y + 8, getModeColor(mode));
-            guiGraphics.drawString(font, mode.getShortLabel(), left + 14, y + 1, 0xFF404040, false);
-        }
-    }
-
-    private static int[] getNodeBounds(int centerX, int centerY, RelativeSide side) {
+    private static int[] getNodeBounds(int leftPos, int topPos, RelativeSide side) {
         return switch (side) {
-            case UP -> new int[]{centerX - NODE_SIZE / 2, centerY - 52};
-            case DOWN -> new int[]{centerX - NODE_SIZE / 2, centerY + 30};
-            case LEFT -> new int[]{centerX - 52, centerY - NODE_SIZE / 2};
-            case RIGHT -> new int[]{centerX + 30, centerY - NODE_SIZE / 2};
-            case FRONT -> new int[]{centerX - 46, centerY - 46};
-            case BACK -> new int[]{centerX + 24, centerY + 24};
+            case UP -> inclusiveBounds(leftPos + 76, topPos + 21, leftPos + 99, topPos + 44);
+            case DOWN -> inclusiveBounds(leftPos + 76, topPos + 97, leftPos + 100, topPos + 120);
+            case LEFT -> inclusiveBounds(leftPos + 38, topPos + 59, leftPos + 61, topPos + 82);
+            case RIGHT -> inclusiveBounds(leftPos + 114, topPos + 59, leftPos + 137, topPos + 82);
+            case FRONT -> inclusiveBounds(leftPos + 38, topPos + 21, leftPos + 61, topPos + 44);
+            case BACK -> inclusiveBounds(leftPos + 114, topPos + 97, leftPos + 137, topPos + 120);
         };
+    }
+
+    private static int[] getCenterBounds(int leftPos, int topPos) {
+        return inclusiveBounds(leftPos + 72, topPos + 55, leftPos + 103, topPos + 86);
+    }
+
+    private static int[] inclusiveBounds(int left, int top, int right, int bottom) {
+        return new int[]{left, top, right - left + 1, bottom - top + 1};
     }
 
     private static boolean isInside(double mouseX, double mouseY, int x, int y, int width, int height) {
         return mouseX >= x && mouseX < x + width && mouseY >= y && mouseY < y + height;
     }
 
-    private static int getTypeAccent(SideConfigType type) {
-        return switch (type) {
-            case ITEMS -> 0xFFD9C07A;
-            case FLUIDS -> 0xFF86B9E8;
-            case ENERGY -> 0xFFE8A186;
+    private static int getModeFillColor(SideAccessMode mode) {
+        return switch (mode) {
+            case DISABLED -> 0xFF5E5E5E;
+            case INPUT -> 0xFF365F95;
+            case OUTPUT -> 0xFF9B6425;
+            case BOTH -> 0xFF2E7A73;
         };
     }
 
-    private static int getModeColor(SideAccessMode mode) {
+    private static int getModeHighlightColor(SideAccessMode mode) {
         return switch (mode) {
-            case DISABLED -> 0xFF8A8A8A;
-            case INPUT -> 0xFF6D9ED6;
-            case OUTPUT -> 0xFFD6A45C;
-            case BOTH -> 0xFF7FB06D;
+            case DISABLED -> 0xFF777777;
+            case INPUT -> 0xFF5B84BA;
+            case OUTPUT -> 0xFFBF8241;
+            case BOTH -> 0xFF4C9A93;
         };
     }
 
@@ -230,6 +205,38 @@ public final class MachineSideConfigOverlay {
 
     private static String getDirectionName(Direction direction) {
         return Component.translatable("direction.minecraft." + direction.getName()).getString();
+    }
+
+    private static boolean shouldShowWorldDirection(RelativeSide side) {
+        return side != RelativeSide.UP && side != RelativeSide.DOWN;
+    }
+
+    private static String getModeLabel(SideAccessMode mode) {
+        return switch (mode) {
+            case DISABLED -> "Off";
+            case INPUT -> "In";
+            case OUTPUT -> "Out";
+            case BOTH -> "I/O";
+        };
+    }
+
+    private static void drawScaledCenteredString(GuiGraphics guiGraphics, Font font, String text, int centerX, int y, float scale, int color) {
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().scale(scale, scale, 1.0F);
+        guiGraphics.drawString(font, text, Math.round((centerX - font.width(text) * scale / 2.0F) / scale), Math.round(y / scale), color, false);
+        guiGraphics.pose().popPose();
+    }
+
+    private static void renderCenterDisplay(GuiGraphics guiGraphics, ItemStack icon, int x, int y, int width, int height) {
+        float scale = Math.min(width / 16.0F, height / 16.0F);
+        float renderSize = 16.0F * scale;
+        float offsetX = x + (width - renderSize) / 2.0F;
+        float offsetY = y + (height - renderSize) / 2.0F;
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(offsetX, offsetY, 0.0F);
+        guiGraphics.pose().scale(scale, scale, 1.0F);
+        guiGraphics.renderItem(icon, 0, 0);
+        guiGraphics.pose().popPose();
     }
 
     private enum RelativeSide {
@@ -250,6 +257,26 @@ public final class MachineSideConfigOverlay {
     }
 
     private static SideAccessMode getNextMode(SideConfigMenuAccess menu, SideConfigType type, Direction direction) {
+        List<SideAccessMode> allowedModes = getAllowedModes(menu, type);
+        SideAccessMode current = menu.getSideAccessMode(type, direction);
+        int index = allowedModes.indexOf(current);
+        if (index < 0) {
+            return allowedModes.get(0);
+        }
+        return allowedModes.get((index + 1) % allowedModes.size());
+    }
+
+    private static SideAccessMode getPreviousMode(SideConfigMenuAccess menu, SideConfigType type, Direction direction) {
+        List<SideAccessMode> allowedModes = getAllowedModes(menu, type);
+        SideAccessMode current = menu.getSideAccessMode(type, direction);
+        int index = allowedModes.indexOf(current);
+        if (index < 0) {
+            return allowedModes.get(0);
+        }
+        return allowedModes.get((index - 1 + allowedModes.size()) % allowedModes.size());
+    }
+
+    private static List<SideAccessMode> getAllowedModes(SideConfigMenuAccess menu, SideConfigType type) {
         List<SideAccessMode> allowedModes = new ArrayList<>();
         allowedModes.add(SideAccessMode.DISABLED);
         if (menu.supportsSideConfigInput(type)) {
@@ -261,12 +288,6 @@ public final class MachineSideConfigOverlay {
         if (menu.supportsSideConfigInput(type) && menu.supportsSideConfigOutput(type)) {
             allowedModes.add(SideAccessMode.BOTH);
         }
-
-        SideAccessMode current = menu.getSideAccessMode(type, direction);
-        int index = allowedModes.indexOf(current);
-        if (index < 0) {
-            return allowedModes.get(0);
-        }
-        return allowedModes.get((index + 1) % allowedModes.size());
+        return allowedModes;
     }
 }

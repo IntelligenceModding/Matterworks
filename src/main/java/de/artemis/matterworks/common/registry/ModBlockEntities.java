@@ -4,8 +4,8 @@ import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterAnalyzerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterConstructorBlockEntity;
 import de.artemis.matterworks.common.blockentity.EnergyCellBlockEntity;
-import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
-import de.artemis.matterworks.common.blockentity.MatterGeneratorBlockEntity;
+import de.artemis.matterworks.common.blockentity.FluidTankBlockEntity;
+import de.artemis.matterworks.common.blockentity.CombustionGeneratorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterNetworkMonitorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
@@ -45,9 +45,9 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("matter_constructor",
                     () -> BlockEntityType.Builder.of(MatterConstructorBlockEntity::new, ModBlocks.MATTER_CONSTRUCTOR.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterGeneratorBlockEntity>> MATTER_GENERATOR =
-            BLOCK_ENTITY_TYPES.register("matter_generator",
-                    () -> BlockEntityType.Builder.of(MatterGeneratorBlockEntity::new, ModBlocks.MATTER_GENERATOR.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<CombustionGeneratorBlockEntity>> COMBUSTION_GENERATOR =
+            BLOCK_ENTITY_TYPES.register("combustion_generator",
+                    () -> BlockEntityType.Builder.of(CombustionGeneratorBlockEntity::new, ModBlocks.COMBUSTION_GENERATOR.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<EnergyCellBlockEntity>> MATTER_ENERGY_CELL =
             BLOCK_ENTITY_TYPES.register("matter_energy_cell",
@@ -61,9 +61,9 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("multiblock_port",
                     () -> BlockEntityType.Builder.of(MatterBatteryPortBlockEntity::new, ModBlocks.MULTIBLOCK_PORT.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterFluidTankBlockEntity>> MATTER_FLUID_TANK =
-            BLOCK_ENTITY_TYPES.register("matter_fluid_tank",
-                    () -> BlockEntityType.Builder.of(MatterFluidTankBlockEntity::new, ModBlocks.MATTER_FLUID_TANK.get()).build(null));
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FluidTankBlockEntity>> FLUID_TANK =
+            BLOCK_ENTITY_TYPES.register("fluid_tank",
+                    () -> BlockEntityType.Builder.of(FluidTankBlockEntity::new, ModBlocks.FLUID_TANK.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterStorageBarrelBlockEntity>> MATTER_STORAGE_BARREL =
             BLOCK_ENTITY_TYPES.register("matter_storage_barrel",
@@ -108,3 +108,4 @@ public class ModBlockEntities {
         BLOCK_ENTITY_TYPES.register(eventBus);
     }
 }
+

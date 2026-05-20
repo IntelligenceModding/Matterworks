@@ -73,7 +73,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         addBlock(ModBlocks.MATTER_STABILIZER, "Matter Stabilizer");
         addBlock(ModBlocks.MATTER_ANALYZER, "Matter Analyzer");
         addBlock(ModBlocks.MATTER_CONSTRUCTOR, "Matter Constructor");
-        addBlock(ModBlocks.MATTER_GENERATOR, "Matter Generator");
+        addBlock(ModBlocks.COMBUSTION_GENERATOR, "Combustion Generator");
         addBlock(ModBlocks.MATTER_ENERGY_CELL, "Energy Cell");
         addBlock(ModBlocks.MATTER_BATTERY_CORE, "Matter Battery Core");
         addBlock(ModBlocks.MULTIBLOCK_FRAME, "Multiblock Frame");
@@ -82,7 +82,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         addBlock(ModBlocks.MULTIBLOCK_GLASS, "Multiblock Glass");
         addBlock(ModBlocks.MATTER_CAPACITOR_CELL, "Matter Capacitor Cell");
         addBlock(ModBlocks.MATTER_INDUCTION_RELAY, "Matter Induction Relay");
-        addBlock(ModBlocks.MATTER_FLUID_TANK, "Matter Fluid Tank");
+        addBlock(ModBlocks.FLUID_TANK, "Fluid Tank");
         addBlock(ModBlocks.MATTER_STORAGE_BARREL, "Matter Storage Barrel");
         addBlock(ModBlocks.MATTER_PYLON, "Matter Pylon");
         addBlock(ModBlocks.MATTER_NETWORK_CONTROLLER, "Matter Network Controller");
@@ -135,7 +135,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("screen.matterworks.matter_network.link_hint", "Shift-right-click nodes to link them.");
         add("screen.matterworks.matter_network.open", "Network");
         add("screen.matterworks.matter_network.energy_cell", "Energy Cell Network");
-        add("screen.matterworks.matter_network.fluid_tank", "Matter Fluid Tank Network");
+        add("screen.matterworks.matter_network.fluid_tank", "Fluid Tank Network");
         add("screen.matterworks.matter_network.storage_barrel", "Matter Storage Barrel Network");
         add("screen.matterworks.matter_network_controller.connected_nodes", "Connected Nodes: %s");
         add("screen.matterworks.matter_network_controller.details", "Details");
@@ -180,3 +180,4 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("screen.matterworks.matter_battery.preview_off", "Preview");
     }
 }
+

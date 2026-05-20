@@ -1,5 +1,6 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.menu.MatterStabilizerMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -20,6 +21,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.level.block.state.BlockState;
+import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.fluids.FluidType;
 import net.neoforged.neoforge.fluids.capability.IFluidHandler;
@@ -163,6 +165,14 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
         blockEntity.serverTick();
     }
 
+    public FluidStack getRawMatterFluidStack() {
+        return rawMatterTank.getFluid().copy();
+    }
+
+    public FluidStack getUnstableMatterFluidStack() {
+        return unstableMatterTank.getFluid().copy();
+    }
+
     @Override
     public Component getDisplayName() {
         return super.getDisplayName();
@@ -242,7 +252,8 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
 
     @Override
     protected void beforeProcessingTick() {
-        super.beforeProcessingTick();
+        syncFluidTankCapacities();
+        transferEnergyFromPowerInputItem();
         importRawMatterBucket();
         exportUnstableMatterBucket();
         exportRefinedMatterBucket();
@@ -302,6 +313,26 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
     @Override
     protected int getEnergyPerTick() {
         return PowerCrystalEffects.getConstructorEnergyPerTick(ENERGY_PER_TICK, getEffectiveCrystalStack());
+    }
+
+    private void transferEnergyFromPowerInputItem() {
+        ItemStack energyStack = itemHandler.getStackInSlot(ENERGY_ITEM_INPUT_SLOT);
+        if (energyStack.isEmpty()) {
+            return;
+        }
+
+        IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(energyStack);
+        if (itemEnergy == null) {
+            return;
+        }
+
+        int missingEnergy = energyStorage.getMaxEnergyStored() - energyStorage.getEnergyStored();
+        if (missingEnergy > 0) {
+            int moved = EnergyItemHelper.transferEnergy(itemEnergy, energyStorage, missingEnergy);
+            if (moved > 0) {
+                setChanged();
+            }
+        }
     }
 
     private void importRawMatterBucket() {

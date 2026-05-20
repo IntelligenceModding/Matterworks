@@ -29,7 +29,7 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
     private static final int PORT_SCROLLBAR_HEIGHT = 64;
     private static final int PORT_SPEED_STEP = 100_000;
 
-    private final List<Button> portRowButtons = new ArrayList<>();
+    private final List<GuiWidgets.SelectablePanelButton> portRowButtons = new ArrayList<>();
     private final List<MatterBatteryCoreBlockEntity.PortOverview> portEntries = new ArrayList<>();
     private Button modeButton;
     private Button decreaseSpeedButton;
@@ -46,7 +46,7 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         super(menu, playerInventory, title);
         this.imageWidth = 248;
         this.imageHeight = 202;
-        this.inventoryLabelY = 106;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
@@ -55,29 +55,22 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         portRowButtons.clear();
         for (int row = 0; row < VISIBLE_PORT_ROWS; row++) {
             final int rowIndex = row;
-            portRowButtons.add(addRenderableWidget(Button.builder(Component.empty(), button -> selectPortRow(rowIndex))
-                    .bounds(leftPos + PORT_LIST_LEFT, topPos + PORT_LIST_TOP + row * PORT_ROW_HEIGHT, 98, 14)
-                    .build()));
+            portRowButtons.add(addRenderableWidget(GuiWidgets.leftAlignedSelectablePanelButton(
+                    leftPos + PORT_LIST_LEFT,
+                    topPos + PORT_LIST_TOP + row * PORT_ROW_HEIGHT,
+                    98,
+                    14,
+                    Component.empty(),
+                    button -> selectPortRow(rowIndex)
+            )));
         }
 
-        modeButton = addRenderableWidget(Button.builder(Component.literal("Mode"), button -> cycleSelectedPortMode())
-                .bounds(leftPos + 132, topPos + 70, 100, 18)
-                .build());
-        decreaseSpeedButton = addRenderableWidget(Button.builder(Component.literal("-100k"), button -> adjustSelectedPortSpeed(-PORT_SPEED_STEP))
-                .bounds(leftPos + 132, topPos + 92, 48, 18)
-                .build());
-        increaseSpeedButton = addRenderableWidget(Button.builder(Component.literal("+100k"), button -> adjustSelectedPortSpeed(PORT_SPEED_STEP))
-                .bounds(leftPos + 184, topPos + 92, 48, 18)
-                .build());
-        minSpeedButton = addRenderableWidget(Button.builder(Component.literal("0"), button -> setSelectedPortSpeed(0))
-                .bounds(leftPos + 132, topPos + 114, 48, 18)
-                .build());
-        maxSpeedButton = addRenderableWidget(Button.builder(Component.literal("Max"), button -> setSelectedPortSpeed(MatterBatteryCoreBlockEntity.BASE_TRANSFER_RATE))
-                .bounds(leftPos + 184, topPos + 114, 48, 18)
-                .build());
-        networkButton = addRenderableWidget(Button.builder(Component.literal("Network"), button -> openSelectedPortNetwork())
-                .bounds(leftPos + 132, topPos + 40, 100, 18)
-                .build());
+        modeButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 132, topPos + 70, 100, 18, Component.literal("Mode"), button -> cycleSelectedPortMode()));
+        decreaseSpeedButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 132, topPos + 92, 48, 18, Component.literal("-100k"), button -> adjustSelectedPortSpeed(-PORT_SPEED_STEP)));
+        increaseSpeedButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 184, topPos + 92, 48, 18, Component.literal("+100k"), button -> adjustSelectedPortSpeed(PORT_SPEED_STEP)));
+        minSpeedButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 132, topPos + 114, 48, 18, Component.literal("0"), button -> setSelectedPortSpeed(0)));
+        maxSpeedButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 184, topPos + 114, 48, 18, Component.literal("Max"), button -> setSelectedPortSpeed(MatterBatteryCoreBlockEntity.BASE_TRANSFER_RATE)));
+        networkButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 132, topPos + 40, 100, 18, Component.literal("Network"), button -> openSelectedPortNetwork()));
 
         refreshPortEntries();
         refreshPortWidgets();
@@ -136,6 +129,18 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
             return true;
         }
         return super.mouseClicked(mouseX, mouseY, button);
+    }
+
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        if (TopCategoryTabs.keyPressed(keyCode, getTabs())) {
+            refreshPortWidgets();
+            return true;
+        }
+        return false;
     }
 
     @Override
@@ -248,7 +253,8 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
             guiGraphics.renderTooltip(font, Component.translatable("tooltip.matterworks.energy", menu.getEnergyStored(), menu.getEnergyCapacity()), mouseX, mouseY);
         } else if (isWithin(mouseX, mouseY, leftPos + 132, topPos + 44, 104, 52)) {
             guiGraphics.renderTooltip(font, Component.literal(
-                    "In " + menu.getBlockEntity().getLatestInputRate() + " FE/t | Out " + menu.getBlockEntity().getLatestOutputRate() + " FE/t"
+                    "In " + GuiWidgets.formatRateText(menu.getBlockEntity().getLatestInputRate(), "FE/t", false)
+                            + " | Out " + GuiWidgets.formatRateText(menu.getBlockEntity().getLatestOutputRate(), "FE/t", false)
             ), mouseX, mouseY);
         }
     }
@@ -301,17 +307,18 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         boolean portsTab = currentTab == BatteryTab.PORTS;
         int firstVisible = getFirstVisiblePortIndex();
         for (int row = 0; row < portRowButtons.size(); row++) {
-            Button button = portRowButtons.get(row);
+            GuiWidgets.SelectablePanelButton button = portRowButtons.get(row);
             int absoluteIndex = firstVisible + row;
             if (portsTab && absoluteIndex < portEntries.size()) {
                 MatterBatteryCoreBlockEntity.PortOverview overview = portEntries.get(absoluteIndex);
-                String prefix = overview.pos().equals(selectedPortPos) ? "> " : "";
                 button.visible = true;
-                button.active = !overview.pos().equals(selectedPortPos);
-                button.setMessage(Component.literal(prefix + trimToWidth(overview.displayName(), 86)));
+                button.active = true;
+                button.setSelected(overview.pos().equals(selectedPortPos));
+                button.setMessage(Component.literal(trimToWidth(overview.displayName(), 84)));
             } else {
                 button.visible = false;
                 button.active = false;
+                button.setSelected(false);
                 button.setMessage(Component.empty());
             }
         }

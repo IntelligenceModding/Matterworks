@@ -1,6 +1,5 @@
 package de.artemis.matterworks.common.menu;
 
-import de.artemis.matterworks.common.blockentity.AbstractMatterMachineBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterSeparatorBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -16,6 +15,7 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
     public MatterSeparatorMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
@@ -28,14 +28,18 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addMachineSlots() {
-        this.addSlot(createEnergyInputSlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, 8, 18));
-        this.addSlot(createOutputOnlySlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_OUTPUT_SLOT, 8, 108));
-        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 30, 18));
-        this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 30, 108));
-        this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.DUST_OUTPUT_SLOT, 116, 63));
-        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 152, 18));
-        this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT, 152, 108));
-        this.addSlot(createCrystalSlot(AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, 80, 108));
+        for (int row = 0; row < 4; row++) {
+            for (int column = 0; column < 3; column++) {
+                int index = row * 3 + column;
+                this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.OUTPUT_SLOT_START + index, 62 + column * 18, 18 + row * 18));
+            }
+        }
+        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 41, 72));
+        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72));
+        this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT, 152, 72));
+        this.addSlot(createCrystalSlot(MatterSeparatorBlockEntity.SLOT_CRYSTAL, 8, 108));
+        this.addSlot(createEnergyInputSlot(MatterSeparatorBlockEntity.SLOT_POWER_INPUT, 152, 108));
     }
 
     @Override
@@ -71,6 +75,10 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
         return Math.max(1, amount * height / capacity);
     }
 
+    public FluidStack getSludgeFluidStack() {
+        return ((MatterSeparatorBlockEntity) blockEntity).getSludgeFluidStack();
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return stillValid(net.minecraft.world.inventory.ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()), player, ModBlocks.MATTER_SEPARATOR.get());
@@ -86,21 +94,17 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
         ItemStack sourceStack = sourceSlot.getItem();
         ItemStack copiedStack = sourceStack.copy();
 
-        if (index == AbstractMatterMachineBlockEntity.ENERGY_ITEM_OUTPUT_SLOT
-                || index == MatterSeparatorBlockEntity.DUST_OUTPUT_SLOT
-                || index == MatterSeparatorBlockEntity.REFINED_BUCKET_OUTPUT_SLOT
-                || index == MatterSeparatorBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT) {
+        if (index < machineSlotCount) {
             if (!this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarEnd, true)) {
                 return ItemStack.EMPTY;
             }
-            sourceSlot.onQuickCraft(sourceStack, copiedStack);
         } else if (index >= playerInventoryStart) {
             if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, AbstractMatterMachineBlockEntity.CRYSTAL_SLOT + 1, false)) {
+                if (!this.moveItemStackTo(sourceStack, MatterSeparatorBlockEntity.SLOT_CRYSTAL, MatterSeparatorBlockEntity.SLOT_CRYSTAL + 1, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT + 1, false)) {
+                if (!this.moveItemStackTo(sourceStack, MatterSeparatorBlockEntity.SLOT_POWER_INPUT, MatterSeparatorBlockEntity.SLOT_POWER_INPUT + 1, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(ModItems.REFINED_MATTER_BUCKET.get())) {
@@ -118,8 +122,6 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
             } else if (!this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarStart, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (!this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarEnd, false)) {
-            return ItemStack.EMPTY;
         }
 
         if (sourceStack.isEmpty()) {

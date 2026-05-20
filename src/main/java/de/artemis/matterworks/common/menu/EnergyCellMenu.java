@@ -50,22 +50,26 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
         this.data = data;
         this.remoteAccess = remoteAccess;
 
-        for (int slot = 0; slot < EnergyCellBlockEntity.DISCHARGE_SLOT_COUNT; slot++) {
-            this.addSlot(new SlotItemHandler(
-                    blockEntity.getItemHandler(),
-                    EnergyCellBlockEntity.DISCHARGE_SLOT_START + slot,
-                    8 + slot * 18,
-                    108
-            ));
-        }
+        this.addSlot(new CrystalSlot(
+                blockEntity.getItemHandler(),
+                EnergyCellBlockEntity.SLOT_CRYSTAL,
+                8,
+                108
+        ));
         for (int slot = 0; slot < EnergyCellBlockEntity.CHARGE_SLOT_COUNT; slot++) {
             this.addSlot(new SlotItemHandler(
                     blockEntity.getItemHandler(),
                     EnergyCellBlockEntity.CHARGE_SLOT_START + slot,
-                    98 + slot * 18,
+                    35 + slot * 18,
                     108
             ));
         }
+        this.addSlot(new PowerBankSlot(
+                blockEntity.getItemHandler(),
+                EnergyCellBlockEntity.SLOT_POWER_BANK,
+                152,
+                108
+        ));
 
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
@@ -169,6 +173,10 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
         return blockEntity.getCurrentTotalTransferRate();
     }
 
+    public int getCurrentNetTransferRate() {
+        return getCurrentInputRate() - getCurrentOutputRate();
+    }
+
     public DyeColor getNetworkColor(int index) {
         return blockEntity.getNetworkColor(index);
     }
@@ -194,13 +202,17 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
             if (!this.moveItemStackTo(sourceStack, PLAYER_INVENTORY_START, PLAYER_HOTBAR_END, false)) {
                 return ItemStack.EMPTY;
             }
+        } else if (de.artemis.matterworks.common.upgrade.PowerCrystalEffects.isPowerCrystal(sourceStack)) {
+            if (!this.moveItemStackTo(sourceStack, EnergyCellBlockEntity.SLOT_CRYSTAL, EnergyCellBlockEntity.SLOT_CRYSTAL + 1, false)) {
+                return ItemStack.EMPTY;
+            }
         } else if (isUsableEnergyItem(sourceStack)) {
             boolean moved = false;
-            if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
+            if (EnergyItemHelper.canProvideEnergy(sourceStack) && EnergyItemHelper.isPowerBank(sourceStack)) {
                 moved = this.moveItemStackTo(
                         sourceStack,
-                        EnergyCellBlockEntity.DISCHARGE_SLOT_START,
-                        EnergyCellBlockEntity.DISCHARGE_SLOT_START + EnergyCellBlockEntity.DISCHARGE_SLOT_COUNT,
+                        EnergyCellBlockEntity.SLOT_POWER_BANK,
+                        EnergyCellBlockEntity.SLOT_POWER_BANK + 1,
                         false
                 );
             }
@@ -211,6 +223,14 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
                         EnergyCellBlockEntity.CHARGE_SLOT_START + EnergyCellBlockEntity.CHARGE_SLOT_COUNT,
                         false
                 ) || moved;
+            }
+            if (!moved && EnergyItemHelper.canProvideEnergy(sourceStack)) {
+                moved = this.moveItemStackTo(
+                        sourceStack,
+                        EnergyCellBlockEntity.SLOT_POWER_BANK,
+                        EnergyCellBlockEntity.SLOT_POWER_BANK + 1,
+                        false
+                );
             }
             if (!moved) {
                 if (index < PLAYER_HOTBAR_START) {
@@ -260,6 +280,28 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
     private static boolean isUsableEnergyItem(ItemStack stack) {
         return EnergyItemHelper.getEnergyStorage(stack) != null
                 && !(stack.getItem() instanceof de.artemis.matterworks.common.item.PowerCrystalItem);
+    }
+
+    private static final class CrystalSlot extends SlotItemHandler {
+        private CrystalSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return de.artemis.matterworks.common.upgrade.PowerCrystalEffects.isPowerCrystal(stack);
+        }
+    }
+
+    private static final class PowerBankSlot extends SlotItemHandler {
+        private PowerBankSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return EnergyItemHelper.canProvideEnergy(stack);
+        }
     }
 
     private static EnergyCellBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {

@@ -218,6 +218,15 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         setChanged();
     }
 
+    public void cycleModeBackward(int channel) {
+        if (!isValidChannel(channel) || !supportsChannel(channel)) {
+            return;
+        }
+        modes[channel] = modes[channel].previous();
+        markNetworkDirty();
+        setChanged();
+    }
+
     public void setMode(int channel, PylonMode mode) {
         if (!isValidChannel(channel) || !supportsChannel(channel)) {
             return;

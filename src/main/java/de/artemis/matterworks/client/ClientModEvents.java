@@ -15,8 +15,8 @@ import de.artemis.matterworks.client.screen.MatterBatteryPreviewScreen;
 import de.artemis.matterworks.client.screen.MatterConstructorScreen;
 import de.artemis.matterworks.client.screen.EnergyCellScreen;
 import de.artemis.matterworks.client.screen.MatterFilterScreen;
-import de.artemis.matterworks.client.screen.MatterFluidTankScreen;
-import de.artemis.matterworks.client.screen.MatterGeneratorScreen;
+import de.artemis.matterworks.client.screen.FluidTankScreen;
+import de.artemis.matterworks.client.screen.CombustionGeneratorScreen;
 import de.artemis.matterworks.client.screen.MatterNetworkControllerScreen;
 import de.artemis.matterworks.client.screen.MatterNetworkMonitorScreen;
 import de.artemis.matterworks.client.screen.MatterPylonScreen;
@@ -61,12 +61,12 @@ public class ClientModEvents {
         event.register(ModMenuTypes.MATTER_STABILIZER.get(), MatterStabilizerScreen::new);
         event.register(ModMenuTypes.MATTER_ANALYZER.get(), MatterAnalyzerScreen::new);
         event.register(ModMenuTypes.MATTER_CONSTRUCTOR.get(), MatterConstructorScreen::new);
-        event.register(ModMenuTypes.MATTER_GENERATOR.get(), MatterGeneratorScreen::new);
+        event.register(ModMenuTypes.COMBUSTION_GENERATOR.get(), CombustionGeneratorScreen::new);
         event.register(ModMenuTypes.MATTER_ENERGY_CELL.get(), EnergyCellScreen::new);
         event.register(ModMenuTypes.MATTER_BATTERY_CORE.get(), MatterBatteryCoreScreen::new);
         event.register(ModMenuTypes.MATTER_BATTERY_PREVIEW.get(), MatterBatteryPreviewScreen::new);
         event.register(ModMenuTypes.MATTER_FILTER.get(), MatterFilterScreen::new);
-        event.register(ModMenuTypes.MATTER_FLUID_TANK.get(), MatterFluidTankScreen::new);
+        event.register(ModMenuTypes.FLUID_TANK.get(), FluidTankScreen::new);
         event.register(ModMenuTypes.MATTER_STORAGE_BARREL.get(), MatterStorageBarrelScreen::new);
         event.register(ModMenuTypes.MATTER_PYLON.get(), MatterPylonScreen::new);
         event.register(ModMenuTypes.MATTER_NETWORK_CONTROLLER.get(), MatterNetworkControllerScreen::new);
@@ -90,7 +90,7 @@ public class ClientModEvents {
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_NETWORK_CONTROLLER.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_NETWORK_MONITOR.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_ENERGY_CELL.get(), MatterPylonBlockEntityRenderer::new);
-        event.registerBlockEntityRenderer(ModBlockEntities.MATTER_FLUID_TANK.get(), MatterPylonBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.FLUID_TANK.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_STORAGE_BARREL.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.POWER_CRYSTAL_ORE.get(), PowerCrystalOreBlockEntityRenderer::new);
     }
@@ -195,3 +195,4 @@ public class ClientModEvents {
         MatterBatteryFormationRenderer.tickParticles();
     }
 }
+

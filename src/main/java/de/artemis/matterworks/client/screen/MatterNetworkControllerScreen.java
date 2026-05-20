@@ -32,7 +32,7 @@ public class MatterNetworkControllerScreen extends AbstractRenamableContainerScr
     private static final int[] COLOR_SWATCH_XS = {216, 236, 256};
     private static final int[] COLOR_SWATCH_YS = {163, 163, 163};
 
-    private final List<Button> rowButtons = new ArrayList<>();
+    private final List<GuiWidgets.SelectablePanelButton> rowButtons = new ArrayList<>();
     private final List<MatterNetworkControllerBlockEntity.ControllerEntry> allEntries = new ArrayList<>();
     private final List<MatterNetworkControllerBlockEntity.ControllerEntry> displayEntries = new ArrayList<>();
     private final NetworkColorPickerOverlay colorPicker = new NetworkColorPickerOverlay(COLOR_SWATCH_XS, COLOR_SWATCH_YS);
@@ -57,7 +57,7 @@ public class MatterNetworkControllerScreen extends AbstractRenamableContainerScr
     @Override
     protected void init() {
         super.init();
-        searchBox = new EditBox(font, leftPos + LIST_LEFT, topPos + SEARCH_TOP, 128, 18, Component.empty());
+        searchBox = GuiWidgets.textField(font, leftPos + LIST_LEFT, topPos + SEARCH_TOP, 128, 18, Component.empty());
         searchBox.setMaxLength(64);
         searchBox.setResponder(ignored -> rebuildDisplayEntries());
         addRenderableWidget(searchBox);
@@ -65,23 +65,34 @@ public class MatterNetworkControllerScreen extends AbstractRenamableContainerScr
         rowButtons.clear();
         for (int row = 0; row < VISIBLE_ROWS; row++) {
             final int rowIndex = row;
-            rowButtons.add(addRenderableWidget(Button.builder(Component.empty(), button -> selectVisibleRow(rowIndex))
-                    .bounds(leftPos + LIST_LEFT, topPos + LIST_TOP + row * ROW_HEIGHT, 128, 18)
-                    .build()));
+            rowButtons.add(addRenderableWidget(GuiWidgets.leftAlignedSelectablePanelButton(
+                    leftPos + LIST_LEFT,
+                    topPos + LIST_TOP + row * ROW_HEIGHT,
+                    128,
+                    18,
+                    Component.empty(),
+                    button -> selectVisibleRow(rowIndex)
+            )));
         }
 
-        filterButton = addRenderableWidget(Button.builder(filterMode.label, button -> cycleFilterMode())
-                .bounds(leftPos + 176, topPos + 34, 68, 20)
-                .build());
-        sortButton = addRenderableWidget(Button.builder(sortMode.label, button -> cycleSortMode())
-                .bounds(leftPos + 252, topPos + 34, 68, 20)
-                .build());
-        openButton = addRenderableWidget(Button.builder(Component.translatable("screen.matterworks.matter_network_controller.open_gui"), button -> triggerAction(MatterNetworkControllerActionPayload.ACTION_OPEN_GUI))
-                .bounds(leftPos + 176, topPos + 212, 144, 18)
-                .build());
-        locateButton = addRenderableWidget(Button.builder(Component.translatable("screen.matterworks.matter_network_controller.locate"), button -> triggerAction(MatterNetworkControllerActionPayload.ACTION_LOCATE))
-                .bounds(leftPos + 176, topPos + 234, 144, 18)
-                .build());
+        filterButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 176, topPos + 34, 68, 20, filterMode.label, button -> cycleFilterMode()));
+        sortButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 252, topPos + 34, 68, 20, sortMode.label, button -> cycleSortMode()));
+        openButton = addRenderableWidget(GuiWidgets.panelButton(
+                leftPos + 176,
+                topPos + 212,
+                144,
+                18,
+                Component.translatable("screen.matterworks.matter_network_controller.open_gui"),
+                button -> triggerAction(MatterNetworkControllerActionPayload.ACTION_OPEN_GUI)
+        ));
+        locateButton = addRenderableWidget(GuiWidgets.panelButton(
+                leftPos + 176,
+                topPos + 234,
+                144,
+                18,
+                Component.translatable("screen.matterworks.matter_network_controller.locate"),
+                button -> triggerAction(MatterNetworkControllerActionPayload.ACTION_LOCATE)
+        ));
 
         refreshEntries();
     }
@@ -229,18 +240,19 @@ public class MatterNetworkControllerScreen extends AbstractRenamableContainerScr
     private void refreshButtons() {
         int firstVisibleIndex = getFirstVisibleIndex();
         for (int row = 0; row < rowButtons.size(); row++) {
-            Button button = rowButtons.get(row);
+            GuiWidgets.SelectablePanelButton button = rowButtons.get(row);
             int absoluteIndex = firstVisibleIndex + row;
             if (absoluteIndex < displayEntries.size()) {
                 MatterNetworkControllerBlockEntity.ControllerEntry entry = displayEntries.get(absoluteIndex);
-                String prefix = entry.pos().equals(selectedPos) ? "> " : "";
-                button.setMessage(Component.literal(prefix + trimToWidth(getPrimaryLabel(entry) + " [" + entry.pos().toShortString() + "]", 122)));
+                button.setMessage(Component.literal(trimToWidth(getPrimaryLabel(entry) + " [" + entry.pos().toShortString() + "]", 116)));
                 button.visible = true;
-                button.active = !entry.pos().equals(selectedPos);
+                button.active = true;
+                button.setSelected(entry.pos().equals(selectedPos));
             } else {
                 button.setMessage(Component.empty());
                 button.visible = false;
                 button.active = false;
+                button.setSelected(false);
             }
         }
 
@@ -256,7 +268,8 @@ public class MatterNetworkControllerScreen extends AbstractRenamableContainerScr
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         MatterNetworkControllerBlockEntity.ControllerEntry selected = getSelectedEntry();
         if (selected != null && colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight,
-                (index, color) -> PacketDistributor.sendToServer(new SetPylonColorCodePayload(selected.pos(), index, color.getId())))) {
+                (index, color) -> PacketDistributor.sendToServer(new SetPylonColorCodePayload(selected.pos(), index, color.getId())),
+                index -> getSelectedEntryColor(index, selected))) {
             return true;
         }
         if (button == 0 && isOverScrollbar(mouseX, mouseY)) {

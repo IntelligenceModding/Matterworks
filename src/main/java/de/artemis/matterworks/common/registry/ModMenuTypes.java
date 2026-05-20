@@ -7,8 +7,8 @@ import de.artemis.matterworks.common.menu.MatterBatteryPreviewMenu;
 import de.artemis.matterworks.common.menu.MatterConstructorMenu;
 import de.artemis.matterworks.common.menu.EnergyCellMenu;
 import de.artemis.matterworks.common.menu.MatterFilterMenu;
-import de.artemis.matterworks.common.menu.MatterFluidTankMenu;
-import de.artemis.matterworks.common.menu.MatterGeneratorMenu;
+import de.artemis.matterworks.common.menu.FluidTankMenu;
+import de.artemis.matterworks.common.menu.CombustionGeneratorMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
 import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
@@ -44,9 +44,9 @@ public class ModMenuTypes {
             MENU_TYPES.register("matter_constructor",
                     () -> IMenuTypeExtension.create(MatterConstructorMenu::new));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<MatterGeneratorMenu>> MATTER_GENERATOR =
-            MENU_TYPES.register("matter_generator",
-                    () -> IMenuTypeExtension.create(MatterGeneratorMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<CombustionGeneratorMenu>> COMBUSTION_GENERATOR =
+            MENU_TYPES.register("combustion_generator",
+                    () -> IMenuTypeExtension.create(CombustionGeneratorMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<EnergyCellMenu>> MATTER_ENERGY_CELL =
             MENU_TYPES.register("matter_energy_cell",
@@ -60,9 +60,9 @@ public class ModMenuTypes {
             MENU_TYPES.register("matter_battery_preview",
                     () -> IMenuTypeExtension.create(MatterBatteryPreviewMenu::new));
 
-    public static final DeferredHolder<MenuType<?>, MenuType<MatterFluidTankMenu>> MATTER_FLUID_TANK =
-            MENU_TYPES.register("matter_fluid_tank",
-                    () -> IMenuTypeExtension.create(MatterFluidTankMenu::new));
+    public static final DeferredHolder<MenuType<?>, MenuType<FluidTankMenu>> FLUID_TANK =
+            MENU_TYPES.register("fluid_tank",
+                    () -> IMenuTypeExtension.create(FluidTankMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<MatterStorageBarrelMenu>> MATTER_STORAGE_BARREL =
             MENU_TYPES.register("matter_storage_barrel",
@@ -99,3 +99,4 @@ public class ModMenuTypes {
         MENU_TYPES.register(eventBus);
     }
 }
+

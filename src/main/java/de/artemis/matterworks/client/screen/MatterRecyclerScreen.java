@@ -1,70 +1,99 @@
 package de.artemis.matterworks.client.screen;
 
+import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.menu.MatterRecyclerMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.entity.player.Inventory;
 
 import java.util.List;
 
 public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecyclerMenu> {
-    private static final int ENERGY_BAR_X = 8;
-    private static final int ENERGY_BAR_Y = 39;
-    private static final int ENERGY_BAR_WIDTH = 16;
-    private static final int ENERGY_BAR_HEIGHT = 64;
-    private static final int PROGRESS_BAR_X = 80;
-    private static final int PROGRESS_BAR_Y = 18;
-    private static final int PROGRESS_BAR_WIDTH = 16;
-    private static final int PROGRESS_BAR_HEIGHT = 85;
-    private static final int FLUID_BAR_X = 152;
-    private static final int FLUID_BAR_Y = 39;
-    private static final int FLUID_BAR_WIDTH = 16;
-    private static final int FLUID_BAR_HEIGHT = 64;
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/matter_recycler.png");
+    private static final int PROGRESS_BAR_X = 29;
+    private static final int PROGRESS_BAR_Y = 108;
+    private static final int ENERGY_BAR_X = 29;
+    private static final int ENERGY_BAR_Y = 118;
+    private static final int BAR_WIDTH = 118;
+    private static final int BAR_HEIGHT = 6;
+    private static final int FLUID_TANK_X = 119;
+    private static final int FLUID_TANK_Y = 18;
+    private static final int FLUID_TANK_WIDTH = 49;
+    private static final int FLUID_TANK_HEIGHT = 49;
+    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
+    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public MatterRecyclerScreen(MatterRecyclerMenu menu, Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
         this.imageWidth = 176;
         this.imageHeight = 222;
-        this.inventoryLabelY = 128;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
-    protected void init() {
-        super.init();
-        this.topPos -= 2;
+    protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        if (sideConfig.isShowing()) {
+            return;
+        }
+        super.renderLabels(guiGraphics, mouseX, mouseY);
     }
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        int left = this.leftPos;
-        int top = this.topPos;
-        int progressColor = menu.getProgressBarColor();
-
-        VanillaGuiHelper.drawScreenBackground(guiGraphics, left, top, this.imageWidth, this.imageHeight);
-        VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, left, top);
-        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + ENERGY_BAR_X, top + ENERGY_BAR_Y, ENERGY_BAR_WIDTH, ENERGY_BAR_HEIGHT);
-        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + ENERGY_BAR_X + 2, top + ENERGY_BAR_Y + 2, ENERGY_BAR_WIDTH - 4, ENERGY_BAR_HEIGHT - 4, menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT - 4), 0xFFE23D2D);
-        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + PROGRESS_BAR_X, top + PROGRESS_BAR_Y, PROGRESS_BAR_WIDTH, PROGRESS_BAR_HEIGHT);
-        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + PROGRESS_BAR_X + 2, top + PROGRESS_BAR_Y + 2, PROGRESS_BAR_WIDTH - 4, PROGRESS_BAR_HEIGHT - 4, menu.getScaledProgress(PROGRESS_BAR_HEIGHT - 4), progressColor);
-        VanillaGuiHelper.drawVerticalBarFrame(guiGraphics, left + FLUID_BAR_X, top + FLUID_BAR_Y, FLUID_BAR_WIDTH, FLUID_BAR_HEIGHT);
-        VanillaGuiHelper.fillVerticalBar(guiGraphics, left + FLUID_BAR_X + 2, top + FLUID_BAR_Y + 2, FLUID_BAR_WIDTH - 4, FLUID_BAR_HEIGHT - 4, menu.getScaledFluidAmount(FLUID_BAR_HEIGHT - 4), 0xFFD4B27A);
-        sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
-        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
+        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
+        if (sideConfig.isShowing()) {
+            sideConfig.renderBackground(guiGraphics, leftPos, topPos);
+            return;
+        }
+        GuiWidgets.fillHorizontalGauge(
+                guiGraphics,
+                leftPos + PROGRESS_BAR_X,
+                topPos + PROGRESS_BAR_Y,
+                menu.getScaledProgress(BAR_WIDTH),
+                BAR_HEIGHT,
+                menu.getProgressBarColor(),
+                menu.getProgressBarColor()
+        );
+        GuiWidgets.fillHorizontalGauge(
+                guiGraphics,
+                leftPos + ENERGY_BAR_X,
+                topPos + ENERGY_BAR_Y,
+                menu.getScaledEnergyAmount(BAR_WIDTH),
+                BAR_HEIGHT,
+                ENERGY_FILL_COLOR,
+                ENERGY_FILL_TOP_COLOR
+        );
+        int fillColor = GuiWidgets.getFluidFillColor(menu.getFluidStack(), 0xFFE2DED6);
+        int highlightColor = GuiWidgets.getFluidHighlightColor(menu.getFluidStack(), 0xFFF3EFE8);
+        GuiWidgets.fillVerticalGauge(
+                guiGraphics,
+                leftPos + FLUID_TANK_X,
+                topPos + FLUID_TANK_Y,
+                FLUID_TANK_WIDTH,
+                FLUID_TANK_HEIGHT,
+                menu.getScaledFluidAmount(FLUID_TANK_HEIGHT),
+                fillColor,
+                highlightColor
+        );
     }
 
     @Override
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
+        sideConfig.syncSlotLayout(menu);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
         if (sideConfig.isShowing()) {
+            sideConfig.renderOverlay(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, titleLabelX, titleLabelY, 0x404040, title.getString(), inventoryLabelX, inventoryLabelY, mouseX, mouseY);
             sideConfig.renderTooltip(guiGraphics, this.font, menu, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY);
         } else {
             renderEnergyTooltip(guiGraphics, mouseX, mouseY);
             renderProgressTooltip(guiGraphics, mouseX, mouseY);
             renderTankTooltip(guiGraphics, mouseX, mouseY);
         }
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         this.renderTooltip(guiGraphics, mouseX, mouseY);
     }
@@ -80,18 +109,26 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
         return super.mouseClicked(mouseX, mouseY, button);
     }
 
+    @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (super.keyPressed(keyCode, scanCode, modifiers)) {
+            return true;
+        }
+        return TopCategoryTabs.keyPressed(keyCode, buildTabs());
+    }
+
     private void renderEnergyTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int x = this.leftPos + ENERGY_BAR_X;
         int y = this.topPos + ENERGY_BAR_Y;
-        if (mouseX >= x && mouseX < x + ENERGY_BAR_WIDTH && mouseY >= y && mouseY < y + ENERGY_BAR_HEIGHT) {
+        if (mouseX >= x && mouseX < x + BAR_WIDTH && mouseY >= y && mouseY < y + BAR_HEIGHT) {
             guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.matterworks.energy", menu.getEnergyStored(), menu.getEnergyCapacity()), mouseX, mouseY);
         }
     }
 
     private void renderTankTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        int x = this.leftPos + FLUID_BAR_X;
-        int y = this.topPos + FLUID_BAR_Y;
-        if (mouseX >= x && mouseX < x + FLUID_BAR_WIDTH && mouseY >= y && mouseY < y + FLUID_BAR_HEIGHT) {
+        int x = this.leftPos + FLUID_TANK_X;
+        int y = this.topPos + FLUID_TANK_Y;
+        if (mouseX >= x && mouseX < x + FLUID_TANK_WIDTH && mouseY >= y && mouseY < y + FLUID_TANK_HEIGHT) {
             guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.matterworks.raw_matter_tank", menu.getFluidAmount(), menu.getFluidCapacity()), mouseX, mouseY);
         }
     }
@@ -99,7 +136,7 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
     private void renderProgressTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         int x = this.leftPos + PROGRESS_BAR_X;
         int y = this.topPos + PROGRESS_BAR_Y;
-        if (mouseX >= x && mouseX < x + PROGRESS_BAR_WIDTH && mouseY >= y && mouseY < y + PROGRESS_BAR_HEIGHT) {
+        if (mouseX >= x && mouseX < x + BAR_WIDTH && mouseY >= y && mouseY < y + BAR_HEIGHT) {
             guiGraphics.renderTooltip(this.font, Component.translatable("tooltip.matterworks.progress", menu.getProgress(), menu.getMaxProgress()), mouseX, mouseY);
         }
     }

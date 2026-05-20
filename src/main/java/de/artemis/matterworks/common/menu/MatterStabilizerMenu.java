@@ -16,17 +16,17 @@ import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
-    private static final int MENU_ENERGY_INPUT_SLOT = 0;
-    private static final int MENU_ENERGY_OUTPUT_SLOT = 1;
-    private static final int MENU_RAW_INPUT_SLOT = 2;
-    private static final int MENU_RAW_OUTPUT_SLOT = 3;
-    private static final int MENU_CRYSTAL_SLOT = 4;
-    private static final int MENU_UNSTABLE_INPUT_SLOT = 5;
-    private static final int MENU_UNSTABLE_OUTPUT_SLOT = 6;
-    private static final int MENU_REFINED_INPUT_SLOT = 7;
-    private static final int MENU_REFINED_OUTPUT_SLOT = 8;
+    private static final int MENU_RAW_INPUT_SLOT = 0;
+    private static final int MENU_RAW_OUTPUT_SLOT = 1;
+    private static final int MENU_REFINED_INPUT_SLOT = 2;
+    private static final int MENU_REFINED_OUTPUT_SLOT = 3;
+    private static final int MENU_UNSTABLE_INPUT_SLOT = 4;
+    private static final int MENU_UNSTABLE_OUTPUT_SLOT = 5;
+    private static final int MENU_CRYSTAL_SLOT = 6;
+    private static final int MENU_ENERGY_INPUT_SLOT = 7;
 
     public MatterStabilizerMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
         this(containerId, playerInventory, resolveBlockEntity(playerInventory, extraData.readBlockPos()), new SimpleContainerData(MatterStabilizerBlockEntity.STABILIZER_DATA_COUNT));
@@ -38,15 +38,14 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addMachineSlots() {
-        this.addSlot(createEnergyInputSlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, 8, 18));
-        this.addSlot(createOutputOnlySlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_OUTPUT_SLOT, 8, 108));
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.RAW_BUCKET_INPUT_SLOT, 30, 18));
-        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.RAW_BUCKET_OUTPUT_SLOT, 30, 108));
-        this.addSlot(createCrystalSlot(AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, 80, 108));
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_INPUT_SLOT, 130, 18));
-        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_OUTPUT_SLOT, 130, 108));
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.REFINED_BUCKET_INPUT_SLOT, 152, 18));
-        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 152, 108));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.RAW_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.RAW_BUCKET_OUTPUT_SLOT, 42, 72));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.REFINED_BUCKET_INPUT_SLOT, 63, 72));
+        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 97, 72));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_INPUT_SLOT, 118, 72));
+        this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_OUTPUT_SLOT, 152, 72));
+        this.addSlot(createCrystalSlot(AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, 8, 108));
+        this.addSlot(createEnergyInputSlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, 152, 108));
     }
 
     @Override
@@ -103,6 +102,18 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
         return Math.max(1, amount * height / capacity);
     }
 
+    public FluidStack getRawMatterFluidStack() {
+        return ((MatterStabilizerBlockEntity) blockEntity).getRawMatterFluidStack();
+    }
+
+    public FluidStack getRefinedMatterFluidStack() {
+        return getFluidStack();
+    }
+
+    public FluidStack getUnstableMatterFluidStack() {
+        return ((MatterStabilizerBlockEntity) blockEntity).getUnstableMatterFluidStack();
+    }
+
     @Override
     public boolean stillValid(Player player) {
         return stillValid(net.minecraft.world.inventory.ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()), player, ModBlocks.MATTER_STABILIZER.get());
@@ -135,6 +146,10 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
                 }
             } else if (sourceStack.is(ModItems.RAW_MATTER_BUCKET.get())) {
                 if (!this.moveItemStackTo(sourceStack, MENU_RAW_INPUT_SLOT, MENU_RAW_INPUT_SLOT + 1, false)) {
+                    return ItemStack.EMPTY;
+                }
+            } else if (sourceStack.is(ModItems.REFINED_MATTER_BUCKET.get())) {
+                if (!this.moveItemStackTo(sourceStack, MENU_REFINED_INPUT_SLOT, MENU_REFINED_INPUT_SLOT + 1, false)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(Items.BUCKET)) {

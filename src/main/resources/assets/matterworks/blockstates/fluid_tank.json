@@ -1,0 +1,17 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "matterworks:block/fluid_tank"
+    },
+    "facing=east": {
+      "model": "matterworks:block/fluid_tank"
+    },
+    "facing=south": {
+      "model": "matterworks:block/fluid_tank"
+    },
+    "facing=west": {
+      "model": "matterworks:block/fluid_tank"
+    }
+  }
+}
+

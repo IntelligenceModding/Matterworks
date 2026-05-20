@@ -16,30 +16,24 @@ public class MatterBatteryPreviewScreen extends AbstractRenamableContainerScreen
         super(menu, playerInventory, title);
         this.imageWidth = 176;
         this.imageHeight = 166;
-        this.inventoryLabelY = 74;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
     protected void init() {
         super.init();
-        previewButton = addRenderableWidget(Button.builder(getPreviewButtonLabel(), button -> {
-                    MatterBatteryPreviewState.toggle(menu.getBlockEntity());
-                    refreshPreviewButtons();
-                })
-                .bounds(leftPos + 8, topPos + 62, 68, 20)
-                .build());
-        layerDownButton = addRenderableWidget(Button.builder(Component.literal("-"), button -> {
-                    MatterBatteryPreviewState.cycleLayer(-1);
-                    refreshPreviewButtons();
-                })
-                .bounds(leftPos + 86, topPos + 62, 20, 20)
-                .build());
-        layerUpButton = addRenderableWidget(Button.builder(Component.literal("+"), button -> {
-                    MatterBatteryPreviewState.cycleLayer(1);
-                    refreshPreviewButtons();
-                })
-                .bounds(leftPos + 148, topPos + 62, 20, 20)
-                .build());
+        previewButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 8, topPos + 62, 68, 20, getPreviewButtonLabel(), button -> {
+            MatterBatteryPreviewState.toggle(menu.getBlockEntity());
+            refreshPreviewButtons();
+        }));
+        layerDownButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 86, topPos + 62, 20, 20, Component.literal("-"), button -> {
+            MatterBatteryPreviewState.cycleLayer(-1);
+            refreshPreviewButtons();
+        }));
+        layerUpButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 148, topPos + 62, 20, 20, Component.literal("+"), button -> {
+            MatterBatteryPreviewState.cycleLayer(1);
+            refreshPreviewButtons();
+        }));
         refreshPreviewButtons();
     }
 

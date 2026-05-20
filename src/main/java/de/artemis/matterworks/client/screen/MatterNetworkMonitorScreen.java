@@ -271,7 +271,7 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
     }
 
     private static String formatAmount(int amount, String unit) {
-        return amount + " " + unit;
+        return GuiWidgets.formatRateText(amount, unit, false);
     }
 
     private static String formatTicksAgo(int ticksAgo) {

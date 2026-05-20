@@ -4,8 +4,8 @@ import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.block.MatterAnalyzerBlock;
 import de.artemis.matterworks.common.block.MatterConstructorBlock;
 import de.artemis.matterworks.common.block.EnergyCellBlock;
-import de.artemis.matterworks.common.block.MatterFluidTankBlock;
-import de.artemis.matterworks.common.block.MatterGeneratorBlock;
+import de.artemis.matterworks.common.block.FluidTankBlock;
+import de.artemis.matterworks.common.block.CombustionGeneratorBlock;
 import de.artemis.matterworks.common.block.MatterNetworkControllerBlock;
 import de.artemis.matterworks.common.block.MatterNetworkMonitorBlock;
 import de.artemis.matterworks.common.block.MatterPylonBlock;
@@ -150,9 +150,9 @@ public class ModBlocks {
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
     );
 
-    public static final DeferredBlock<MatterGeneratorBlock> MATTER_GENERATOR = register(
-            "matter_generator",
-            MatterGeneratorBlock::new,
+    public static final DeferredBlock<CombustionGeneratorBlock> COMBUSTION_GENERATOR = register(
+            "combustion_generator",
+            CombustionGeneratorBlock::new,
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
     );
 
@@ -204,9 +204,9 @@ public class ModBlocks {
             properties -> properties.strength(4.0F).sound(SoundType.METAL)
     );
 
-    public static final DeferredBlock<MatterFluidTankBlock> MATTER_FLUID_TANK = register(
-            "matter_fluid_tank",
-            MatterFluidTankBlock::new,
+    public static final DeferredBlock<FluidTankBlock> FLUID_TANK = register(
+            "fluid_tank",
+            FluidTankBlock::new,
             properties -> properties.strength(3.5F).sound(SoundType.METAL)
     );
 
@@ -283,3 +283,4 @@ public class ModBlocks {
         BLOCKS.register(eventBus);
     }
 }
+

@@ -1,15 +1,14 @@
 package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
-import de.artemis.matterworks.common.blockentity.MatterFluidTankBlockEntity;
-import de.artemis.matterworks.common.network.SetMatterNetworkTrackingPayload;
+import de.artemis.matterworks.common.blockentity.CombustionGeneratorBlockEntity;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
-import net.minecraft.util.Mth;
 import net.minecraft.world.Containers;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.RenderShape;
@@ -18,18 +17,17 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.phys.BlockHitResult;
-import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
-public class MatterFluidTankBlock extends HorizontalFacingMachineBlock {
-    public static final MapCodec<MatterFluidTankBlock> CODEC = simpleCodec(MatterFluidTankBlock::new);
+public class CombustionGeneratorBlock extends HorizontalFacingMachineBlock {
+    public static final MapCodec<CombustionGeneratorBlock> CODEC = simpleCodec(CombustionGeneratorBlock::new);
 
-    public MatterFluidTankBlock(Properties properties) {
+    public CombustionGeneratorBlock(Properties properties) {
         super(properties);
     }
 
     @Override
-    public MapCodec<MatterFluidTankBlock> codec() {
+    public MapCodec<CombustionGeneratorBlock> codec() {
         return CODEC;
     }
 
@@ -42,15 +40,8 @@ public class MatterFluidTankBlock extends HorizontalFacingMachineBlock {
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
         if (!level.isClientSide()) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof MatterFluidTankBlockEntity fluidTankBlockEntity) {
-                if (player.isShiftKeyDown()) {
-                    fluidTankBlockEntity.handleLinkUse(player);
-                } else {
-                    if (player instanceof net.minecraft.server.level.ServerPlayer serverPlayer) {
-                        PacketDistributor.sendToPlayer(serverPlayer, new SetMatterNetworkTrackingPayload(false, pos, ""));
-                    }
-                    player.openMenu((MenuProvider) fluidTankBlockEntity, pos);
-                }
+            if (blockEntity instanceof CombustionGeneratorBlockEntity) {
+                player.openMenu((MenuProvider) blockEntity, pos);
             }
         }
 
@@ -59,22 +50,20 @@ public class MatterFluidTankBlock extends HorizontalFacingMachineBlock {
 
     @Override
     public BlockEntity newBlockEntity(BlockPos pos, BlockState state) {
-        return new MatterFluidTankBlockEntity(pos, state);
+        return new CombustionGeneratorBlockEntity(pos, state);
     }
 
     @Override
     public <T extends BlockEntity> @Nullable BlockEntityTicker<T> getTicker(Level level, BlockState state, BlockEntityType<T> blockEntityType) {
-        return createTickerHelper(blockEntityType, ModBlockEntities.MATTER_FLUID_TANK.get(), MatterFluidTankBlockEntity::tick);
+        return createTickerHelper(blockEntityType, ModBlockEntities.COMBUSTION_GENERATOR.get(), CombustionGeneratorBlockEntity::tick);
     }
 
     @Override
     protected void onRemove(BlockState state, Level level, BlockPos pos, BlockState newState, boolean movedByPiston) {
         if (!state.is(newState.getBlock())) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
-            if (blockEntity instanceof MatterFluidTankBlockEntity fluidTankBlockEntity) {
-                fluidTankBlockEntity.releaseChunkLoadingTickets();
-                fluidTankBlockEntity.unlinkAll();
-                Containers.dropContents(level, pos, fluidTankBlockEntity.createDropInventory());
+            if (blockEntity instanceof CombustionGeneratorBlockEntity generatorBlockEntity) {
+                Containers.dropContents(level, pos, generatorBlockEntity.createDropInventory());
             }
         }
 
@@ -89,13 +78,8 @@ public class MatterFluidTankBlock extends HorizontalFacingMachineBlock {
     @Override
     protected int getAnalogOutputSignal(BlockState blockState, Level level, BlockPos pos) {
         BlockEntity blockEntity = level.getBlockEntity(pos);
-        if (blockEntity instanceof MatterFluidTankBlockEntity fluidTankBlockEntity) {
-            int fluidAmount = fluidTankBlockEntity.getFluidAmount();
-            int capacity = fluidTankBlockEntity.getFluidCapacity();
-            if (fluidAmount <= 0 || capacity <= 0) {
-                return 0;
-            }
-            return Mth.floor((double) fluidAmount * 14.0D / capacity) + 1;
+        if (blockEntity instanceof CombustionGeneratorBlockEntity generatorBlockEntity) {
+            return AbstractContainerMenu.getRedstoneSignalFromContainer(generatorBlockEntity.createDropInventory());
         }
         return 0;
     }

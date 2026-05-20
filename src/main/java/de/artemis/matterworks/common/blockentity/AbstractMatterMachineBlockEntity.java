@@ -325,7 +325,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
 
     public int getEffectiveProgressBarColor() {
         ItemStack crystalStack = getEffectiveCrystalStack();
-        return crystalStack.isEmpty() ? 0xB67CFF : PowerCrystalEffects.getBarColor(crystalStack);
+        return PowerCrystalEffects.isActive(crystalStack) ? PowerCrystalEffects.getBarColor(crystalStack) : 0xB67CFF;
     }
 
     public IEnergyStorage getEnergyStorage(@Nullable Direction side) {

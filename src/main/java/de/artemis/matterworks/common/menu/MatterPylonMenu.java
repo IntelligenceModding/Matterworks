@@ -25,6 +25,10 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     public static final int BUTTON_CYCLE_MODE_CHANNEL_2 = 1;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_3 = 2;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_4 = 3;
+    public static final int BUTTON_CYCLE_MODE_CHANNEL_1_BACKWARD = 100;
+    public static final int BUTTON_CYCLE_MODE_CHANNEL_2_BACKWARD = 101;
+    public static final int BUTTON_CYCLE_MODE_CHANNEL_3_BACKWARD = 102;
+    public static final int BUTTON_CYCLE_MODE_CHANNEL_4_BACKWARD = 103;
     private static final int CRYSTAL_SLOT_START = 8;
     private static final int CRYSTAL_SLOT_END = CRYSTAL_SLOT_START + MatterPylonBlockEntity.CRYSTAL_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_START = CRYSTAL_SLOT_END;
@@ -35,6 +39,7 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     private final MatterPylonBlockEntity blockEntity;
     private final ContainerData data;
     private final boolean remoteAccess;
+    private int activeFilterChannel = MatterPylonBlockEntity.CHANNEL_ITEMS;
 
     public MatterPylonMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
         this(
@@ -56,20 +61,23 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
         this.data = data;
         this.remoteAccess = remoteAccess;
 
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST, 16, 86, MatterPylonBlockEntity.CHANNEL_ITEMS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_BLACKLIST, 34, 86, MatterPylonBlockEntity.CHANNEL_ITEMS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_WHITELIST, 16, 104, MatterPylonBlockEntity.CHANNEL_ITEMS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_BLACKLIST, 34, 104, MatterPylonBlockEntity.CHANNEL_ITEMS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_WHITELIST, 88, 86, MatterPylonBlockEntity.CHANNEL_FLUIDS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_BLACKLIST, 106, 86, MatterPylonBlockEntity.CHANNEL_FLUIDS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST, 88, 104, MatterPylonBlockEntity.CHANNEL_FLUIDS));
-        addSlot(new FilterSlot(blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST, 106, 104, MatterPylonBlockEntity.CHANNEL_FLUIDS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST, 8, 75, MatterPylonBlockEntity.CHANNEL_ITEMS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_BLACKLIST, 28, 75, MatterPylonBlockEntity.CHANNEL_ITEMS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_WHITELIST, 48, 75, MatterPylonBlockEntity.CHANNEL_ITEMS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_BLACKLIST, 68, 75, MatterPylonBlockEntity.CHANNEL_ITEMS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_WHITELIST, 8, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_BLACKLIST, 28, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST, 48, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
+        addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST, 68, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
         for (int slot = 0; slot < MatterPylonBlockEntity.CRYSTAL_SLOT_COUNT; slot++) {
-            addSlot(new CrystalSlot(blockEntity.getCrystalHandler(), slot, 16 + slot * 18, 140));
+            addSlot(new CrystalSlot(blockEntity.getCrystalHandler(), slot, 92 + slot * 30, 108));
         }
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
         addDataSlots(data);
+        this.activeFilterChannel = supportsFilterChannel(MatterPylonBlockEntity.CHANNEL_ITEMS)
+                ? MatterPylonBlockEntity.CHANNEL_ITEMS
+                : MatterPylonBlockEntity.CHANNEL_FLUIDS;
     }
 
     public BlockPos getBlockPos() {
@@ -99,6 +107,14 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
 
     public boolean supportsUpgradeCrystals() {
         return blockEntity.supportsUpgradeCrystals();
+    }
+
+    public void setActiveFilterChannel(int channel) {
+        this.activeFilterChannel = channel;
+    }
+
+    public int getActiveFilterChannel() {
+        return activeFilterChannel;
     }
 
     public DyeColor getNetworkColor(int index) {
@@ -131,6 +147,10 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     public boolean clickMenuButton(Player player, int id) {
         if (id >= BUTTON_CYCLE_MODE_CHANNEL_1 && id <= BUTTON_CYCLE_MODE_CHANNEL_4) {
             blockEntity.cycleMode(id);
+            return true;
+        }
+        if (id >= BUTTON_CYCLE_MODE_CHANNEL_1_BACKWARD && id <= BUTTON_CYCLE_MODE_CHANNEL_4_BACKWARD) {
+            blockEntity.cycleModeBackward(id - BUTTON_CYCLE_MODE_CHANNEL_1_BACKWARD);
             return true;
         }
         return false;
@@ -196,14 +216,14 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     private void addPlayerInventory(Inventory inventory) {
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 134 + row * 18));
+                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
             }
         }
     }
 
     private void addPlayerHotbar(Inventory inventory) {
         for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 192));
+            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
         }
     }
 
@@ -236,11 +256,13 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     }
 
     private static final class FilterSlot extends SlotItemHandler {
+        private final MatterPylonMenu menu;
         private final MatterPylonBlockEntity blockEntity;
         private final int channel;
 
-        private FilterSlot(MatterPylonBlockEntity blockEntity, int slot, int x, int y, int channel) {
+        private FilterSlot(MatterPylonMenu menu, MatterPylonBlockEntity blockEntity, int slot, int x, int y, int channel) {
             super(blockEntity.getFilterHandler(), slot, x, y);
+            this.menu = menu;
             this.blockEntity = blockEntity;
             this.channel = channel;
         }
@@ -257,6 +279,11 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
                 return stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
             }
             return false;
+        }
+
+        @Override
+        public boolean isActive() {
+            return blockEntity.supportsFilterChannel(channel) && menu.getActiveFilterChannel() == channel;
         }
     }
 }

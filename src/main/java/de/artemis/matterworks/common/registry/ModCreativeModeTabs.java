@@ -60,7 +60,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.MATTER_STABILIZER.get());
                         output.accept(ModBlocks.MATTER_ANALYZER.get());
                         output.accept(ModBlocks.MATTER_CONSTRUCTOR.get());
-                        output.accept(ModBlocks.MATTER_GENERATOR.get());
+                        output.accept(ModBlocks.COMBUSTION_GENERATOR.get());
                         output.accept(ModBlocks.MATTER_ENERGY_CELL.get());
                         output.accept(ModBlocks.MATTER_BATTERY_CORE.get());
                         output.accept(ModBlocks.MULTIBLOCK_FRAME.get());
@@ -68,7 +68,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.MULTIBLOCK_PORT.get());
                         output.accept(ModBlocks.MULTIBLOCK_GLASS.get());
                         output.accept(ModBlocks.MATTER_CAPACITOR_CELL.get());
-                        output.accept(ModBlocks.MATTER_FLUID_TANK.get());
+                        output.accept(ModBlocks.FLUID_TANK.get());
                         output.accept(ModBlocks.MATTER_STORAGE_BARREL.get());
                         output.accept(ModBlocks.MATTER_PYLON.get());
                         output.accept(ModBlocks.MATTER_NETWORK_CONTROLLER.get());
@@ -110,3 +110,4 @@ public class ModCreativeModeTabs {
         return stack;
     }
 }
+

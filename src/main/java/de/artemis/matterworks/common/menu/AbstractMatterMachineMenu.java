@@ -18,6 +18,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
@@ -157,6 +158,10 @@ public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu im
             return 0;
         }
         return Math.max(1, fluidAmount * height / fluidCapacity);
+    }
+
+    public FluidStack getFluidStack() {
+        return blockEntity.getFluidTank().getFluid().copy();
     }
 
     public int getEnergyStored() {
