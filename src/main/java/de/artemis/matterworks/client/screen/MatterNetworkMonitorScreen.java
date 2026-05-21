@@ -1,10 +1,12 @@
 package de.artemis.matterworks.client.screen;
 
+import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterNetworkMonitorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.network.chat.Component;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 
 import java.util.ArrayList;
@@ -12,38 +14,37 @@ import java.util.List;
 import java.util.Optional;
 
 public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen<MatterNetworkMonitorMenu> {
-    private static final int PANEL_LEFT = 12;
-    private static final int PANEL_TOP = 28;
-    private static final int PANEL_GAP = 8;
-    private static final int PANEL_HEIGHT = 66;
-    private static final int PANEL_INNER_PADDING = 8;
-    private static final int CHART_TOP_OFFSET = 20;
-    private static final int CHART_BOTTOM_PADDING = 8;
-
     private static final GraphSpec[] GRAPH_SPECS = new GraphSpec[]{
-            new GraphSpec(MatterPylonBlockEntity.CHANNEL_ENERGY, "Energy Transfer", 0xFFE23D2D, "FE/t"),
-            new GraphSpec(MatterPylonBlockEntity.CHANNEL_ITEMS, "Item Transfer", 0xFFD8B55B, "i/t"),
-            new GraphSpec(MatterPylonBlockEntity.CHANNEL_FLUIDS, "Fluid Transfer", 0xFF3A93FF, "mB/t")
+            new GraphSpec(MatterPylonBlockEntity.CHANNEL_ENERGY, "Energy Transfer", 0xFFE23D2D, "FE/t", 8, 92, 160, 32),
+            new GraphSpec(MatterPylonBlockEntity.CHANNEL_ITEMS, "Item Transfer", 0xFFD8B55B, "i/t", 8, 55, 160, 32),
+            new GraphSpec(MatterPylonBlockEntity.CHANNEL_FLUIDS, "Fluid Transfer", 0xFF3A93FF, "mB/t", 8, 18, 160, 32)
     };
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/matter_network_monitor.png");
+    private static final int TEXTURE_SIZE = 256;
+    private static final int GRAPH_GRID = 0x22373737;
+    private static final int GRAPH_HOVER_LINE = 0x66FFFFFF;
+    private static final int GRAPH_HOVER_POINT = 0xFFFFFFFF;
+    private static final int GRAPH_ZERO_LINE = 0x44373737;
 
     public MatterNetworkMonitorScreen(MatterNetworkMonitorMenu menu, net.minecraft.world.entity.player.Inventory playerInventory, Component title) {
         super(menu, playerInventory, title);
-        this.imageWidth = 340;
-        this.imageHeight = 250;
-        this.inventoryLabelY = 1000;
+        this.imageWidth = 176;
+        this.imageHeight = 222;
+        this.inventoryLabelY = this.imageHeight - 94;
     }
 
     @Override
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
-        VanillaGuiHelper.drawScreenBackground(guiGraphics, leftPos, topPos, imageWidth, imageHeight);
-        for (int graphIndex = 0; graphIndex < GRAPH_SPECS.length; graphIndex++) {
-            renderGraphPanel(guiGraphics, GRAPH_SPECS[graphIndex], graphIndex, mouseX, mouseY);
+        guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
+        for (GraphSpec spec : GRAPH_SPECS) {
+            renderGraph(guiGraphics, spec, mouseX, mouseY);
         }
     }
 
     @Override
     protected void renderLabels(GuiGraphics guiGraphics, int mouseX, int mouseY) {
-        renderEditableTitle(guiGraphics, 12, 10, 0x404040);
+        renderEditableTitle(guiGraphics, 8, 6, 0x404040);
+        guiGraphics.drawString(font, playerInventoryTitle, inventoryLabelX, inventoryLabelY, 0x404040, false);
     }
 
     @Override
@@ -61,43 +62,27 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
 
     @Override
     protected int getEditableTitleX() {
-        return 12;
+        return 8;
     }
 
     @Override
     protected int getEditableTitleY() {
-        return 10;
+        return 6;
     }
 
     @Override
     protected int getEditableTitleWidth() {
-        return 220;
+        return 160;
     }
 
-    private void renderGraphPanel(GuiGraphics guiGraphics, GraphSpec spec, int graphIndex, int mouseX, int mouseY) {
-        int panelLeft = leftPos + PANEL_LEFT;
-        int panelTop = topPos + PANEL_TOP + graphIndex * (PANEL_HEIGHT + PANEL_GAP);
-        int panelWidth = imageWidth - PANEL_LEFT * 2;
-        int panelBottom = panelTop + PANEL_HEIGHT;
+    private void renderGraph(GuiGraphics guiGraphics, GraphSpec spec, int mouseX, int mouseY) {
+        int chartLeft = leftPos + spec.x();
+        int chartTop = topPos + spec.y();
+        int chartWidth = spec.width();
+        int chartHeight = spec.height();
+        int bottom = chartTop + chartHeight - 1;
 
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, panelLeft, panelTop, panelWidth, PANEL_HEIGHT);
-        guiGraphics.fill(panelLeft + 6, panelTop + 7, panelLeft + panelWidth - 6, panelTop + 8, spec.color());
-        guiGraphics.drawString(font, Component.literal(spec.title()), panelLeft + 10, panelTop + 6, 0x202020, false);
-
-        int chartLeft = panelLeft + PANEL_INNER_PADDING;
-        int chartTop = panelTop + CHART_TOP_OFFSET;
-        int chartWidth = panelWidth - PANEL_INNER_PADDING * 2;
-        int chartHeight = PANEL_HEIGHT - CHART_TOP_OFFSET - CHART_BOTTOM_PADDING;
-        int innerLeft = chartLeft + 2;
-        int innerTop = chartTop + 2;
-        int innerWidth = chartWidth - 4;
-        int innerHeight = chartHeight - 4;
-        int bottom = innerTop + innerHeight - 1;
-
-        VanillaGuiHelper.drawInsetPanel(guiGraphics, chartLeft, chartTop, chartWidth, chartHeight);
-        guiGraphics.fill(innerLeft, innerTop, innerLeft + innerWidth, innerTop + innerHeight, 0xFF1F1F1F);
-        renderGraphGrid(guiGraphics, innerLeft, innerTop, innerWidth, innerHeight);
-
+        renderGraphGrid(guiGraphics, chartLeft, chartTop, chartWidth, chartHeight);
         MatterNetworkMonitorBlockEntity blockEntity = menu.getBlockEntity();
         int historySize = blockEntity.getHistorySize();
         int historyCapacity = blockEntity.getHistoryCapacity();
@@ -105,42 +90,52 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
             return;
         }
 
-        int maxValue = 1;
+        int minValue = 0;
+        int maxValue = 0;
         for (int index = 0; index < historyCapacity; index++) {
-            maxValue = Math.max(maxValue, getVisibleSample(blockEntity, spec.channel(), index).totalAmount());
+            int value = getNetworkAmount(getVisibleSample(blockEntity, spec.channel(), index));
+            minValue = Math.min(minValue, value);
+            maxValue = Math.max(maxValue, value);
+        }
+        if (minValue == 0 && maxValue == 0) {
+            maxValue = 1;
+        }
+        int zeroY = getSampleY(0, minValue, maxValue, chartTop, chartHeight);
+        if (minValue < 0 && maxValue > 0) {
+            guiGraphics.fill(chartLeft, zeroY, chartLeft + chartWidth, zeroY + 1, GRAPH_ZERO_LINE);
         }
 
         for (int index = 0; index < historyCapacity - 1; index++) {
             MatterNetworkMonitorBlockEntity.HistorySample current = getVisibleSample(blockEntity, spec.channel(), index);
             MatterNetworkMonitorBlockEntity.HistorySample next = getVisibleSample(blockEntity, spec.channel(), index + 1);
-            int x1 = getSampleX(index, historyCapacity, innerLeft, innerWidth);
-            int y1 = getSampleY(current.totalAmount(), maxValue, innerTop, innerHeight);
-            int x2 = getSampleX(index + 1, historyCapacity, innerLeft, innerWidth);
-            int y2 = getSampleY(next.totalAmount(), maxValue, innerTop, innerHeight);
-            drawAreaSegment(guiGraphics, x1, y1, x2, y2, bottom, withAlpha(spec.color(), 0x35));
+            int x1 = getSampleX(index, historyCapacity, chartLeft, chartWidth);
+            int y1 = getSampleY(getNetworkAmount(current), minValue, maxValue, chartTop, chartHeight);
+            int x2 = getSampleX(index + 1, historyCapacity, chartLeft, chartWidth);
+            int y2 = getSampleY(getNetworkAmount(next), minValue, maxValue, chartTop, chartHeight);
+            drawAreaSegment(guiGraphics, x1, y1, x2, y2, zeroY, withAlpha(spec.color(), 0x35));
             drawLineSegment(guiGraphics, x1, y1, x2, y2, spec.color());
         }
 
         if (historySize == 1) {
             int visibleIndex = historyCapacity - 1;
             MatterNetworkMonitorBlockEntity.HistorySample sample = getVisibleSample(blockEntity, spec.channel(), visibleIndex);
-            int x = getSampleX(visibleIndex, historyCapacity, innerLeft, innerWidth);
-            int y = getSampleY(sample.totalAmount(), maxValue, innerTop, innerHeight);
+            int x = getSampleX(visibleIndex, historyCapacity, chartLeft, chartWidth);
+            int y = getSampleY(getNetworkAmount(sample), minValue, maxValue, chartTop, chartHeight);
             guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, spec.color());
         } else if (historySize > 0) {
             MatterNetworkMonitorBlockEntity.HistorySample latest = blockEntity.getHistorySample(spec.channel(), historySize - 1);
-            int latestX = getSampleX(historyCapacity - 1, historyCapacity, innerLeft, innerWidth);
-            int latestY = getSampleY(latest.totalAmount(), maxValue, innerTop, innerHeight);
+            int latestX = getSampleX(historyCapacity - 1, historyCapacity, chartLeft, chartWidth);
+            int latestY = getSampleY(getNetworkAmount(latest), minValue, maxValue, chartTop, chartHeight);
             guiGraphics.fill(latestX - 1, latestY - 1, latestX + 2, latestY + 2, spec.color());
         }
 
-        int hoveredSampleIndex = getHoveredSampleIndex(mouseX, mouseY, innerLeft, innerTop, innerWidth, innerHeight, historyCapacity);
+        int hoveredSampleIndex = getHoveredSampleIndex(mouseX, mouseY, chartLeft, chartTop, chartWidth, chartHeight, historyCapacity);
         if (hoveredSampleIndex >= 0) {
             MatterNetworkMonitorBlockEntity.HistorySample hoveredSample = getVisibleSample(blockEntity, spec.channel(), hoveredSampleIndex);
-            int hoveredX = getSampleX(hoveredSampleIndex, historyCapacity, innerLeft, innerWidth);
-            int hoveredY = getSampleY(hoveredSample.totalAmount(), maxValue, innerTop, innerHeight);
-            guiGraphics.fill(hoveredX, innerTop, hoveredX + 1, panelBottom - CHART_BOTTOM_PADDING - 2, 0x66FFFFFF);
-            guiGraphics.fill(hoveredX - 2, hoveredY - 2, hoveredX + 3, hoveredY + 3, 0xFFFFFFFF);
+            int hoveredX = getSampleX(hoveredSampleIndex, historyCapacity, chartLeft, chartWidth);
+            int hoveredY = getSampleY(getNetworkAmount(hoveredSample), minValue, maxValue, chartTop, chartHeight);
+            guiGraphics.fill(hoveredX, chartTop, hoveredX + 1, chartTop + chartHeight, GRAPH_HOVER_LINE);
+            guiGraphics.fill(hoveredX - 2, hoveredY - 2, hoveredX + 3, hoveredY + 3, GRAPH_HOVER_POINT);
             guiGraphics.fill(hoveredX - 1, hoveredY - 1, hoveredX + 2, hoveredY + 2, spec.color());
         }
     }
@@ -150,11 +145,11 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
         int bottom = top + height;
         for (int step = 1; step < 4; step++) {
             int y = top + Math.round(step * (height - 1) / 4.0F);
-            guiGraphics.fill(left, y, right, y + 1, 0x22373737);
+            guiGraphics.fill(left, y, right, y + 1, GRAPH_GRID);
         }
         for (int step = 1; step < 4; step++) {
             int x = left + Math.round(step * (width - 1) / 4.0F);
-            guiGraphics.fill(x, top, x + 1, bottom, 0x22373737);
+            guiGraphics.fill(x, top, x + 1, bottom, GRAPH_GRID);
         }
     }
 
@@ -168,15 +163,15 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
 
         for (int graphIndex = 0; graphIndex < GRAPH_SPECS.length; graphIndex++) {
             GraphSpec spec = GRAPH_SPECS[graphIndex];
-            int panelLeft = leftPos + PANEL_LEFT;
-            int panelTop = topPos + PANEL_TOP + graphIndex * (PANEL_HEIGHT + PANEL_GAP);
-            int panelWidth = imageWidth - PANEL_LEFT * 2;
-            int chartLeft = panelLeft + PANEL_INNER_PADDING + 2;
-            int chartTop = panelTop + CHART_TOP_OFFSET + 2;
-            int chartWidth = panelWidth - PANEL_INNER_PADDING * 2 - 4;
-            int chartHeight = PANEL_HEIGHT - CHART_TOP_OFFSET - CHART_BOTTOM_PADDING - 4;
-
-            int hoveredSampleIndex = getHoveredSampleIndex(mouseX, mouseY, chartLeft, chartTop, chartWidth, chartHeight, historyCapacity);
+            int hoveredSampleIndex = getHoveredSampleIndex(
+                    mouseX,
+                    mouseY,
+                    leftPos + spec.x(),
+                    topPos + spec.y(),
+                    spec.width(),
+                    spec.height(),
+                    historyCapacity
+            );
             if (hoveredSampleIndex < 0) {
                 continue;
             }
@@ -189,9 +184,9 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
             int ticksAgo = (historySize - 1 - historyIndex) * 4;
             List<Component> lines = new ArrayList<>();
             lines.add(Component.literal(spec.title()));
-            lines.add(Component.literal(formatAmount(sample.totalAmount(), spec.unit())));
-            lines.add(Component.literal("Source: " + formatAmount(sample.sourceAmount(), spec.unit())));
-            lines.add(Component.literal("Sink: " + formatAmount(sample.sinkAmount(), spec.unit())));
+            lines.add(Component.literal(formatAmount(getNetworkAmount(sample), spec.unit())));
+            lines.add(Component.literal("Import: " + formatAmount(sample.sourceAmount(), spec.unit())));
+            lines.add(Component.literal("Export: " + formatAmount(sample.sinkAmount(), spec.unit())));
             lines.add(Component.literal("Transit: " + formatAmount(sample.transitAmount(), spec.unit())));
             lines.add(Component.literal("Active Nodes: " + sample.activeNodes()));
             lines.add(Component.literal(ticksAgo <= 0 ? "Now" : formatTicksAgo(ticksAgo)));
@@ -237,18 +232,25 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
         return chartLeft + Math.round(sampleIndex * (chartWidth - 1) / (float) (historySize - 1));
     }
 
-    private static int getSampleY(int value, int maxValue, int chartTop, int chartHeight) {
+    private static int getSampleY(int value, int minValue, int maxValue, int chartTop, int chartHeight) {
         int bottom = chartTop + chartHeight - 1;
-        return bottom - Math.round((value / (float) Math.max(1, maxValue)) * (chartHeight - 1));
+        int range = maxValue - minValue;
+        if (range <= 0) {
+            return bottom;
+        }
+        float normalized = (value - minValue) / (float) range;
+        return bottom - Math.round(normalized * (chartHeight - 1));
     }
 
-    private static void drawAreaSegment(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int bottom, int color) {
+    private static void drawAreaSegment(GuiGraphics guiGraphics, int x1, int y1, int x2, int y2, int baselineY, int color) {
         int startX = Math.min(x1, x2);
         int endX = Math.max(x1, x2);
         for (int x = startX; x <= endX; x++) {
             float delta = endX == startX ? 0.0F : (x - startX) / (float) (endX - startX);
             int y = Math.round(Mth.lerp(delta, y1, y2));
-            guiGraphics.fill(x, y, x + 1, bottom + 1, color);
+            int fillTop = Math.min(y, baselineY);
+            int fillBottom = Math.max(y, baselineY) + 1;
+            guiGraphics.fill(x, fillTop, x + 1, fillBottom, color);
         }
     }
 
@@ -271,7 +273,11 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
     }
 
     private static String formatAmount(int amount, String unit) {
-        return GuiWidgets.formatRateText(amount, unit, false);
+        return GuiWidgets.formatRateText(amount, unit, true);
+    }
+
+    private static int getNetworkAmount(MatterNetworkMonitorBlockEntity.HistorySample sample) {
+        return sample.sourceAmount() - sample.sinkAmount();
     }
 
     private static String formatTicksAgo(int ticksAgo) {
@@ -281,7 +287,7 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
         return String.format("%.1fs ago", ticksAgo / 20.0F);
     }
 
-    private record GraphSpec(int channel, String title, int color, String unit) {
+    private record GraphSpec(int channel, String title, int color, String unit, int x, int y, int width, int height) {
     }
 
     private record GraphHover(List<Component> lines) {

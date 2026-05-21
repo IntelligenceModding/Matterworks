@@ -10,6 +10,7 @@
   "block.matterworks.matter_energy_cell": "Energy Cell",
   "block.matterworks.matter_induction_relay": "Matter Induction Relay",
   "block.matterworks.matter_network_controller": "Matter Network Controller",
+  "block.matterworks.matter_network_monitor": "Matter Network Monitor",
   "block.matterworks.matter_pylon": "Matter Pylon",
   "block.matterworks.matter_recycler": "Matter Recycler",
   "block.matterworks.matter_separator": "Matter Separator",

@@ -57,6 +57,21 @@ public final class GuiWidgets {
         return new SelectablePanelButton(x, y, width, height, message, onPress, TextAlignment.LEFT);
     }
 
+    public static ClippedSelectablePanelButton clippedLeftAlignedSelectablePanelButton(
+            int x,
+            int y,
+            int width,
+            int height,
+            int clipLeft,
+            int clipTop,
+            int clipRight,
+            int clipBottom,
+            Component message,
+            Button.OnPress onPress
+    ) {
+        return new ClippedSelectablePanelButton(x, y, width, height, clipLeft, clipTop, clipRight, clipBottom, message, onPress, TextAlignment.LEFT);
+    }
+
     public static SpriteSelectableButton spriteSelectableButton(
             int x,
             int y,
@@ -345,6 +360,7 @@ public final class GuiWidgets {
     public static class PanelButton extends Button {
         private final TextAlignment alignment;
         private float textScale = 1.0F;
+        private int textOffsetY;
 
         public PanelButton(int x, int y, int width, int height, Component message, OnPress onPress, TextAlignment alignment) {
             super(x, y, width, height, message, onPress, DEFAULT_NARRATION);
@@ -353,6 +369,11 @@ public final class GuiWidgets {
 
         public PanelButton setTextScale(float textScale) {
             this.textScale = Math.max(0.25F, textScale);
+            return this;
+        }
+
+        public PanelButton setTextOffsetY(int textOffsetY) {
+            this.textOffsetY = textOffsetY;
             return this;
         }
 
@@ -373,7 +394,7 @@ public final class GuiWidgets {
         private void drawText(GuiGraphics guiGraphics, int color) {
             Font font = Minecraft.getInstance().font;
             int scaledTextHeight = Math.max(1, Math.round(8 * textScale));
-            int textY = this.getY() + (this.height - scaledTextHeight) / 2;
+            int textY = this.getY() + (this.height - scaledTextHeight) / 2 + textOffsetY;
             if (textScale != 1.0F) {
                 guiGraphics.pose().pushPose();
                 guiGraphics.pose().scale(textScale, textScale, 1.0F);
@@ -406,6 +427,12 @@ public final class GuiWidgets {
             return this;
         }
 
+        @Override
+        public SelectablePanelButton setTextOffsetY(int textOffsetY) {
+            super.setTextOffsetY(textOffsetY);
+            return this;
+        }
+
         public void setSelected(boolean selected) {
             this.selected = selected;
         }
@@ -413,6 +440,40 @@ public final class GuiWidgets {
         @Override
         protected boolean isSelectedStyle() {
             return selected;
+        }
+    }
+
+    public static class ClippedSelectablePanelButton extends SelectablePanelButton {
+        private final int clipLeft;
+        private final int clipTop;
+        private final int clipRight;
+        private final int clipBottom;
+
+        public ClippedSelectablePanelButton(
+                int x,
+                int y,
+                int width,
+                int height,
+                int clipLeft,
+                int clipTop,
+                int clipRight,
+                int clipBottom,
+                Component message,
+                OnPress onPress,
+                TextAlignment alignment
+        ) {
+            super(x, y, width, height, message, onPress, alignment);
+            this.clipLeft = clipLeft;
+            this.clipTop = clipTop;
+            this.clipRight = clipRight;
+            this.clipBottom = clipBottom;
+        }
+
+        @Override
+        protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
+            guiGraphics.enableScissor(clipLeft, clipTop, clipRight, clipBottom);
+            super.renderWidget(guiGraphics, mouseX, mouseY, partialTick);
+            guiGraphics.disableScissor();
         }
     }
 

@@ -86,6 +86,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         addBlock(ModBlocks.MATTER_STORAGE_BARREL, "Matter Storage Barrel");
         addBlock(ModBlocks.MATTER_PYLON, "Matter Pylon");
         addBlock(ModBlocks.MATTER_NETWORK_CONTROLLER, "Matter Network Controller");
+        addBlock(ModBlocks.MATTER_NETWORK_MONITOR, "Matter Network Monitor");
         addBlock(ModBlocks.CREATIVE_SOURCE, "Creative Source");
         addBlock(ModBlocks.CREATIVE_SINK, "Creative Sink");
         addBlock(ModBlocks.MATTER_SEPARATOR, "Matter Separator");

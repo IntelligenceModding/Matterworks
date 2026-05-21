@@ -21,6 +21,9 @@ public final class ModPayloads {
                 .playToServer(OpenMatterNetworkMenuPayload.TYPE, OpenMatterNetworkMenuPayload.STREAM_CODEC, OpenMatterNetworkMenuPayload::handle)
                 .playToServer(SetSideConfigPayload.TYPE, SetSideConfigPayload.STREAM_CODEC, SetSideConfigPayload::handle)
                 .playToServer(SetPylonColorCodePayload.TYPE, SetPylonColorCodePayload.STREAM_CODEC, SetPylonColorCodePayload::handle)
-                .playToServer(SetPylonIdPayload.TYPE, SetPylonIdPayload.STREAM_CODEC, SetPylonIdPayload::handle);
+                .playToServer(SetPylonIdPayload.TYPE, SetPylonIdPayload.STREAM_CODEC, SetPylonIdPayload::handle)
+                .playToServer(SetMatterNetworkControllerSelectedNodePayload.TYPE, SetMatterNetworkControllerSelectedNodePayload.STREAM_CODEC, SetMatterNetworkControllerSelectedNodePayload::handle)
+                .playToServer(SetMatterNetworkControllerNodeIdPayload.TYPE, SetMatterNetworkControllerNodeIdPayload.STREAM_CODEC, SetMatterNetworkControllerNodeIdPayload::handle)
+                .playToServer(CycleMatterNetworkControllerNodeModePayload.TYPE, CycleMatterNetworkControllerNodeModePayload.STREAM_CODEC, CycleMatterNetworkControllerNodeModePayload::handle);
     }
 }
