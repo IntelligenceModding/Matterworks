@@ -3,6 +3,7 @@ package de.artemis.matterworks.common.menu;
 import de.artemis.matterworks.common.blockentity.MatterSeparatorBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
@@ -75,8 +76,15 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
         return Math.max(1, amount * height / capacity);
     }
 
+    @Override
+    public FluidStack getFluidStack() {
+        FluidStack fluid = super.getFluidStack();
+        return !fluid.isEmpty() || getFluidAmount() <= 0 ? fluid : new FluidStack(ModFluids.REFINED_MATTER.get(), 1);
+    }
+
     public FluidStack getSludgeFluidStack() {
-        return ((MatterSeparatorBlockEntity) blockEntity).getSludgeFluidStack();
+        FluidStack fluid = ((MatterSeparatorBlockEntity) blockEntity).getSludgeFluidStack();
+        return !fluid.isEmpty() || getSludgeAmount() <= 0 ? fluid : new FluidStack(ModFluids.MATTER_SLUDGE.get(), 1);
     }
 
     @Override

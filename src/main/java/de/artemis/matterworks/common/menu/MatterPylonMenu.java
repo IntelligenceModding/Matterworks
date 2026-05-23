@@ -14,6 +14,7 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.DyeColor;
 import net.neoforged.neoforge.items.SlotItemHandler;
@@ -117,8 +118,8 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
         return activeFilterChannel;
     }
 
-    public DyeColor getNetworkColor(int index) {
-        return blockEntity.getNetworkColor(index);
+    public DyeColor getNetworkColor(int channel, int index) {
+        return blockEntity.getNetworkColor(channel, index);
     }
 
     public int getFirstSupportedChannel() {
@@ -162,6 +163,14 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     }
 
     @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (handleFilterSlotClick(slotId, clickType)) {
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player player, int index) {
         Slot sourceSlot = slots.get(index);
         if (!sourceSlot.hasItem()) {
@@ -171,26 +180,15 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
         ItemStack sourceStack = sourceSlot.getItem();
         ItemStack copiedStack = sourceStack.copy();
 
-        if (index < PLAYER_INVENTORY_START) {
+        if (index < CRYSTAL_SLOT_START) {
+            return ItemStack.EMPTY;
+        } else if (index < PLAYER_INVENTORY_START) {
             if (!moveItemStackTo(sourceStack, PLAYER_INVENTORY_START, PLAYER_HOTBAR_END, false)) {
                 return ItemStack.EMPTY;
             }
-        } else if (sourceStack.getItem() == ModItems.MATTER_ITEM_FILTER.get()) {
-            boolean moved = false;
-            if (supportsFilterChannel(MatterPylonBlockEntity.CHANNEL_ITEMS)) {
-                moved = moveItemStackTo(sourceStack, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_BLACKLIST + 1, false);
-            }
-            if (!moved) {
-                return ItemStack.EMPTY;
-            }
-        } else if (sourceStack.getItem() == ModItems.MATTER_FLUID_FILTER.get()) {
-            boolean moved = false;
-            if (supportsFilterChannel(MatterPylonBlockEntity.CHANNEL_FLUIDS)) {
-                moved = moveItemStackTo(sourceStack, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_WHITELIST, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST + 1, false);
-            }
-            if (!moved) {
-                return ItemStack.EMPTY;
-            }
+        } else if (sourceStack.getItem() == ModItems.MATTER_ITEM_FILTER.get()
+                || sourceStack.getItem() == ModItems.MATTER_FLUID_FILTER.get()) {
+            return ItemStack.EMPTY;
         } else if (supportsUpgradeCrystals() && PowerCrystalEffects.isPowerCrystal(sourceStack)) {
             if (!moveItemStackTo(sourceStack, CRYSTAL_SLOT_START, CRYSTAL_SLOT_END, false)) {
                 return ItemStack.EMPTY;
@@ -211,6 +209,27 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
 
         sourceSlot.onTake(player, sourceStack);
         return copiedStack;
+    }
+
+    private boolean handleFilterSlotClick(int slotId, ClickType clickType) {
+        if (slotId < 0 || slotId >= CRYSTAL_SLOT_START) {
+            return false;
+        }
+        if (!(slots.get(slotId) instanceof FilterSlot filterSlot) || !filterSlot.isActive()) {
+            return true;
+        }
+        if (clickType != ClickType.PICKUP) {
+            return true;
+        }
+
+        ItemStack carried = getCarried();
+        if (carried.isEmpty()) {
+            blockEntity.getFilterHandler().setStackInSlot(filterSlot.getContainerSlot(), ItemStack.EMPTY);
+        } else if (filterSlot.acceptsFilterCard(carried)) {
+            blockEntity.getFilterHandler().setStackInSlot(filterSlot.getContainerSlot(), carried.copyWithCount(1));
+        }
+        broadcastChanges();
+        return true;
     }
 
     private void addPlayerInventory(Inventory inventory) {
@@ -269,6 +288,20 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
 
         @Override
         public boolean mayPlace(ItemStack stack) {
+            return false;
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return false;
+        }
+
+        @Override
+        public boolean isActive() {
+            return blockEntity.supportsFilterChannel(channel) && menu.getActiveFilterChannel() == channel;
+        }
+
+        private boolean acceptsFilterCard(ItemStack stack) {
             if (!blockEntity.supportsFilterChannel(channel)) {
                 return false;
             }
@@ -279,11 +312,6 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
                 return stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
             }
             return false;
-        }
-
-        @Override
-        public boolean isActive() {
-            return blockEntity.supportsFilterChannel(channel) && menu.getActiveFilterChannel() == channel;
         }
     }
 }

@@ -3,6 +3,7 @@ package de.artemis.matterworks.common.menu;
 import de.artemis.matterworks.common.blockentity.MatterRecyclerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
@@ -13,6 +14,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.neoforged.neoforge.fluids.FluidStack;
 
 public class MatterRecyclerMenu extends AbstractMatterMachineMenu {
     public MatterRecyclerMenu(int containerId, Inventory playerInventory, RegistryFriendlyByteBuf extraData) {
@@ -58,6 +60,12 @@ public class MatterRecyclerMenu extends AbstractMatterMachineMenu {
     @Override
     public boolean stillValid(Player player) {
         return stillValid(net.minecraft.world.inventory.ContainerLevelAccess.create(blockEntity.getLevel(), blockEntity.getBlockPos()), player, ModBlocks.MATTER_RECYCLER.get());
+    }
+
+    @Override
+    public FluidStack getFluidStack() {
+        FluidStack fluid = super.getFluidStack();
+        return !fluid.isEmpty() || getFluidAmount() <= 0 ? fluid : new FluidStack(ModFluids.RAW_MATTER.get(), 1);
     }
 
     @Override

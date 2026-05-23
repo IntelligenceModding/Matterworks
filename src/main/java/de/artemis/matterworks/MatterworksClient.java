@@ -18,5 +18,6 @@ public class MatterworksClient {
         modEventBus.addListener(ClientModEvents::registerScreens);
         modEventBus.addListener(ClientModEvents::registerRenderers);
         modEventBus.addListener(ClientModEvents::registerTooltipComponents);
+        modEventBus.addListener(ClientModEvents::registerItemDecorations);
     }
 }

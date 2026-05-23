@@ -10,17 +10,18 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.item.DyeColor;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
-public record SetPylonColorCodePayload(BlockPos pos, int index, int colorId) implements CustomPacketPayload {
+public record SetPylonColorCodePayload(BlockPos pos, int channel, int index, int colorId) implements CustomPacketPayload {
     public static final Type<SetPylonColorCodePayload> TYPE =
             new Type<>(ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "set_pylon_color_code"));
     public static final StreamCodec<RegistryFriendlyByteBuf, SetPylonColorCodePayload> STREAM_CODEC =
             StreamCodec.of(
                     (buffer, payload) -> {
                         buffer.writeBlockPos(payload.pos());
+                        buffer.writeVarInt(payload.channel());
                         buffer.writeVarInt(payload.index());
                         buffer.writeVarInt(payload.colorId());
                     },
-                    buffer -> new SetPylonColorCodePayload(buffer.readBlockPos(), buffer.readVarInt(), buffer.readVarInt())
+                    buffer -> new SetPylonColorCodePayload(buffer.readBlockPos(), buffer.readVarInt(), buffer.readVarInt(), buffer.readVarInt())
             );
 
     @Override
@@ -31,7 +32,7 @@ public record SetPylonColorCodePayload(BlockPos pos, int index, int colorId) imp
     public static void handle(SetPylonColorCodePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (context.player().level().getBlockEntity(payload.pos()) instanceof MatterPylonBlockEntity blockEntity) {
-                blockEntity.setNetworkColor(payload.index(), DyeColor.byId(payload.colorId()));
+                blockEntity.setNetworkColor(payload.channel(), payload.index(), DyeColor.byId(payload.colorId()));
             }
         });
     }

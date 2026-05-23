@@ -98,7 +98,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     private final LinkedHashSet<BlockPos> linkedPylons = new LinkedHashSet<>();
     private final PylonMode[] modes = createDefaultModes();
     private final int[] pylonIds = createDefaultPylonIds();
-    private final DyeColor[] networkColorCode = createDefaultNetworkColorCode();
+    private final DyeColor[][] networkColorCodes = createDefaultNetworkColorCodes();
     private final ItemStackHandler filterHandler = new ItemStackHandler(FILTER_SLOT_COUNT) {
         @Override
         protected void onContentsChanged(int slot) {
@@ -249,19 +249,21 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return isValidChannel(channel) ? pylonIds[channel] : DEFAULT_PYLON_ID;
     }
 
-    public DyeColor getNetworkColor(int index) {
-        return index >= 0 && index < NETWORK_COLOR_CODE_PARTS ? networkColorCode[index] : DyeColor.WHITE;
+    public DyeColor getNetworkColor(int channel, int index) {
+        return isValidChannel(channel) && index >= 0 && index < NETWORK_COLOR_CODE_PARTS
+                ? networkColorCodes[channel][index]
+                : DyeColor.WHITE;
     }
 
-    public void setNetworkColor(int index, DyeColor color) {
-        if (index < 0 || index >= NETWORK_COLOR_CODE_PARTS) {
+    public void setNetworkColor(int channel, int index, DyeColor color) {
+        if (!isValidChannel(channel) || index < 0 || index >= NETWORK_COLOR_CODE_PARTS || !supportsNetworkColorChannel(channel)) {
             return;
         }
         DyeColor sanitized = color == null ? DyeColor.WHITE : color;
-        if (networkColorCode[index] == sanitized) {
+        if (networkColorCodes[channel][index] == sanitized) {
             return;
         }
-        networkColorCode[index] = sanitized;
+        networkColorCodes[channel][index] = sanitized;
         markNetworkDirty();
         setChanged();
         syncVisualState();
@@ -330,7 +332,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     public Set<BlockPos> getLinkedNodePositions() {
-        return Set.copyOf(linkedPylons);
+        return Set.copyOf(getTraversalLinkedPositions());
     }
 
     public BlockPos getControllerTrackedPos() {
@@ -362,9 +364,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                 continue;
             }
 
-            for (BlockPos linkedPos : current.linkedPylons) {
+            for (BlockPos linkedPos : current.getTraversalLinkedPositions()) {
                 MatterPylonBlockEntity linked = getNode(level, linkedPos);
-                if (linked == null || !linked.linkedPylons.contains(currentPos)) {
+                if (linked == null || !linked.hasTraversalLinkTo(currentPos)) {
                     continue;
                 }
                 if (members.add(linkedPos)) {
@@ -388,7 +390,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
 
     public AABB getRenderBoundingBox() {
         AABB bounds = new AABB(worldPosition);
-        for (BlockPos linkedPos : linkedPylons) {
+        for (BlockPos linkedPos : getTraversalLinkedPositions()) {
             bounds = bounds.minmax(new AABB(linkedPos));
         }
         return bounds.inflate(1.0D);
@@ -618,7 +620,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private List<EnergyTransferRoute> findEnergyRoutesToImporters(int channel) {
-        if (!(level instanceof ServerLevel serverLevel) || linkedPylons.isEmpty()) {
+        if (!(level instanceof ServerLevel serverLevel) || getTraversalLinkCount() == 0) {
             return List.of();
         }
 
@@ -638,7 +640,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private List<ItemTransferRoute> findItemRoutesToImporters(int channel) {
-        if (!(level instanceof ServerLevel serverLevel) || linkedPylons.isEmpty()) {
+        if (!(level instanceof ServerLevel serverLevel) || getTraversalLinkCount() == 0) {
             return List.of();
         }
 
@@ -658,7 +660,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private List<FluidTransferRoute> findFluidRoutesToImporters(int channel) {
-        if (!(level instanceof ServerLevel serverLevel) || linkedPylons.isEmpty()) {
+        if (!(level instanceof ServerLevel serverLevel) || getTraversalLinkCount() == 0) {
             return List.of();
         }
 
@@ -678,7 +680,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private List<RedstoneTransferRoute> findRedstoneRoutesToImporters(int channel) {
-        if (!(level instanceof ServerLevel serverLevel) || linkedPylons.isEmpty()) {
+        if (!(level instanceof ServerLevel serverLevel) || getTraversalLinkCount() == 0) {
             return List.of();
         }
 
@@ -902,30 +904,38 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         int roundRobinIndex = 0;
         Map<BlockPos, Integer> transferredByTarget = new HashMap<>();
 
-        while (moved < maxTransfer) {
+        while (moved < maxTransfer && !routes.isEmpty()) {
             boolean movedThisPass = false;
+            int routeCount = routes.size();
+            int startIndex = roundRobinIndex % routeCount;
 
-            if (!pendingItemStack.isEmpty()) {
-                ItemMoveResult result = movePendingItemAcrossRoutes(routes, roundRobinIndex, maxTransfer - moved);
-                moved += result.movedAmount();
-                if (result.movedAmount() > 0) {
-                    movedThisPass = true;
-                    transferredByTarget.merge(result.targetPos(), result.movedAmount(), Integer::sum);
-                    roundRobinIndex = result.nextRoundRobinIndex();
+            for (int processed = 0; processed < routeCount && moved < maxTransfer; processed++) {
+                ItemTransferRoute route = routes.get((startIndex + processed) % routeCount);
+                int remaining = maxTransfer - moved;
+                int remainingRoutes = routeCount - processed;
+                int shareBudget = Math.max(1, (remaining + remainingRoutes - 1) / remainingRoutes);
+
+                int inserted;
+                if (!pendingItemStack.isEmpty()) {
+                    inserted = movePendingItemToRoute(route, shareBudget);
+                } else if (sourceHandler != null) {
+                    inserted = moveSourceItemToRoute(sourceHandler, route, shareBudget);
+                } else {
+                    inserted = 0;
                 }
-            } else if (sourceHandler != null) {
-                ItemMoveResult result = moveSourceItemAcrossRoutes(sourceHandler, routes, roundRobinIndex, maxTransfer - moved);
-                moved += result.movedAmount();
-                if (result.movedAmount() > 0) {
+
+                if (inserted > 0) {
+                    moved += inserted;
                     movedThisPass = true;
-                    transferredByTarget.merge(result.targetPos(), result.movedAmount(), Integer::sum);
-                    roundRobinIndex = result.nextRoundRobinIndex();
+                    transferredByTarget.merge(route.targetPos(), inserted, Integer::sum);
                 }
             }
 
             if (!movedThisPass) {
                 break;
             }
+
+            roundRobinIndex = (startIndex + 1) % routeCount;
         }
 
         if (moved > 0) {
@@ -960,29 +970,38 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         int roundRobinIndex = 0;
         Map<BlockPos, Integer> transferredByTarget = new HashMap<>();
 
-        while (moved < maxTransfer) {
+        while (moved < maxTransfer && !routes.isEmpty()) {
             boolean movedThisPass = false;
-            if (!pendingFluidStack.isEmpty()) {
-                FluidMoveResult result = movePendingFluidAcrossRoutes(routes, roundRobinIndex, maxTransfer - moved);
-                moved += result.movedAmount();
-                if (result.movedAmount() > 0) {
-                    movedThisPass = true;
-                    transferredByTarget.merge(result.targetPos(), result.movedAmount(), Integer::sum);
-                    roundRobinIndex = result.nextRoundRobinIndex();
+            int routeCount = routes.size();
+            int startIndex = roundRobinIndex % routeCount;
+
+            for (int processed = 0; processed < routeCount && moved < maxTransfer; processed++) {
+                FluidTransferRoute route = routes.get((startIndex + processed) % routeCount);
+                int remaining = maxTransfer - moved;
+                int remainingRoutes = routeCount - processed;
+                int shareBudget = Math.max(1, (remaining + remainingRoutes - 1) / remainingRoutes);
+
+                int inserted;
+                if (!pendingFluidStack.isEmpty()) {
+                    inserted = movePendingFluidToRoute(route, shareBudget);
+                } else if (sourceHandler != null) {
+                    inserted = moveSourceFluidToRoute(sourceHandler, route, shareBudget);
+                } else {
+                    inserted = 0;
                 }
-            } else if (sourceHandler != null) {
-                FluidMoveResult result = moveSourceFluidAcrossRoutes(sourceHandler, routes, roundRobinIndex, maxTransfer - moved);
-                moved += result.movedAmount();
-                if (result.movedAmount() > 0) {
+
+                if (inserted > 0) {
+                    moved += inserted;
                     movedThisPass = true;
-                    transferredByTarget.merge(result.targetPos(), result.movedAmount(), Integer::sum);
-                    roundRobinIndex = result.nextRoundRobinIndex();
+                    transferredByTarget.merge(route.targetPos(), inserted, Integer::sum);
                 }
             }
 
             if (!movedThisPass) {
                 break;
             }
+
+            roundRobinIndex = (startIndex + 1) % routeCount;
         }
 
         if (moved > 0) {
@@ -1025,51 +1044,45 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         }
     }
 
-    private ItemMoveResult movePendingItemAcrossRoutes(List<ItemTransferRoute> routes, int roundRobinIndex, int maxTransfer) {
+    private int movePendingItemToRoute(ItemTransferRoute route, int maxTransfer) {
         if (pendingItemStack.isEmpty() || maxTransfer <= 0) {
-            return ItemMoveResult.none(roundRobinIndex);
+            return 0;
         }
 
         ItemStack candidate = pendingItemStack.copyWithCount(Math.min(pendingItemStack.getCount(), maxTransfer));
-        int routeCount = routes.size();
-        for (int offset = 0; offset < routeCount; offset++) {
-            ItemTransferRoute route = routes.get((roundRobinIndex + offset) % routeCount);
-            if (!matchesItemExportFilter(candidate) || !route.targetPylon.matchesItemImportFilter(candidate)) {
-                continue;
-            }
-            ItemStack simulatedRemainder = ItemHandlerHelper.insertItem(route.targetHandler, candidate.copy(), true);
-            int accepted = candidate.getCount() - simulatedRemainder.getCount();
-            if (accepted <= 0) {
-                continue;
-            }
-
-            ItemStack movedStack = pendingItemStack.copyWithCount(accepted);
-            ItemStack actualRemainder = ItemHandlerHelper.insertItem(route.targetHandler, movedStack, false);
-            int inserted = accepted - actualRemainder.getCount();
-            if (inserted <= 0) {
-                continue;
-            }
-
-            pendingItemStack.shrink(inserted);
-            if (pendingItemStack.isEmpty()) {
-                pendingItemStack = ItemStack.EMPTY;
-            }
-            if (!actualRemainder.isEmpty()) {
-                storePendingItem(actualRemainder);
-            }
-            setChanged();
-            return new ItemMoveResult(inserted, route.targetPos, (roundRobinIndex + offset + 1) % routeCount);
+        if (!matchesItemExportFilter(candidate) || !route.targetPylon.matchesItemImportFilter(candidate)) {
+            return 0;
         }
 
-        return ItemMoveResult.none(roundRobinIndex);
+        ItemStack simulatedRemainder = ItemHandlerHelper.insertItem(route.targetHandler, candidate.copy(), true);
+        int accepted = candidate.getCount() - simulatedRemainder.getCount();
+        if (accepted <= 0) {
+            return 0;
+        }
+
+        ItemStack movedStack = pendingItemStack.copyWithCount(accepted);
+        ItemStack actualRemainder = ItemHandlerHelper.insertItem(route.targetHandler, movedStack, false);
+        int inserted = accepted - actualRemainder.getCount();
+        if (inserted <= 0) {
+            return 0;
+        }
+
+        pendingItemStack.shrink(inserted);
+        if (pendingItemStack.isEmpty()) {
+            pendingItemStack = ItemStack.EMPTY;
+        }
+        if (!actualRemainder.isEmpty()) {
+            storePendingItem(actualRemainder);
+        }
+        setChanged();
+        return inserted;
     }
 
-    private ItemMoveResult moveSourceItemAcrossRoutes(IItemHandler sourceHandler, List<ItemTransferRoute> routes, int roundRobinIndex, int maxTransfer) {
+    private int moveSourceItemToRoute(IItemHandler sourceHandler, ItemTransferRoute route, int maxTransfer) {
         if (maxTransfer <= 0) {
-            return ItemMoveResult.none(roundRobinIndex);
+            return 0;
         }
 
-        int routeCount = routes.size();
         for (int slot = 0; slot < sourceHandler.getSlots(); slot++) {
             ItemStack simulatedExtract = sourceHandler.extractItem(slot, maxTransfer, true);
             if (simulatedExtract.isEmpty()) {
@@ -1078,125 +1091,111 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
             if (!matchesItemExportFilter(simulatedExtract)) {
                 continue;
             }
-
-            for (int offset = 0; offset < routeCount; offset++) {
-                ItemTransferRoute route = routes.get((roundRobinIndex + offset) % routeCount);
-                if (!route.targetPylon.matchesItemImportFilter(simulatedExtract)) {
-                    continue;
-                }
-                ItemStack simulatedRemainder = ItemHandlerHelper.insertItem(route.targetHandler, simulatedExtract.copy(), true);
-                int accepted = simulatedExtract.getCount() - simulatedRemainder.getCount();
-                if (accepted <= 0) {
-                    continue;
-                }
-
-                ItemStack extracted = sourceHandler.extractItem(slot, accepted, false);
-                if (extracted.isEmpty()) {
-                    continue;
-                }
-
-                ItemStack actualRemainder = ItemHandlerHelper.insertItem(route.targetHandler, extracted, false);
-                int inserted = extracted.getCount() - actualRemainder.getCount();
-                if (inserted <= 0) {
-                    storePendingItem(extracted);
-                    return ItemMoveResult.none(roundRobinIndex);
-                }
-
-                if (!actualRemainder.isEmpty()) {
-                    storePendingItem(actualRemainder);
-                }
-                if (inserted != extracted.getCount() || !actualRemainder.isEmpty()) {
-                    setChanged();
-                }
-                return new ItemMoveResult(inserted, route.targetPos, (roundRobinIndex + offset + 1) % routeCount);
-            }
-        }
-
-        return ItemMoveResult.none(roundRobinIndex);
-    }
-
-    private FluidMoveResult movePendingFluidAcrossRoutes(List<FluidTransferRoute> routes, int roundRobinIndex, int maxTransfer) {
-        if (pendingFluidStack.isEmpty() || maxTransfer <= 0) {
-            return FluidMoveResult.none(roundRobinIndex);
-        }
-
-        FluidStack candidate = pendingFluidStack.copyWithAmount(Math.min(pendingFluidStack.getAmount(), maxTransfer));
-        int routeCount = routes.size();
-        for (int offset = 0; offset < routeCount; offset++) {
-            FluidTransferRoute route = routes.get((roundRobinIndex + offset) % routeCount);
-            if (!matchesFluidExportFilter(candidate) || !route.targetPylon.matchesFluidImportFilter(candidate)) {
+            if (!route.targetPylon.matchesItemImportFilter(simulatedExtract)) {
                 continue;
             }
-            int accepted = route.targetHandler.fill(candidate, IFluidHandler.FluidAction.SIMULATE);
+
+            ItemStack simulatedRemainder = ItemHandlerHelper.insertItem(route.targetHandler, simulatedExtract.copy(), true);
+            int accepted = simulatedExtract.getCount() - simulatedRemainder.getCount();
             if (accepted <= 0) {
                 continue;
             }
 
-            FluidStack transferStack = pendingFluidStack.copyWithAmount(accepted);
-            int inserted = route.targetHandler.fill(transferStack, IFluidHandler.FluidAction.EXECUTE);
-            if (inserted <= 0) {
+            ItemStack extracted = sourceHandler.extractItem(slot, accepted, false);
+            if (extracted.isEmpty()) {
                 continue;
             }
 
-            pendingFluidStack.shrink(inserted);
-            if (pendingFluidStack.isEmpty()) {
-                pendingFluidStack = FluidStack.EMPTY;
+            ItemStack actualRemainder = ItemHandlerHelper.insertItem(route.targetHandler, extracted, false);
+            int inserted = extracted.getCount() - actualRemainder.getCount();
+            if (inserted <= 0) {
+                storePendingItem(extracted);
+                return 0;
             }
-            if (inserted < accepted) {
-                storePendingFluid(transferStack.copyWithAmount(accepted - inserted));
+
+            if (!actualRemainder.isEmpty()) {
+                storePendingItem(actualRemainder);
             }
-            setChanged();
-            return new FluidMoveResult(inserted, route.targetPos, (roundRobinIndex + offset + 1) % routeCount);
+            if (inserted != extracted.getCount() || !actualRemainder.isEmpty()) {
+                setChanged();
+            }
+            return inserted;
         }
 
-        return FluidMoveResult.none(roundRobinIndex);
+        return 0;
     }
 
-    private FluidMoveResult moveSourceFluidAcrossRoutes(IFluidHandler sourceHandler, List<FluidTransferRoute> routes, int roundRobinIndex, int maxTransfer) {
+    private int movePendingFluidToRoute(FluidTransferRoute route, int maxTransfer) {
+        if (pendingFluidStack.isEmpty() || maxTransfer <= 0) {
+            return 0;
+        }
+
+        FluidStack candidate = pendingFluidStack.copyWithAmount(Math.min(pendingFluidStack.getAmount(), maxTransfer));
+        if (!matchesFluidExportFilter(candidate) || !route.targetPylon.matchesFluidImportFilter(candidate)) {
+            return 0;
+        }
+
+        int accepted = route.targetHandler.fill(candidate, IFluidHandler.FluidAction.SIMULATE);
+        if (accepted <= 0) {
+            return 0;
+        }
+
+        FluidStack transferStack = pendingFluidStack.copyWithAmount(accepted);
+        int inserted = route.targetHandler.fill(transferStack, IFluidHandler.FluidAction.EXECUTE);
+        if (inserted <= 0) {
+            return 0;
+        }
+
+        pendingFluidStack.shrink(inserted);
+        if (pendingFluidStack.isEmpty()) {
+            pendingFluidStack = FluidStack.EMPTY;
+        }
+        if (inserted < accepted) {
+            storePendingFluid(transferStack.copyWithAmount(accepted - inserted));
+        }
+        setChanged();
+        return inserted;
+    }
+
+    private int moveSourceFluidToRoute(IFluidHandler sourceHandler, FluidTransferRoute route, int maxTransfer) {
         if (maxTransfer <= 0) {
-            return FluidMoveResult.none(roundRobinIndex);
+            return 0;
         }
 
         FluidStack simulatedDrain = findDrainableFluid(sourceHandler, maxTransfer);
         if (simulatedDrain.isEmpty()) {
-            return FluidMoveResult.none(roundRobinIndex);
+            return 0;
         }
         if (!matchesFluidExportFilter(simulatedDrain)) {
-            return FluidMoveResult.none(roundRobinIndex);
+            return 0;
         }
 
-        int routeCount = routes.size();
-        for (int offset = 0; offset < routeCount; offset++) {
-            FluidTransferRoute route = routes.get((roundRobinIndex + offset) % routeCount);
-            if (!route.targetPylon.matchesFluidImportFilter(simulatedDrain)) {
-                continue;
-            }
-            int accepted = route.targetHandler.fill(simulatedDrain, IFluidHandler.FluidAction.SIMULATE);
-            if (accepted <= 0) {
-                continue;
-            }
-
-            FluidStack drained = sourceHandler.drain(simulatedDrain.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
-            if (drained.isEmpty()) {
-                continue;
-            }
-
-            int inserted = route.targetHandler.fill(drained, IFluidHandler.FluidAction.EXECUTE);
-            if (inserted <= 0) {
-                storePendingFluid(drained);
-                return FluidMoveResult.none(roundRobinIndex);
-            }
-
-            if (inserted < drained.getAmount()) {
-                storePendingFluid(drained.copyWithAmount(drained.getAmount() - inserted));
-            }
-            if (inserted != drained.getAmount()) {
-                setChanged();
-            }
-            return new FluidMoveResult(inserted, route.targetPos, (roundRobinIndex + offset + 1) % routeCount);
+        if (!route.targetPylon.matchesFluidImportFilter(simulatedDrain)) {
+            return 0;
+        }
+        int accepted = route.targetHandler.fill(simulatedDrain, IFluidHandler.FluidAction.SIMULATE);
+        if (accepted <= 0) {
+            return 0;
         }
 
-        return FluidMoveResult.none(roundRobinIndex);
+        FluidStack drained = sourceHandler.drain(simulatedDrain.copyWithAmount(accepted), IFluidHandler.FluidAction.EXECUTE);
+        if (drained.isEmpty()) {
+            return 0;
+        }
+
+        int inserted = route.targetHandler.fill(drained, IFluidHandler.FluidAction.EXECUTE);
+        if (inserted <= 0) {
+            storePendingFluid(drained);
+            return 0;
+        }
+
+        if (inserted < drained.getAmount()) {
+            storePendingFluid(drained.copyWithAmount(drained.getAmount() - inserted));
+        }
+        if (inserted != drained.getAmount()) {
+            setChanged();
+        }
+        return inserted;
     }
 
     private void storePendingItem(ItemStack stack) {
@@ -1259,7 +1258,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return blockEntity instanceof MatterPylonBlockEntity pylonBlockEntity ? pylonBlockEntity : null;
     }
 
-    private void markNetworkDirty() {
+    protected final void markNetworkDirty() {
         if (level instanceof ServerLevel serverLevel) {
             NetworkCacheManager.markDirty(serverLevel, worldPosition);
         }
@@ -1376,7 +1375,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private void recordActiveLink(int channel, BlockPos linkedPos, long gameTime) {
-        if (!isValidChannel(channel) || !linkedPylons.contains(linkedPos)) {
+        if (!isValidChannel(channel) || !hasTraversalLinkTo(linkedPos)) {
             return;
         }
 
@@ -1485,6 +1484,26 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return true;
     }
 
+    protected boolean supportsNetworkColorChannel(int channel) {
+        return supportsChannel(channel);
+    }
+
+    protected Set<BlockPos> getTraversalLinkedPositions() {
+        return Set.copyOf(linkedPylons);
+    }
+
+    protected boolean hasTraversalLinkTo(BlockPos pos) {
+        return linkedPylons.contains(pos);
+    }
+
+    protected int getTraversalLinkCount() {
+        return getTraversalLinkedPositions().size();
+    }
+
+    protected boolean canTraverseLinkForChannel(int channel, MatterPylonBlockEntity exporter, BlockPos linkedPos) {
+        return true;
+    }
+
     public boolean supportsUpgradeCrystals() {
         return getClass() == MatterPylonBlockEntity.class;
     }
@@ -1501,9 +1520,12 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return supportsChannel(channel);
     }
 
-    public boolean matchesNetworkColorCode(MatterPylonBlockEntity other) {
+    public boolean matchesNetworkColorCode(MatterPylonBlockEntity other, int channel) {
+        if (other == null || !isValidChannel(channel)) {
+            return false;
+        }
         for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
-            if (getNetworkColor(index) != other.getNetworkColor(index)) {
+            if (getNetworkColor(channel, index) != other.getNetworkColor(channel, index)) {
                 return false;
             }
         }
@@ -1635,7 +1657,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
             sources.add(new EnergyMaintenanceSource(localStorage, List.of()));
         }
 
-        if (!supportsChannel(CHANNEL_ENERGY) || !modes[CHANNEL_ENERGY].canImport() || linkedPylons.isEmpty()) {
+        if (!supportsChannel(CHANNEL_ENERGY) || !modes[CHANNEL_ENERGY].canImport() || getTraversalLinkCount() == 0) {
             return sources;
         }
 
@@ -1775,8 +1797,10 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private void writeNetworkColorCodeTag(CompoundTag tag) {
-        for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
-            tag.putString(getNetworkColorTagName(index), networkColorCode[index].getName());
+        for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+            for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+                tag.putString(getNetworkColorTagName(channel, index), networkColorCodes[channel][index].getName());
+            }
         }
     }
 
@@ -1797,8 +1821,21 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private void readNetworkColorCodeTag(CompoundTag tag) {
+        if (hasPerChannelNetworkColorCodeTag(tag)) {
+            for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+                for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+                    networkColorCodes[channel][index] = parseNetworkColor(tag.getString(getNetworkColorTagName(channel, index)));
+                }
+            }
+            return;
+        }
+
+        DyeColor[] legacyColors = createDefaultNetworkColorCode();
         for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
-            networkColorCode[index] = parseNetworkColor(tag.getString(getNetworkColorTagName(index)));
+            legacyColors[index] = parseNetworkColor(tag.getString(getLegacyNetworkColorTagName(index)));
+        }
+        for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+            System.arraycopy(legacyColors, 0, networkColorCodes[channel], 0, NETWORK_COLOR_CODE_PARTS);
         }
     }
 
@@ -1963,6 +2000,14 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return amounts;
     }
 
+    private static DyeColor[][] createDefaultNetworkColorCodes() {
+        DyeColor[][] colors = new DyeColor[CHANNEL_COUNT][NETWORK_COLOR_CODE_PARTS];
+        for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+            colors[channel] = createDefaultNetworkColorCode();
+        }
+        return colors;
+    }
+
     private static DyeColor[] createDefaultNetworkColorCode() {
         DyeColor[] colors = new DyeColor[NETWORK_COLOR_CODE_PARTS];
         for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
@@ -1997,8 +2042,23 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         return "channel_" + (channel + 1) + "_id";
     }
 
-    private static String getNetworkColorTagName(int index) {
+    private static String getNetworkColorTagName(int channel, int index) {
+        return "channel_" + (channel + 1) + "_network_color_" + (index + 1);
+    }
+
+    private static String getLegacyNetworkColorTagName(int index) {
         return "network_color_" + (index + 1);
+    }
+
+    private static boolean hasPerChannelNetworkColorCodeTag(CompoundTag tag) {
+        for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+            for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+                if (tag.contains(getNetworkColorTagName(channel, index), Tag.TAG_STRING)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private static String getTransferDisplayAmountTagName(int channel) {
@@ -2141,9 +2201,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                     continue;
                 }
 
-                for (BlockPos linkedPos : currentPylon.linkedPylons) {
+                for (BlockPos linkedPos : currentPylon.getTraversalLinkedPositions()) {
                     MatterPylonBlockEntity linkedPylon = getNode(level, linkedPos);
-                    if (linkedPylon == null || !linkedPylon.linkedPylons.contains(currentPos)) {
+                    if (linkedPylon == null || !linkedPylon.hasTraversalLinkTo(currentPos)) {
                         continue;
                     }
                     if (members.add(linkedPos)) {
@@ -2168,44 +2228,46 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                 return Map.of();
             }
 
-            ArrayDeque<BlockPos> queue = new ArrayDeque<>();
-            Map<BlockPos, BlockPos> parent = new HashMap<>();
-            Set<BlockPos> visited = new HashSet<>();
             Map<Integer, List<CachedRoute>> routesByChannel = new HashMap<>();
 
-            queue.add(exporterPos);
-            visited.add(exporterPos);
+            for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+                ArrayDeque<BlockPos> queue = new ArrayDeque<>();
+                Map<BlockPos, BlockPos> parent = new HashMap<>();
+                Set<BlockPos> visited = new HashSet<>();
 
-            while (!queue.isEmpty()) {
-                BlockPos currentPos = queue.removeFirst();
-                MatterPylonBlockEntity currentPylon = getNode(level, currentPos);
-                if (currentPylon == null) {
-                    continue;
-                }
+                queue.add(exporterPos);
+                visited.add(exporterPos);
 
-                if (!currentPos.equals(exporterPos)) {
-                    for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
-                        if (currentPylon.supportsChannel(channel)
-                                && currentPylon.modes[channel].canImport()
-                                && exporterPylon.matchesNetworkColorCode(currentPylon)) {
-                            routesByChannel
-                                    .computeIfAbsent(channel, ignored -> new ArrayList<>())
-                                    .add(new CachedRoute(currentPos, buildPath(parent, currentPos), currentPylon.pylonIds[channel]));
+                while (!queue.isEmpty()) {
+                    BlockPos currentPos = queue.removeFirst();
+                    MatterPylonBlockEntity currentPylon = getNode(level, currentPos);
+                    if (currentPylon == null) {
+                        continue;
+                    }
+
+                    if (!currentPos.equals(exporterPos)
+                            && currentPylon.supportsChannel(channel)
+                            && currentPylon.modes[channel].canImport()
+                            && exporterPylon.matchesNetworkColorCode(currentPylon, channel)) {
+                        routesByChannel
+                                .computeIfAbsent(channel, ignored -> new ArrayList<>())
+                                .add(new CachedRoute(currentPos, buildPath(parent, currentPos), currentPylon.pylonIds[channel]));
+                    }
+
+                    for (BlockPos linkedPos : currentPylon.getTraversalLinkedPositions()) {
+                        if (!members.contains(linkedPos) || !currentPylon.canTraverseLinkForChannel(channel, exporterPylon, linkedPos)) {
+                            continue;
                         }
-                    }
-                }
-
-                for (BlockPos linkedPos : currentPylon.linkedPylons) {
-                    if (!members.contains(linkedPos)) {
-                        continue;
-                    }
-                    MatterPylonBlockEntity linkedPylon = getNode(level, linkedPos);
-                    if (linkedPylon == null || !linkedPylon.linkedPylons.contains(currentPos)) {
-                        continue;
-                    }
-                    if (visited.add(linkedPos)) {
-                        parent.put(linkedPos, currentPos);
-                        queue.addLast(linkedPos);
+                        MatterPylonBlockEntity linkedPylon = getNode(level, linkedPos);
+                        if (linkedPylon == null
+                                || !linkedPylon.hasTraversalLinkTo(currentPos)
+                                || !linkedPylon.canTraverseLinkForChannel(channel, exporterPylon, currentPos)) {
+                            continue;
+                        }
+                        if (visited.add(linkedPos)) {
+                            parent.put(linkedPos, currentPos);
+                            queue.addLast(linkedPos);
+                        }
                     }
                 }
             }
@@ -2245,18 +2307,6 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
     }
 
     private record EnergyMaintenanceSource(IEnergyStorage storage, List<BlockPos> path) {
-    }
-
-    private record ItemMoveResult(int movedAmount, @Nullable BlockPos targetPos, int nextRoundRobinIndex) {
-        private static ItemMoveResult none(int roundRobinIndex) {
-            return new ItemMoveResult(0, null, roundRobinIndex);
-        }
-    }
-
-    private record FluidMoveResult(int movedAmount, @Nullable BlockPos targetPos, int nextRoundRobinIndex) {
-        private static FluidMoveResult none(int roundRobinIndex) {
-            return new FluidMoveResult(0, null, roundRobinIndex);
-        }
     }
 
 }

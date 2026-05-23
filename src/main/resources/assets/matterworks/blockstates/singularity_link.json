@@ -1,0 +1,30 @@
+{
+  "variants": {
+    "facing=down": {
+      "model": "matterworks:block/singularity_link",
+      "x": 180
+    },
+    "facing=up": {
+      "model": "matterworks:block/singularity_link"
+    },
+    "facing=north": {
+      "model": "matterworks:block/singularity_link",
+      "x": 90
+    },
+    "facing=south": {
+      "model": "matterworks:block/singularity_link",
+      "x": 90,
+      "y": 180
+    },
+    "facing=west": {
+      "model": "matterworks:block/singularity_link",
+      "x": 90,
+      "y": 270
+    },
+    "facing=east": {
+      "model": "matterworks:block/singularity_link",
+      "x": 90,
+      "y": 90
+    }
+  }
+}

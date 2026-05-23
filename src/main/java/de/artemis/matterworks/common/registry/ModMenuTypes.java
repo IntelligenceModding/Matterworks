@@ -14,6 +14,8 @@ import de.artemis.matterworks.common.menu.MatterNetworkMonitorMenu;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import de.artemis.matterworks.common.menu.MatterRecyclerMenu;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
+import de.artemis.matterworks.common.menu.GraviticCondenserMenu;
+import de.artemis.matterworks.common.menu.SingularityLinkMenu;
 import de.artemis.matterworks.common.menu.MatterStorageBarrelMenu;
 import de.artemis.matterworks.common.menu.MatterStabilizerMenu;
 import de.artemis.matterworks.common.menu.PowerCrystalChargerMenu;
@@ -72,6 +74,10 @@ public class ModMenuTypes {
             MENU_TYPES.register("matter_pylon",
                     () -> IMenuTypeExtension.create(MatterPylonMenu::new));
 
+    public static final DeferredHolder<MenuType<?>, MenuType<SingularityLinkMenu>> SINGULARITY_LINK =
+            MENU_TYPES.register("singularity_link",
+                    () -> IMenuTypeExtension.create(SingularityLinkMenu::new));
+
     public static final DeferredHolder<MenuType<?>, MenuType<MatterNetworkControllerMenu>> MATTER_NETWORK_CONTROLLER =
             MENU_TYPES.register("matter_network_controller",
                     () -> IMenuTypeExtension.create(MatterNetworkControllerMenu::new));
@@ -87,6 +93,10 @@ public class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<MatterSeparatorMenu>> MATTER_SEPARATOR =
             MENU_TYPES.register("matter_separator",
                     () -> IMenuTypeExtension.create(MatterSeparatorMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<GraviticCondenserMenu>> GRAVITIC_CONDENSER =
+            MENU_TYPES.register("gravitic_condenser",
+                    () -> IMenuTypeExtension.create(GraviticCondenserMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<PowerCrystalChargerMenu>> POWER_CRYSTAL_CHARGER =
             MENU_TYPES.register("power_crystal_charger",

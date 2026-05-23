@@ -1,0 +1,7 @@
+{
+  "variants": {
+    "": {
+      "model": "matterworks:block/singularity_link_frame"
+    }
+  }
+}

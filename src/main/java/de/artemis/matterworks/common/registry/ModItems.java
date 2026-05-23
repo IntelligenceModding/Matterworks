@@ -3,6 +3,8 @@ package de.artemis.matterworks.common.registry;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.item.EncodedTemplateItem;
 import de.artemis.matterworks.common.item.MatterFilterItem;
+import de.artemis.matterworks.common.item.NetworkDataCardItem;
+import de.artemis.matterworks.common.item.NetworkRemoteTerminalItem;
 import de.artemis.matterworks.common.item.MatterPowerBankItem;
 import de.artemis.matterworks.common.item.PowerCrystalItem;
 import de.artemis.matterworks.common.item.UnstableMatterBucketItem;
@@ -53,6 +55,12 @@ public class ModItems {
             "matter_dust",
             Item::new,
             UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<Item> MATTER_SINGULARITY = register(
+            "matter_singularity",
+            Item::new,
+            properties -> properties.rarity(Rarity.RARE)
     );
 
     public static final DeferredItem<Item> ENTROPIC_MATTER = register(
@@ -119,6 +127,18 @@ public class ModItems {
             "encoded_template",
             EncodedTemplateItem::new,
             properties -> properties.rarity(Rarity.UNCOMMON)
+    );
+
+    public static final DeferredItem<NetworkDataCardItem> NETWORK_DATA_CARD = register(
+            "network_data_card",
+            NetworkDataCardItem::new,
+            properties -> properties.rarity(Rarity.UNCOMMON).stacksTo(1)
+    );
+
+    public static final DeferredItem<NetworkRemoteTerminalItem> NETWORK_REMOTE_TERMINAL = register(
+            "network_remote_terminal",
+            NetworkRemoteTerminalItem::new,
+            properties -> properties.rarity(Rarity.UNCOMMON).stacksTo(1)
     );
 
     public static final DeferredItem<PowerCrystalItem> CRIMSON_POWER_CRYSTAL = register(

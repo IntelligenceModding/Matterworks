@@ -174,7 +174,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
         renderInactiveFilterCover(guiGraphics);
-        colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, menu::getNetworkColor);
+        colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, index -> menu.getNetworkColor(selectedChannel, index));
         TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 
@@ -197,7 +197,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
-        colorPicker.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, menu::getNetworkColor);
+        colorPicker.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, index -> menu.getNetworkColor(selectedChannel, index));
         TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         if (renderFilterSlotTooltip(guiGraphics, mouseX, mouseY)) {
             return;
@@ -210,7 +210,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         if (TopCategoryTabs.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, buildTabs())) {
             return true;
         }
-        if (colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, menu::getNetworkColor)) {
+        if (colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, index -> menu.getNetworkColor(selectedChannel, index))) {
             return true;
         }
         if (button == 1 && modeButton != null && modeButton.isMouseOver(mouseX, mouseY)) {
@@ -225,7 +225,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
-        if (colorPicker.mouseScrolled(mouseX, mouseY, scrollY, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, menu::getNetworkColor)) {
+        if (colorPicker.mouseScrolled(mouseX, mouseY, scrollY, leftPos, topPos, imageWidth, imageHeight, this::setNetworkColor, index -> menu.getNetworkColor(selectedChannel, index))) {
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -353,7 +353,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     }
 
     private void setNetworkColor(int index, DyeColor color) {
-        PacketDistributor.sendToServer(new SetPylonColorCodePayload(menu.getBlockPos(), index, color.getId()));
+        PacketDistributor.sendToServer(new SetPylonColorCodePayload(menu.getBlockPos(), selectedChannel, index, color.getId()));
     }
 
     private List<TopCategoryTabs.Tab> buildTabs() {
@@ -410,30 +410,42 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     }
 
     private boolean renderFilterSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Integer slotIndex = null;
         Component tooltip = null;
         if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_ITEMS) {
             if (isMouseOverSlot(mouseX, mouseY, 0)) {
+                slotIndex = 0;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, 1)) {
+                slotIndex = 1;
                 tooltip = Component.literal("Blacklist");
             } else if (isMouseOverSlot(mouseX, mouseY, 2)) {
+                slotIndex = 2;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, 3)) {
+                slotIndex = 3;
                 tooltip = Component.literal("Blacklist");
             }
         } else if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_FLUIDS) {
             if (isMouseOverSlot(mouseX, mouseY, 4)) {
+                slotIndex = 4;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, 5)) {
+                slotIndex = 5;
                 tooltip = Component.literal("Blacklist");
             } else if (isMouseOverSlot(mouseX, mouseY, 6)) {
+                slotIndex = 6;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, 7)) {
+                slotIndex = 7;
                 tooltip = Component.literal("Blacklist");
             }
         }
 
-        if (tooltip == null) {
+        if (tooltip == null || slotIndex == null) {
+            return false;
+        }
+        if (slotIndex < menu.slots.size() && !menu.slots.get(slotIndex).getItem().isEmpty()) {
             return false;
         }
 

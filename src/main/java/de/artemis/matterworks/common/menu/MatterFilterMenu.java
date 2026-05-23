@@ -6,6 +6,7 @@ import de.artemis.matterworks.common.item.MatterFilterItem;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.network.RegistryFriendlyByteBuf;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
@@ -14,16 +15,28 @@ import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.minecraft.world.level.material.Fluids;
+import net.minecraft.core.registries.BuiltInRegistries;
 import net.neoforged.neoforge.fluids.FluidStack;
+
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 
 public class MatterFilterMenu extends AbstractContainerMenu {
     public static final int GHOST_SLOT_COUNT = MatterFilterData.SLOT_COUNT;
     public static final int BUTTON_CLEAR = 0;
+    public static final int BUTTON_SORT = 1;
+    public static final int BUTTON_CLEAN = 2;
     private static final int PLAYER_INVENTORY_START = GHOST_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
     private static final int PLAYER_HOTBAR_END = PLAYER_HOTBAR_START + 9;
+    private static final int PLAYER_INVENTORY_Y = 107;
+    private static final int PLAYER_HOTBAR_Y = 165;
+    private static final String NEOFORGE_MILK_ID = "neoforge:milk";
+    private static final String FORGE_MILK_ID = "forge:milk";
 
     private final Player owner;
     private final InteractionHand hand;
@@ -61,15 +74,15 @@ public class MatterFilterMenu extends AbstractContainerMenu {
         for (int row = 0; row < 3; row++) {
             for (int column = 0; column < 9; column++) {
                 int inventorySlot = column + row * 9 + 9;
-                addSlot(new Slot(playerInventory, inventorySlot, 8 + column * 18, 86 + row * 18));
+                addSlot(new Slot(playerInventory, inventorySlot, 8 + column * 18, PLAYER_INVENTORY_Y + row * 18));
             }
         }
 
         for (int slot = 0; slot < 9; slot++) {
             if (slot == lockedHotbarSlot) {
-                addSlot(new LockedSlot(playerInventory, slot, 8 + slot * 18, 144));
+                addSlot(new LockedSlot(playerInventory, slot, 8 + slot * 18, PLAYER_HOTBAR_Y));
             } else {
-                addSlot(new Slot(playerInventory, slot, 8 + slot * 18, 144));
+                addSlot(new Slot(playerInventory, slot, 8 + slot * 18, PLAYER_HOTBAR_Y));
             }
         }
     }
@@ -90,6 +103,18 @@ public class MatterFilterMenu extends AbstractContainerMenu {
     public boolean clickMenuButton(Player player, int id) {
         if (id == BUTTON_CLEAR) {
             clearGhostEntries();
+            saveGhostEntries();
+            broadcastChanges();
+            return true;
+        }
+        if (id == BUTTON_SORT) {
+            sortGhostEntries();
+            saveGhostEntries();
+            broadcastChanges();
+            return true;
+        }
+        if (id == BUTTON_CLEAN) {
+            removeDuplicateGhostEntries();
             saveGhostEntries();
             broadcastChanges();
             return true;
@@ -201,6 +226,72 @@ public class MatterFilterMenu extends AbstractContainerMenu {
         }
     }
 
+    private void sortGhostEntries() {
+        if (fluidFilter) {
+            List<FluidStack> entries = new ArrayList<>();
+            for (FluidStack ghostFluid : ghostFluids) {
+                FluidStack entry = MatterFilterData.sanitizeFluidEntry(ghostFluid);
+                if (!entry.isEmpty()) {
+                    entries.add(entry);
+                }
+            }
+            entries.sort(Comparator
+                    .comparing((FluidStack fluid) -> fluid.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER)
+                    .thenComparing(fluid -> fluid.getFluid().builtInRegistryHolder().key().location().toString()));
+            clearGhostEntries();
+            for (int slot = 0; slot < entries.size() && slot < GHOST_SLOT_COUNT; slot++) {
+                setFluidEntry(slot, entries.get(slot));
+            }
+            return;
+        }
+
+        List<ItemStack> entries = new ArrayList<>();
+        for (int slot = 0; slot < GHOST_SLOT_COUNT; slot++) {
+            ItemStack entry = MatterFilterData.sanitizeItemEntry(ghostInventory.getItem(slot));
+            if (!entry.isEmpty()) {
+                entries.add(entry);
+            }
+        }
+        entries.sort(Comparator
+                .comparing((ItemStack stack) -> stack.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER)
+                .thenComparing(stack -> BuiltInRegistries.ITEM.getKey(stack.getItem()).toString()));
+        clearGhostEntries();
+        for (int slot = 0; slot < entries.size() && slot < GHOST_SLOT_COUNT; slot++) {
+            ghostInventory.setItem(slot, entries.get(slot));
+        }
+    }
+
+    private void removeDuplicateGhostEntries() {
+        if (fluidFilter) {
+            List<FluidStack> uniqueEntries = new ArrayList<>();
+            for (FluidStack ghostFluid : ghostFluids) {
+                FluidStack entry = MatterFilterData.sanitizeFluidEntry(ghostFluid);
+                if (entry.isEmpty() || containsFluid(uniqueEntries, entry)) {
+                    continue;
+                }
+                uniqueEntries.add(entry);
+            }
+            clearGhostEntries();
+            for (int slot = 0; slot < uniqueEntries.size() && slot < GHOST_SLOT_COUNT; slot++) {
+                setFluidEntry(slot, uniqueEntries.get(slot));
+            }
+            return;
+        }
+
+        List<ItemStack> uniqueEntries = new ArrayList<>();
+        for (int slot = 0; slot < GHOST_SLOT_COUNT; slot++) {
+            ItemStack entry = MatterFilterData.sanitizeItemEntry(ghostInventory.getItem(slot));
+            if (entry.isEmpty() || containsItem(uniqueEntries, entry)) {
+                continue;
+            }
+            uniqueEntries.add(entry);
+        }
+        clearGhostEntries();
+        for (int slot = 0; slot < uniqueEntries.size() && slot < GHOST_SLOT_COUNT; slot++) {
+            ghostInventory.setItem(slot, uniqueEntries.get(slot));
+        }
+    }
+
     private void saveGhostEntries() {
         if (fluidFilter) {
             MatterFilterData.saveFluidEntries(getFilterStack(), ghostFluids);
@@ -225,6 +316,13 @@ public class MatterFilterMenu extends AbstractContainerMenu {
         if (stack.isEmpty()) {
             return FluidStack.EMPTY;
         }
+        if (stack.is(Items.MILK_BUCKET)) {
+            FluidStack milk = getRegisteredFluidSample(NEOFORGE_MILK_ID);
+            if (!milk.isEmpty()) {
+                return milk;
+            }
+            return getRegisteredFluidSample(FORGE_MILK_ID);
+        }
         var handler = FluidItemHelper.getFluidHandler(stack);
         if (handler == null) {
             return FluidStack.EMPTY;
@@ -240,6 +338,32 @@ public class MatterFilterMenu extends AbstractContainerMenu {
             return FluidStack.EMPTY;
         }
         return drained.copyWithAmount(1);
+    }
+
+    private static FluidStack getRegisteredFluidSample(String fluidId) {
+        ResourceLocation key = ResourceLocation.tryParse(fluidId);
+        if (key == null || !BuiltInRegistries.FLUID.containsKey(key)) {
+            return FluidStack.EMPTY;
+        }
+        return new FluidStack(BuiltInRegistries.FLUID.get(key), 1);
+    }
+
+    private static boolean containsItem(List<ItemStack> entries, ItemStack candidate) {
+        for (ItemStack entry : entries) {
+            if (ItemStack.isSameItemSameComponents(entry, candidate)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean containsFluid(List<FluidStack> entries, FluidStack candidate) {
+        for (FluidStack entry : entries) {
+            if (FluidStack.isSameFluidSameComponents(entry, candidate)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static final class GhostSlot extends Slot {

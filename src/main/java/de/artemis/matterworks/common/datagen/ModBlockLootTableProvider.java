@@ -24,7 +24,8 @@ public class ModBlockLootTableProvider extends BlockLootSubProvider {
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_PYLON.get(),
             de.artemis.matterworks.common.registry.ModBlocks.MATTER_NETWORK_CONTROLLER.get(),
             de.artemis.matterworks.common.registry.ModBlocks.CREATIVE_SOURCE.get(),
-            de.artemis.matterworks.common.registry.ModBlocks.CREATIVE_SINK.get()
+            de.artemis.matterworks.common.registry.ModBlocks.CREATIVE_SINK.get(),
+            de.artemis.matterworks.common.registry.ModBlocks.GRAVITIC_CONDENSER.get()
     );
     private static final Set<Block> GENERATED_BLOCKS = ModDatagenEntries.ALL_PAIRS.stream()
             .flatMap(pair -> Stream.of(pair.base().get(), pair.glowing().get()))

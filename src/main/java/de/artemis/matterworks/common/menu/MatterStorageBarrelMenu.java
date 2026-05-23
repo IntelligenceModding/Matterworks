@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
@@ -107,7 +108,7 @@ public class MatterStorageBarrelMenu extends AbstractContainerMenu implements Na
     }
 
     public DyeColor getNetworkColor(int index) {
-        return blockEntity.getNetworkColor(index);
+        return blockEntity.getNetworkColor(MatterPylonBlockEntity.CHANNEL_ENERGY, index);
     }
 
     @Override

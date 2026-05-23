@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.EnergyCellBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
@@ -178,7 +179,7 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
     }
 
     public DyeColor getNetworkColor(int index) {
-        return blockEntity.getNetworkColor(index);
+        return blockEntity.getNetworkColor(MatterPylonBlockEntity.CHANNEL_ENERGY, index);
     }
 
     @Override

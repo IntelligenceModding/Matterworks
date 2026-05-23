@@ -16,7 +16,7 @@ import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtension
 import net.neoforged.neoforge.fluids.FluidStack;
 
 public class MatterFilterClientTooltipComponent implements ClientTooltipComponent {
-    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("matterworks", "textures/gui/filter_tooltip.png");
+    private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath("matterworks", "textures/gui/filter_tooltab.png");
     private static final int TEXTURE_WIDTH = 256;
     private static final int TEXTURE_HEIGHT = 256;
     private static final int PANEL_WIDTH = 176;
@@ -111,8 +111,8 @@ public class MatterFilterClientTooltipComponent implements ClientTooltipComponen
         float blue = (tint & 0xFF) / 255.0F;
 
         RenderSystem.setShaderColor(red, green, blue, 0.95F);
-        guiGraphics.blit(x + 1, y + 2, 0, 16, 16, sprite);
+        guiGraphics.blit(x, y, 0, 16, 16, sprite);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        guiGraphics.fill(x + 1, y + 2, x + 17, y + 18, 0x22FFFFFF);
+        guiGraphics.fill(x, y, x + 16, y + 16, 0x22FFFFFF);
     }
 }

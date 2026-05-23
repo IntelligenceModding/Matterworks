@@ -68,15 +68,9 @@ public class MatterStabilizerScreen extends AbstractContainerScreen<MatterStabil
                 ENERGY_FILL_COLOR,
                 ENERGY_FILL_TOP_COLOR
         );
-        int rawFillColor = GuiWidgets.getFluidFillColor(menu.getRawMatterFluidStack(), 0xFFE2DED6);
-        int rawHighlightColor = GuiWidgets.getFluidHighlightColor(menu.getRawMatterFluidStack(), 0xFFF3EFE8);
-        int refinedFillColor = GuiWidgets.getFluidFillColor(menu.getRefinedMatterFluidStack(), 0xFF9CE5FF);
-        int refinedHighlightColor = GuiWidgets.getFluidHighlightColor(menu.getRefinedMatterFluidStack(), 0xFFC7F2FF);
-        int unstableFillColor = GuiWidgets.getFluidFillColor(menu.getUnstableMatterFluidStack(), 0xFFF08A7A);
-        int unstableHighlightColor = GuiWidgets.getFluidHighlightColor(menu.getUnstableMatterFluidStack(), 0xFFFFB09D);
-        GuiWidgets.fillVerticalGauge(guiGraphics, leftPos + RAW_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRawMatterAmount(TANK_HEIGHT), rawFillColor, rawHighlightColor);
-        GuiWidgets.fillVerticalGauge(guiGraphics, leftPos + REFINED_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRefinedMatterAmount(TANK_HEIGHT), refinedFillColor, refinedHighlightColor);
-        GuiWidgets.fillVerticalGauge(guiGraphics, leftPos + UNSTABLE_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledUnstableMatterAmount(TANK_HEIGHT), unstableFillColor, unstableHighlightColor);
+        GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + RAW_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRawMatterAmount(TANK_HEIGHT), menu.getRawMatterFluidStack());
+        GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + REFINED_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRefinedMatterAmount(TANK_HEIGHT), menu.getRefinedMatterFluidStack());
+        GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + UNSTABLE_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledUnstableMatterAmount(TANK_HEIGHT), menu.getUnstableMatterFluidStack());
     }
 
     @Override

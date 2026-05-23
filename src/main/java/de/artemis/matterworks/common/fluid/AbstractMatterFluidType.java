@@ -2,7 +2,6 @@ package de.artemis.matterworks.common.fluid;
 
 import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.systems.RenderSystem;
-import de.artemis.matterworks.Matterworks;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.FogRenderer;
@@ -14,10 +13,10 @@ import org.joml.Vector3f;
 import java.util.function.Consumer;
 
 public abstract class AbstractMatterFluidType extends FluidType {
-    private static final ResourceLocation OVERLAY_TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "block/fluid/fluid_overlay");
+    private static final ResourceLocation STILL_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_still");
+    private static final ResourceLocation FLOWING_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_flow");
+    private static final ResourceLocation OVERLAY_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_overlay");
 
-    private final ResourceLocation stillTexture;
-    private final ResourceLocation flowingTexture;
     private final int tintColor;
     private final Vector3f fogColor;
     private final float fogStart;
@@ -26,8 +25,6 @@ public abstract class AbstractMatterFluidType extends FluidType {
 
     protected AbstractMatterFluidType(
             Properties properties,
-            ResourceLocation stillTexture,
-            ResourceLocation flowingTexture,
             int tintColor,
             Vector3f fogColor,
             float fogStart,
@@ -35,8 +32,6 @@ public abstract class AbstractMatterFluidType extends FluidType {
             float fogDistanceLimit
     ) {
         super(properties);
-        this.stillTexture = stillTexture;
-        this.flowingTexture = flowingTexture;
         this.tintColor = tintColor;
         this.fogColor = fogColor;
         this.fogStart = fogStart;
@@ -49,12 +44,12 @@ public abstract class AbstractMatterFluidType extends FluidType {
         consumer.accept(new IClientFluidTypeExtensions() {
             @Override
             public ResourceLocation getStillTexture() {
-                return stillTexture;
+                return STILL_TEXTURE;
             }
 
             @Override
             public ResourceLocation getFlowingTexture() {
-                return flowingTexture;
+                return FLOWING_TEXTURE;
             }
 
             @Override

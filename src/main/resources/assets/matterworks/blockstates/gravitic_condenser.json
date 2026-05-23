@@ -1,0 +1,16 @@
+{
+  "variants": {
+    "facing=north": {
+      "model": "matterworks:block/gravitic_condenser"
+    },
+    "facing=east": {
+      "model": "matterworks:block/gravitic_condenser"
+    },
+    "facing=south": {
+      "model": "matterworks:block/gravitic_condenser"
+    },
+    "facing=west": {
+      "model": "matterworks:block/gravitic_condenser"
+    }
+  }
+}

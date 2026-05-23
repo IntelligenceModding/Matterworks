@@ -34,6 +34,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.MATTER_SLUDGE_BUCKET.get());
                         output.accept(ModItems.UNSTABLE_MATTER_BUCKET.get());
                         output.accept(ModItems.MATTER_DUST.get());
+                        output.accept(ModItems.MATTER_SINGULARITY.get());
                         output.accept(ModItems.ENTROPIC_MATTER.get());
                         output.accept(ModItems.STABILIZED_MATTER_PLATE.get());
                         output.accept(ModItems.CONDUCTIVE_MATTER_COIL.get());
@@ -45,6 +46,8 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.MATTER_ITEM_FILTER.get());
                         output.accept(ModItems.MATTER_FLUID_FILTER.get());
                         output.accept(ModItems.ENCODED_TEMPLATE.get());
+                        output.accept(ModItems.NETWORK_DATA_CARD.get());
+                        output.accept(ModItems.NETWORK_REMOTE_TERMINAL.get());
                         output.accept(ModItems.CRIMSON_POWER_CRYSTAL.get());
                         output.accept(ModItems.AZURE_POWER_CRYSTAL.get());
                         output.accept(ModItems.VERDANT_POWER_CRYSTAL.get());
@@ -71,11 +74,14 @@ public class ModCreativeModeTabs {
                         output.accept(ModBlocks.FLUID_TANK.get());
                         output.accept(ModBlocks.MATTER_STORAGE_BARREL.get());
                         output.accept(ModBlocks.MATTER_PYLON.get());
+                        output.accept(ModBlocks.SINGULARITY_LINK_FRAME.get());
+                        output.accept(ModBlocks.SINGULARITY_LINK.get());
                         output.accept(ModBlocks.MATTER_NETWORK_CONTROLLER.get());
                         output.accept(ModBlocks.MATTER_NETWORK_MONITOR.get());
                         output.accept(ModBlocks.CREATIVE_SOURCE.get());
                         output.accept(ModBlocks.CREATIVE_SINK.get());
                         output.accept(ModBlocks.MATTER_SEPARATOR.get());
+                        output.accept(ModBlocks.GRAVITIC_CONDENSER.get());
                         output.accept(ModBlocks.POWER_CRYSTAL_CHARGER.get());
                         output.accept(ModBlocks.POWER_CRYSTAL_ORE.get());
                     })

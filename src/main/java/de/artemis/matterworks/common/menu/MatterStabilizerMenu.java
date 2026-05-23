@@ -4,6 +4,7 @@ import de.artemis.matterworks.common.blockentity.AbstractMatterMachineBlockEntit
 import de.artemis.matterworks.common.blockentity.MatterStabilizerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
@@ -103,7 +104,14 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
     }
 
     public FluidStack getRawMatterFluidStack() {
-        return ((MatterStabilizerBlockEntity) blockEntity).getRawMatterFluidStack();
+        FluidStack fluid = ((MatterStabilizerBlockEntity) blockEntity).getRawMatterFluidStack();
+        return !fluid.isEmpty() || getRawMatterAmount() <= 0 ? fluid : new FluidStack(ModFluids.RAW_MATTER.get(), 1);
+    }
+
+    @Override
+    public FluidStack getFluidStack() {
+        FluidStack fluid = super.getFluidStack();
+        return !fluid.isEmpty() || getFluidAmount() <= 0 ? fluid : new FluidStack(ModFluids.REFINED_MATTER.get(), 1);
     }
 
     public FluidStack getRefinedMatterFluidStack() {
@@ -111,7 +119,8 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
     }
 
     public FluidStack getUnstableMatterFluidStack() {
-        return ((MatterStabilizerBlockEntity) blockEntity).getUnstableMatterFluidStack();
+        FluidStack fluid = ((MatterStabilizerBlockEntity) blockEntity).getUnstableMatterFluidStack();
+        return !fluid.isEmpty() || getUnstableMatterAmount() <= 0 ? fluid : new FluidStack(ModFluids.UNSTABLE_MATTER.get(), 1);
     }
 
     @Override

@@ -53,8 +53,6 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     public static final int DUST_OUTPUT_COUNT = 1;
     private static final int SLOT_COUNT = 19;
 
-    private int sludgeOverflowBuffer;
-
     private final FluidTank sludgeTank = new FluidTank(MATTER_SLUDGE_TANK_CAPACITY, ModFluids::isMatterSludge) {
         @Override
         protected void onContentsChanged() {
@@ -127,7 +125,13 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
         @Override
         public int getSlotLimit(int slot) {
-            return 1;
+            return switch (slot) {
+                case 0 -> 1;
+                case 1 -> itemHandler.getSlotLimit(REFINED_BUCKET_INPUT_SLOT);
+                case 2 -> itemHandler.getSlotLimit(SLUDGE_BUCKET_INPUT_SLOT);
+                case 3 -> 1;
+                default -> 0;
+            };
         }
 
         @Override
@@ -289,7 +293,6 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         tag.put("sludge_tank", sludgeTank.writeToNBT(registries, new CompoundTag()));
-        tag.putInt("sludge_overflow_buffer", sludgeOverflowBuffer);
     }
 
     @Override
@@ -299,7 +302,6 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         if (tag.contains("sludge_tank")) {
             sludgeTank.readFromNBT(registries, tag.getCompound("sludge_tank"));
         }
-        sludgeOverflowBuffer = tag.getInt("sludge_overflow_buffer");
     }
 
     @Override
@@ -310,12 +312,6 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         exportSludgeBucket();
     }
 
-    @Override
-    protected void afterProcessingTick() {
-        sludgeOverflowBuffer = 0;
-    }
-
-    @Override
     protected void syncFluidTankCapacities() {
         super.syncFluidTankCapacities();
         syncTankCapacity(sludgeTank, getModifiedFluidTankCapacity(MATTER_SLUDGE_TANK_CAPACITY));

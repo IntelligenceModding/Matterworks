@@ -10,7 +10,9 @@ import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEnt
 import de.artemis.matterworks.common.blockentity.MatterNetworkMonitorBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterRecyclerBlockEntity;
+import de.artemis.matterworks.common.blockentity.SingularityLinkBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterSeparatorBlockEntity;
+import de.artemis.matterworks.common.blockentity.GraviticCondenserBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStabilizerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
 import de.artemis.matterworks.common.blockentity.CreativeSinkBlockEntity;
@@ -73,6 +75,10 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("matter_pylon",
                     () -> BlockEntityType.Builder.of(MatterPylonBlockEntity::new, ModBlocks.MATTER_PYLON.get()).build(null));
 
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<SingularityLinkBlockEntity>> SINGULARITY_LINK =
+            BLOCK_ENTITY_TYPES.register("singularity_link",
+                    () -> BlockEntityType.Builder.of(SingularityLinkBlockEntity::new, ModBlocks.SINGULARITY_LINK.get()).build(null));
+
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterNetworkControllerBlockEntity>> MATTER_NETWORK_CONTROLLER =
             BLOCK_ENTITY_TYPES.register("matter_network_controller",
                     () -> BlockEntityType.Builder.of(MatterNetworkControllerBlockEntity::new, ModBlocks.MATTER_NETWORK_CONTROLLER.get()).build(null));
@@ -92,6 +98,10 @@ public class ModBlockEntities {
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterSeparatorBlockEntity>> MATTER_SEPARATOR =
             BLOCK_ENTITY_TYPES.register("matter_separator",
                     () -> BlockEntityType.Builder.of(MatterSeparatorBlockEntity::new, ModBlocks.MATTER_SEPARATOR.get()).build(null));
+
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<GraviticCondenserBlockEntity>> GRAVITIC_CONDENSER =
+            BLOCK_ENTITY_TYPES.register("gravitic_condenser",
+                    () -> BlockEntityType.Builder.of(GraviticCondenserBlockEntity::new, ModBlocks.GRAVITIC_CONDENSER.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<PowerCrystalChargerBlockEntity>> POWER_CRYSTAL_CHARGER =
             BLOCK_ENTITY_TYPES.register("power_crystal_charger",

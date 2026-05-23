@@ -10,6 +10,8 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.inventory.ClickType;
+import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
 import net.neoforged.neoforge.items.SlotItemHandler;
@@ -108,8 +110,43 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
     }
 
     @Override
+    public void clicked(int slotId, int button, ClickType clickType, Player player) {
+        if (handleFilterSlotClick(slotId, clickType)) {
+            return;
+        }
+        super.clicked(slotId, button, clickType, player);
+    }
+
+    @Override
     public ItemStack quickMoveStack(Player player, int index) {
         return ItemStack.EMPTY;
+    }
+
+    private boolean handleFilterSlotClick(int slotId, ClickType clickType) {
+        if (slotId < 0 || slotId >= 8) {
+            return false;
+        }
+        Slot slot = slots.get(slotId);
+        if (!(slot instanceof SelectedNodeFilterSlot filterSlot) || !filterSlot.isActive()) {
+            return true;
+        }
+        if (clickType != ClickType.PICKUP) {
+            return true;
+        }
+
+        MatterPylonBlockEntity target = getSelectedTarget();
+        if (target == null) {
+            return true;
+        }
+
+        ItemStack carried = getCarried();
+        if (carried.isEmpty()) {
+            target.getFilterHandler().setStackInSlot(filterSlot.getContainerSlot(), ItemStack.EMPTY);
+        } else if (filterSlot.acceptsFilterCard(carried)) {
+            target.getFilterHandler().setStackInSlot(filterSlot.getContainerSlot(), carried.copyWithCount(1));
+        }
+        broadcastChanges();
+        return true;
     }
 
     private static MatterNetworkControllerBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
@@ -233,6 +270,20 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
 
         @Override
         public boolean mayPlace(ItemStack stack) {
+            return false;
+        }
+
+        @Override
+        public boolean mayPickup(Player player) {
+            return false;
+        }
+
+        @Override
+        public boolean isActive() {
+            return menu.supportsFilterChannel(channel) && menu.getActiveFilterChannel() == channel;
+        }
+
+        private boolean acceptsFilterCard(ItemStack stack) {
             if (!menu.supportsFilterChannel(channel)) {
                 return false;
             }
@@ -243,11 +294,6 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
                 return stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
             }
             return false;
-        }
-
-        @Override
-        public boolean isActive() {
-            return menu.supportsFilterChannel(channel) && menu.getActiveFilterChannel() == channel;
         }
     }
 

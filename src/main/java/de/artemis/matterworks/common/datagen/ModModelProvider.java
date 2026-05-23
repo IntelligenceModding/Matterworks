@@ -55,6 +55,10 @@ public class ModModelProvider implements DataProvider {
             futures.add(saveTrapdoorBlockstate(output, name));
         });
 
+        futures.add(saveAliasedFlatItemModel(output, "network_data_card", "minecraft:block/repeater", "minecraft:item/generated"));
+        futures.add(saveAliasedFlatItemModel(output, "network_remote_terminal", "minecraft:item/echo_shard", "minecraft:item/generated"));
+        futures.add(saveAliasedFlatItemModel(output, "matter_singularity", "minecraft:item/ender_eye", "minecraft:item/generated"));
+
         return CompletableFuture.allOf(futures.toArray(CompletableFuture[]::new));
     }
 
@@ -78,6 +82,17 @@ public class ModModelProvider implements DataProvider {
 
         JsonObject textures = new JsonObject();
         textures.addProperty("layer0", modPath("item/" + itemName));
+        json.add("textures", textures);
+
+        return DataProvider.saveStable(output, json, itemModelPathProvider.json(id(itemName)));
+    }
+
+    private CompletableFuture<?> saveAliasedFlatItemModel(CachedOutput output, String itemName, String texturePath, String parent) {
+        JsonObject json = new JsonObject();
+        json.addProperty("parent", parent);
+
+        JsonObject textures = new JsonObject();
+        textures.addProperty("layer0", texturePath);
         json.add("textures", textures);
 
         return DataProvider.saveStable(output, json, itemModelPathProvider.json(id(itemName)));

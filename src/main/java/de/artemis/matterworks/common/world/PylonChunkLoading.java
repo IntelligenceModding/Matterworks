@@ -48,6 +48,14 @@ public final class PylonChunkLoading {
         forceChunk(level, nodePos, nodePos, false);
     }
 
+    public static void forceRemoteNodeTickets(ServerLevel level, BlockPos ownerPos, BlockPos remoteNodePos) {
+        forceChunk(level, ownerPos, remoteNodePos, true);
+    }
+
+    public static void releaseRemoteNodeTickets(ServerLevel level, BlockPos ownerPos, BlockPos remoteNodePos) {
+        forceChunk(level, ownerPos, remoteNodePos, false);
+    }
+
     private static void forceChunk(ServerLevel level, BlockPos ownerPos, BlockPos chunkAnchorPos, boolean add) {
         ChunkPos chunkPos = new ChunkPos(chunkAnchorPos);
         CONTROLLER.forceChunk(level, ownerPos.immutable(), chunkPos.x, chunkPos.z, add, true);

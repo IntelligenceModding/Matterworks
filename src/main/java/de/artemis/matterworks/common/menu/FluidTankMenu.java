@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.FluidTankBlockEntity;
+import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.fluid.FluidItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
@@ -167,7 +168,7 @@ public class FluidTankMenu extends AbstractContainerMenu implements NamedBlockMe
     }
 
     public DyeColor getNetworkColor(int index) {
-        return blockEntity.getNetworkColor(index);
+        return blockEntity.getNetworkColor(MatterPylonBlockEntity.CHANNEL_ENERGY, index);
     }
 
     @Override

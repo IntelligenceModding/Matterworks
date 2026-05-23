@@ -20,6 +20,7 @@ public class ModBlockTagProvider extends BlockTagsProvider {
         var pickaxeTag = tag(BlockTags.MINEABLE_WITH_PICKAXE);
         pickaxeTag.add(ModBlocks.POWER_CRYSTAL_ORE.get());
         pickaxeTag.add(ModBlocks.MATTER_SEPARATOR.get());
+        pickaxeTag.add(ModBlocks.GRAVITIC_CONDENSER.get());
         pickaxeTag.add(ModBlocks.POWER_CRYSTAL_CHARGER.get());
         pickaxeTag.add(ModBlocks.MATTER_ENERGY_CELL.get());
         pickaxeTag.add(ModBlocks.MATTER_BATTERY_CORE.get());

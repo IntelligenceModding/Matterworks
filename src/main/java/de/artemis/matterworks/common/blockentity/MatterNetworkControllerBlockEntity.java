@@ -57,6 +57,21 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
         return remoteAccess || player.distanceToSqr(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D) <= 64.0D;
     }
 
+    public void openRemoteMenu(ServerPlayer player) {
+        player.openMenu(
+                new RemoteMenuProvider(getDisplayName()) {
+                    @Override
+                    public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player menuPlayer) {
+                        return new MatterNetworkControllerMenu(containerId, inventory, MatterNetworkControllerBlockEntity.this, true);
+                    }
+                },
+                buffer -> {
+                    buffer.writeBlockPos(worldPosition);
+                    buffer.writeBoolean(true);
+                }
+        );
+    }
+
     public boolean isConnectedTargetPosition(BlockPos targetPos) {
         return targetPos != null && !targetPos.equals(worldPosition) && collectConnectedNodePositions().contains(targetPos);
     }
@@ -175,9 +190,18 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 entries.add(new ControllerEntry(
                         pos.immutable(),
                         node.getDisplayName().getString(),
-                        node.getNetworkColor(0).getId(),
-                        node.getNetworkColor(1).getId(),
-                        node.getNetworkColor(2).getId(),
+                        node.getNetworkColor(CHANNEL_ENERGY, 0).getId(),
+                        node.getNetworkColor(CHANNEL_ENERGY, 1).getId(),
+                        node.getNetworkColor(CHANNEL_ENERGY, 2).getId(),
+                        node.getNetworkColor(CHANNEL_ITEMS, 0).getId(),
+                        node.getNetworkColor(CHANNEL_ITEMS, 1).getId(),
+                        node.getNetworkColor(CHANNEL_ITEMS, 2).getId(),
+                        node.getNetworkColor(CHANNEL_FLUIDS, 0).getId(),
+                        node.getNetworkColor(CHANNEL_FLUIDS, 1).getId(),
+                        node.getNetworkColor(CHANNEL_FLUIDS, 2).getId(),
+                        node.getNetworkColor(CHANNEL_REDSTONE, 0).getId(),
+                        node.getNetworkColor(CHANNEL_REDSTONE, 1).getId(),
+                        node.getNetworkColor(CHANNEL_REDSTONE, 2).getId(),
                         getSupportedChannelMask(node),
                         hasRecentTransfers(node),
                         node.getLinkedNodePositions().size(),
@@ -313,9 +337,11 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
             entryTag.putInt("y", entry.pos().getY());
             entryTag.putInt("z", entry.pos().getZ());
             entryTag.putString("display_name", entry.displayName());
-            entryTag.putInt("color_1", entry.colorOneId());
-            entryTag.putInt("color_2", entry.colorTwoId());
-            entryTag.putInt("color_3", entry.colorThreeId());
+            for (int channel = 0; channel < CHANNEL_COUNT; channel++) {
+                for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
+                    entryTag.putInt(getOverviewColorTagName(channel, index), entry.getColorId(channel, index));
+                }
+            }
             entryTag.putInt("supported_channels", entry.supportedChannelMask());
             entryTag.putBoolean("active", entry.active());
             entryTag.putInt("link_count", entry.linkCount());
@@ -352,9 +378,18 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 entries.add(new ControllerEntry(
                         new BlockPos(entryTag.getInt("x"), entryTag.getInt("y"), entryTag.getInt("z")),
                         entryTag.getString("display_name"),
-                        entryTag.contains("color_1") ? entryTag.getInt("color_1") : net.minecraft.world.item.DyeColor.WHITE.getId(),
-                        entryTag.contains("color_2") ? entryTag.getInt("color_2") : net.minecraft.world.item.DyeColor.WHITE.getId(),
-                        entryTag.contains("color_3") ? entryTag.getInt("color_3") : net.minecraft.world.item.DyeColor.WHITE.getId(),
+                        readOverviewColorId(entryTag, CHANNEL_ENERGY, 0),
+                        readOverviewColorId(entryTag, CHANNEL_ENERGY, 1),
+                        readOverviewColorId(entryTag, CHANNEL_ENERGY, 2),
+                        readOverviewColorId(entryTag, CHANNEL_ITEMS, 0),
+                        readOverviewColorId(entryTag, CHANNEL_ITEMS, 1),
+                        readOverviewColorId(entryTag, CHANNEL_ITEMS, 2),
+                        readOverviewColorId(entryTag, CHANNEL_FLUIDS, 0),
+                        readOverviewColorId(entryTag, CHANNEL_FLUIDS, 1),
+                        readOverviewColorId(entryTag, CHANNEL_FLUIDS, 2),
+                        readOverviewColorId(entryTag, CHANNEL_REDSTONE, 0),
+                        readOverviewColorId(entryTag, CHANNEL_REDSTONE, 1),
+                        readOverviewColorId(entryTag, CHANNEL_REDSTONE, 2),
                         entryTag.contains("supported_channels") ? entryTag.getInt("supported_channels") : (1 << CHANNEL_COUNT) - 1,
                         entryTag.getBoolean("active"),
                         entryTag.getInt("link_count"),
@@ -395,9 +430,18 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
     public record ControllerEntry(
             BlockPos pos,
             String displayName,
-            int colorOneId,
-            int colorTwoId,
-            int colorThreeId,
+            int energyColorOneId,
+            int energyColorTwoId,
+            int energyColorThreeId,
+            int itemColorOneId,
+            int itemColorTwoId,
+            int itemColorThreeId,
+            int fluidColorOneId,
+            int fluidColorTwoId,
+            int fluidColorThreeId,
+            int redstoneColorOneId,
+            int redstoneColorTwoId,
+            int redstoneColorThreeId,
             int supportedChannelMask,
             boolean active,
             int linkCount,
@@ -422,10 +466,118 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
             CompoundTag crystalTwoStackTag,
             CompoundTag crystalThreeStackTag
     ) {
+        public int getColorId(int channel, int index) {
+            return switch (channel) {
+                case CHANNEL_ENERGY -> getEnergyColorId(index);
+                case CHANNEL_ITEMS -> getItemColorId(index);
+                case CHANNEL_FLUIDS -> getFluidColorId(index);
+                case CHANNEL_REDSTONE -> getRedstoneColorId(index);
+                default -> net.minecraft.world.item.DyeColor.WHITE.getId();
+            };
+        }
+
+        public ControllerEntry withColor(int channel, int index, int colorId) {
+            int sanitizedColorId = net.minecraft.world.item.DyeColor.byId(colorId).getId();
+            return new ControllerEntry(
+                    pos,
+                    displayName,
+                    channel == CHANNEL_ENERGY && index == 0 ? sanitizedColorId : energyColorOneId,
+                    channel == CHANNEL_ENERGY && index == 1 ? sanitizedColorId : energyColorTwoId,
+                    channel == CHANNEL_ENERGY && index == 2 ? sanitizedColorId : energyColorThreeId,
+                    channel == CHANNEL_ITEMS && index == 0 ? sanitizedColorId : itemColorOneId,
+                    channel == CHANNEL_ITEMS && index == 1 ? sanitizedColorId : itemColorTwoId,
+                    channel == CHANNEL_ITEMS && index == 2 ? sanitizedColorId : itemColorThreeId,
+                    channel == CHANNEL_FLUIDS && index == 0 ? sanitizedColorId : fluidColorOneId,
+                    channel == CHANNEL_FLUIDS && index == 1 ? sanitizedColorId : fluidColorTwoId,
+                    channel == CHANNEL_FLUIDS && index == 2 ? sanitizedColorId : fluidColorThreeId,
+                    channel == CHANNEL_REDSTONE && index == 0 ? sanitizedColorId : redstoneColorOneId,
+                    channel == CHANNEL_REDSTONE && index == 1 ? sanitizedColorId : redstoneColorTwoId,
+                    channel == CHANNEL_REDSTONE && index == 2 ? sanitizedColorId : redstoneColorThreeId,
+                    supportedChannelMask,
+                    active,
+                    linkCount,
+                    energyMode,
+                    itemMode,
+                    fluidMode,
+                    redstoneMode,
+                    energyId,
+                    itemId,
+                    fluidId,
+                    redstoneId,
+                    energyAmount,
+                    energyRole,
+                    itemAmount,
+                    itemRole,
+                    fluidAmount,
+                    fluidRole,
+                    redstoneAmount,
+                    redstoneRole,
+                    supportsUpgradeCrystals,
+                    crystalOneStackTag,
+                    crystalTwoStackTag,
+                    crystalThreeStackTag
+            );
+        }
+
+        private int getEnergyColorId(int index) {
+            return switch (index) {
+                case 0 -> energyColorOneId;
+                case 1 -> energyColorTwoId;
+                case 2 -> energyColorThreeId;
+                default -> net.minecraft.world.item.DyeColor.WHITE.getId();
+            };
+        }
+
+        private int getItemColorId(int index) {
+            return switch (index) {
+                case 0 -> itemColorOneId;
+                case 1 -> itemColorTwoId;
+                case 2 -> itemColorThreeId;
+                default -> net.minecraft.world.item.DyeColor.WHITE.getId();
+            };
+        }
+
+        private int getFluidColorId(int index) {
+            return switch (index) {
+                case 0 -> fluidColorOneId;
+                case 1 -> fluidColorTwoId;
+                case 2 -> fluidColorThreeId;
+                default -> net.minecraft.world.item.DyeColor.WHITE.getId();
+            };
+        }
+
+        private int getRedstoneColorId(int index) {
+            return switch (index) {
+                case 0 -> redstoneColorOneId;
+                case 1 -> redstoneColorTwoId;
+                case 2 -> redstoneColorThreeId;
+                default -> net.minecraft.world.item.DyeColor.WHITE.getId();
+            };
+        }
     }
 
     private static int sanitizeModeOrdinal(int ordinal) {
         return Math.max(0, Math.min(PylonMode.values().length - 1, ordinal));
+    }
+
+    private static int readOverviewColorId(CompoundTag entryTag, int channel, int index) {
+        String colorTag = getOverviewColorTagName(channel, index);
+        if (entryTag.contains(colorTag)) {
+            return net.minecraft.world.item.DyeColor.byId(entryTag.getInt(colorTag)).getId();
+        }
+        String legacyColorTag = getLegacyOverviewColorTagName(index);
+        if (entryTag.contains(legacyColorTag)) {
+            return net.minecraft.world.item.DyeColor.byId(entryTag.getInt(legacyColorTag)).getId();
+        }
+        return net.minecraft.world.item.DyeColor.WHITE.getId();
+    }
+
+    private static String getOverviewColorTagName(int channel, int index) {
+        return "channel_" + (channel + 1) + "_color_" + (index + 1);
+    }
+
+    private static String getLegacyOverviewColorTagName(int index) {
+        return "color_" + (index + 1);
     }
 
     private abstract static class RemoteMenuProvider implements net.minecraft.world.MenuProvider {

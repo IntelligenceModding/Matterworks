@@ -131,17 +131,14 @@ public class FluidTankScreen extends AbstractRenamableContainerScreen<FluidTankM
     }
 
     private void renderTankBar(GuiGraphics guiGraphics) {
-        int fillColor = GuiWidgets.getFluidFillColor(menu.getFluidStack(), 0xFF3A93FF);
-        int highlightColor = GuiWidgets.getFluidHighlightColor(menu.getFluidStack(), 0xFF7CC3FF);
-        GuiWidgets.drawInsetVerticalFillBar(
+        GuiWidgets.drawInsetVerticalFluidBar(
                 guiGraphics,
                 leftPos + TANK_BAR_X,
                 topPos + TANK_BAR_Y,
                 TANK_BAR_WIDTH,
                 TANK_BAR_HEIGHT,
                 menu.getScaledFluidAmount(TANK_BAR_HEIGHT - 4),
-                fillColor,
-                highlightColor
+                menu.getFluidStack()
         );
     }
 

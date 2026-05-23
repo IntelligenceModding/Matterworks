@@ -66,17 +66,14 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
                 ENERGY_FILL_COLOR,
                 ENERGY_FILL_TOP_COLOR
         );
-        int fillColor = GuiWidgets.getFluidFillColor(menu.getFluidStack(), 0xFFE2DED6);
-        int highlightColor = GuiWidgets.getFluidHighlightColor(menu.getFluidStack(), 0xFFF3EFE8);
-        GuiWidgets.fillVerticalGauge(
+        GuiWidgets.fillVerticalFluidGauge(
                 guiGraphics,
                 leftPos + FLUID_TANK_X,
                 topPos + FLUID_TANK_Y,
                 FLUID_TANK_WIDTH,
                 FLUID_TANK_HEIGHT,
                 menu.getScaledFluidAmount(FLUID_TANK_HEIGHT),
-                fillColor,
-                highlightColor
+                menu.getFluidStack()
         );
     }
 

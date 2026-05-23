@@ -60,10 +60,10 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     private static final int DETAIL_MODE_BUTTON_HEIGHT = 17;
     private static final int[] DETAIL_COLOR_SLOT_XS = {260, 280, 300};
     private static final int DETAIL_COLOR_SLOT_Y = 75;
-    private static final int DETAIL_INFO_X = 173;
-    private static final int DETAIL_INFO_Y = 117;
-    private static final int DETAIL_INFO_WIDTH = 126;
-    private static final int DETAIL_INFO_HEIGHT = 97;
+    private static final int DETAIL_INFO_X = 174;
+    private static final int DETAIL_INFO_Y = 118;
+    private static final int DETAIL_INFO_WIDTH = 124;
+    private static final int DETAIL_INFO_HEIGHT = 95;
     private static final int DETAIL_INFO_LINE_HEIGHT = 12;
     private static final int DETAIL_SCROLLBAR_X = 304;
     private static final int DETAIL_SCROLLBAR_Y = 117;
@@ -228,7 +228,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
                 SCROLLBAR_WIDTH,
                 getScrollbarHandleHeight()
         );
-        List<DetailTextLine> detailLines = buildDetailTextLines();
+        List<DetailTextLine> detailLines = getWrappedDetailLines();
         guiGraphics.blitSprite(
                 canScrollDetailInfo(detailLines) ? SCROLLER_SPRITE : SCROLLER_DISABLED_SPRITE,
                 leftPos + DETAIL_SCROLLBAR_X,
@@ -245,7 +245,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     }
 
     private void renderDetailInfo(GuiGraphics guiGraphics) {
-        List<DetailTextLine> detailLines = buildDetailTextLines();
+        List<DetailTextLine> detailLines = getWrappedDetailLines();
         int firstVisibleLine = getFirstVisibleDetailLine(detailLines);
         int visibleLineCount = getVisibleDetailLineCount();
         int y = DETAIL_INFO_Y;
@@ -257,7 +257,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
         );
         for (int index = 0; index < visibleLineCount && firstVisibleLine + index < detailLines.size(); index++) {
             DetailTextLine line = detailLines.get(firstVisibleLine + index);
-            guiGraphics.drawString(font, trimToWidth(line.text(), DETAIL_INFO_WIDTH), DETAIL_INFO_X, y, line.color(), false);
+            guiGraphics.drawString(font, line.text(), DETAIL_INFO_X, y, line.color(), false);
             y += DETAIL_INFO_LINE_HEIGHT;
         }
         guiGraphics.disableScissor();
@@ -408,8 +408,8 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
         MatterNetworkControllerBlockEntity.ControllerEntry selectedEntry = getSelectedEntry();
         if (selectedEntry != null && colorPicker.mouseClicked(mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight,
-                (index, color) -> setSelectedNodeColor(selectedEntry, index, color),
-                index -> getSelectedNodeColor(selectedEntry, index))) {
+                (index, color) -> setSelectedNodeColor(selectedEntry, selectedDetailChannel, index, color),
+                index -> getSelectedNodeColor(selectedEntry, selectedDetailChannel, index))) {
             return true;
         }
         if (button == 1 && detailModeButton != null && detailModeButton.active && detailModeButton.visible && detailModeButton.isMouseOver(mouseX, mouseY)) {
@@ -422,7 +422,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             setScrollOffsetFromMouse(mouseY);
             return true;
         }
-        List<DetailTextLine> detailLines = buildDetailTextLines();
+        List<DetailTextLine> detailLines = getWrappedDetailLines();
         if (button == 0 && canScrollDetailInfo(detailLines) && isOverDetailScrollbar(mouseX, mouseY)) {
             detailScrolling = true;
             setDetailScrollOffsetFromMouse(mouseY, detailLines);
@@ -446,7 +446,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             return true;
         }
         if (detailScrolling) {
-            setDetailScrollOffsetFromMouse(mouseY, buildDetailTextLines());
+            setDetailScrollOffsetFromMouse(mouseY, getWrappedDetailLines());
             return true;
         }
         return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
@@ -465,8 +465,8 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     public boolean mouseScrolled(double mouseX, double mouseY, double scrollX, double scrollY) {
         MatterNetworkControllerBlockEntity.ControllerEntry selectedEntry = getSelectedEntry();
         if (selectedEntry != null && colorPicker.mouseScrolled(mouseX, mouseY, scrollY, leftPos, topPos, imageWidth, imageHeight,
-                (index, color) -> setSelectedNodeColor(selectedEntry, index, color),
-                index -> getSelectedNodeColor(selectedEntry, index))) {
+                (index, color) -> setSelectedNodeColor(selectedEntry, selectedDetailChannel, index, color),
+                index -> getSelectedNodeColor(selectedEntry, selectedDetailChannel, index))) {
             return true;
         }
         if (isOverList(mouseX, mouseY) || isOverScrollbar(mouseX, mouseY)) {
@@ -474,7 +474,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             return true;
         }
         if (isOverDetailInfo(mouseX, mouseY) || isOverDetailScrollbar(mouseX, mouseY)) {
-            scrollDetailByRows((int) -Math.signum(scrollY), buildDetailTextLines());
+            scrollDetailByRows((int) -Math.signum(scrollY), getWrappedDetailLines());
             return true;
         }
         return super.mouseScrolled(mouseX, mouseY, scrollX, scrollY);
@@ -557,7 +557,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             return;
         }
 
-        colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, index -> getSelectedNodeColor(selectedEntry, index));
+        colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, index -> getSelectedNodeColor(selectedEntry, selectedDetailChannel, index));
     }
 
     private void renderSelectedNodeSlotTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
@@ -566,7 +566,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             return;
         }
 
-        colorPicker.renderTooltip(guiGraphics, font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, index -> getSelectedNodeColor(selectedEntry, index));
+        colorPicker.renderTooltip(guiGraphics, font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, index -> getSelectedNodeColor(selectedEntry, selectedDetailChannel, index));
         renderSelectedNodeFilterTooltip(guiGraphics, mouseX, mouseY);
     }
 
@@ -602,25 +602,21 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
                 || entry.pos().toShortString().toLowerCase(Locale.ROOT).contains(query);
     }
 
-    private static DyeColor getSelectedNodeColor(MatterNetworkControllerBlockEntity.ControllerEntry entry, int index) {
-        return switch (index) {
-            case 0 -> DyeColor.byId(entry.colorOneId());
-            case 1 -> DyeColor.byId(entry.colorTwoId());
-            case 2 -> DyeColor.byId(entry.colorThreeId());
-            default -> DyeColor.WHITE;
-        };
+    private static DyeColor getSelectedNodeColor(MatterNetworkControllerBlockEntity.ControllerEntry entry, int channel, int index) {
+        return DyeColor.byId(entry.getColorId(channel, index));
     }
 
-    private void setSelectedNodeColor(MatterNetworkControllerBlockEntity.ControllerEntry entry, int index, DyeColor color) {
-        if (entry == null || color == null) {
+    private void setSelectedNodeColor(MatterNetworkControllerBlockEntity.ControllerEntry entry, int channel, int index, DyeColor color) {
+        if (entry == null || color == null || !supportsChannel(entry, channel)) {
             return;
         }
-        int[] override = pendingNodeColorOverrides.computeIfAbsent(entry.pos(), ignored -> new int[]{entry.colorOneId(), entry.colorTwoId(), entry.colorThreeId()});
-        if (index >= 0 && index < override.length) {
-            override[index] = color.getId();
+        int[] override = pendingNodeColorOverrides.computeIfAbsent(entry.pos(), ignored -> createColorOverride(entry));
+        int overrideIndex = getColorOverrideIndex(channel, index);
+        if (overrideIndex >= 0 && overrideIndex < override.length) {
+            override[overrideIndex] = color.getId();
         }
         applyLocalColorOverride(entry.pos(), override);
-        PacketDistributor.sendToServer(new SetPylonColorCodePayload(entry.pos(), index, color.getId()));
+        PacketDistributor.sendToServer(new SetPylonColorCodePayload(entry.pos(), channel, index, color.getId()));
     }
 
     private List<MatterNetworkControllerBlockEntity.ControllerEntry> applyPendingColorOverrides(List<MatterNetworkControllerBlockEntity.ControllerEntry> sourceEntries) {
@@ -660,43 +656,48 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     }
 
     private static boolean matchesColorOverride(MatterNetworkControllerBlockEntity.ControllerEntry entry, int[] override) {
-        return override.length >= 3
-                && entry.colorOneId() == override[0]
-                && entry.colorTwoId() == override[1]
-                && entry.colorThreeId() == override[2];
+        if (override.length < MatterPylonBlockEntity.CHANNEL_COUNT * MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS) {
+            return false;
+        }
+        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
+            for (int index = 0; index < MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS; index++) {
+                if (entry.getColorId(channel, index) != override[getColorOverrideIndex(channel, index)]) {
+                    return false;
+                }
+            }
+        }
+        return true;
     }
 
     private static MatterNetworkControllerBlockEntity.ControllerEntry withUpdatedNodeColors(MatterNetworkControllerBlockEntity.ControllerEntry entry, int[] override) {
-        return new MatterNetworkControllerBlockEntity.ControllerEntry(
-                entry.pos(),
-                entry.displayName(),
-                override.length > 0 ? override[0] : entry.colorOneId(),
-                override.length > 1 ? override[1] : entry.colorTwoId(),
-                override.length > 2 ? override[2] : entry.colorThreeId(),
-                entry.supportedChannelMask(),
-                entry.active(),
-                entry.linkCount(),
-                entry.energyMode(),
-                entry.itemMode(),
-                entry.fluidMode(),
-                entry.redstoneMode(),
-                entry.energyId(),
-                entry.itemId(),
-                entry.fluidId(),
-                entry.redstoneId(),
-                entry.energyAmount(),
-                entry.energyRole(),
-                entry.itemAmount(),
-                entry.itemRole(),
-                entry.fluidAmount(),
-                entry.fluidRole(),
-                entry.redstoneAmount(),
-                entry.redstoneRole(),
-                entry.supportsUpgradeCrystals(),
-                entry.crystalOneStackTag(),
-                entry.crystalTwoStackTag(),
-                entry.crystalThreeStackTag()
-        );
+        MatterNetworkControllerBlockEntity.ControllerEntry updatedEntry = entry;
+        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
+            for (int index = 0; index < MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS; index++) {
+                int overrideIndex = getColorOverrideIndex(channel, index);
+                if (overrideIndex >= override.length) {
+                    continue;
+                }
+                updatedEntry = updatedEntry.withColor(channel, index, override[overrideIndex]);
+            }
+        }
+        return updatedEntry;
+    }
+
+    private static int[] createColorOverride(MatterNetworkControllerBlockEntity.ControllerEntry entry) {
+        int[] override = new int[MatterPylonBlockEntity.CHANNEL_COUNT * MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS];
+        for (int channel = 0; channel < MatterPylonBlockEntity.CHANNEL_COUNT; channel++) {
+            for (int index = 0; index < MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS; index++) {
+                override[getColorOverrideIndex(channel, index)] = entry.getColorId(channel, index);
+            }
+        }
+        return override;
+    }
+
+    private static int getColorOverrideIndex(int channel, int index) {
+        if (channel < 0 || channel >= MatterPylonBlockEntity.CHANNEL_COUNT || index < 0 || index >= MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS) {
+            return -1;
+        }
+        return channel * MatterPylonBlockEntity.NETWORK_COLOR_CODE_PARTS + index;
     }
 
     private String getPrimaryLabel(MatterNetworkControllerBlockEntity.ControllerEntry entry) {
@@ -706,9 +707,12 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
     private List<DetailTextLine> buildDetailTextLines() {
         List<DetailTextLine> detailLines = new ArrayList<>();
         NetworkTotals totals = calculateTotals();
-        detailLines.add(new DetailTextLine("Nodes " + totals.totalNodes + " | Active " + totals.activeNodes, 0x404040));
-        detailLines.add(new DetailTextLine("E " + totals.energyAmount + " fe/t | I " + totals.itemAmount + " i/t", 0x406040));
-        detailLines.add(new DetailTextLine("F " + totals.fluidAmount + " mb/t | R " + totals.redstoneAmount + " rs", 0x406090));
+        detailLines.add(new DetailTextLine("Connected nodes: " + totals.totalNodes, 0x404040));
+        detailLines.add(new DetailTextLine("Active nodes: " + totals.activeNodes, 0x404040));
+        detailLines.add(new DetailTextLine("Total energy: " + totals.energyAmount + " FE/t", 0x406040));
+        detailLines.add(new DetailTextLine("Total items: " + totals.itemAmount + " items/t", 0x806030));
+        detailLines.add(new DetailTextLine("Total fluids: " + totals.fluidAmount + " mB/t", 0x406090));
+        detailLines.add(new DetailTextLine("Total redstone: " + totals.redstoneAmount + " RS", 0x904040));
         detailLines.add(new DetailTextLine("", 0x404040));
 
         MatterNetworkControllerBlockEntity.ControllerEntry selectedEntry = getSelectedEntry();
@@ -718,45 +722,96 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
         }
 
         ensureSelectedDetailChannel(selectedEntry);
-        detailLines.add(new DetailTextLine(getPrimaryLabel(selectedEntry), 0x202020));
-        detailLines.add(new DetailTextLine((selectedEntry.active() ? "Active" : "Idle") + " | Links " + selectedEntry.linkCount(), selectedEntry.active() ? 0x507D50 : 0x505050));
+        detailLines.add(new DetailTextLine("Selected node: " + getPrimaryLabel(selectedEntry), 0x202020));
+        detailLines.add(new DetailTextLine("Status: " + (selectedEntry.active() ? "Active" : "Idle"), selectedEntry.active() ? 0x507D50 : 0x505050));
+        detailLines.add(new DetailTextLine("Connections: " + selectedEntry.linkCount(), 0x505050));
         detailLines.add(new DetailTextLine("", 0x404040));
         detailLines.add(new DetailTextLine(getDetailChannelSummary(selectedEntry, MatterPylonBlockEntity.CHANNEL_ENERGY), getDetailChannelColor(MatterPylonBlockEntity.CHANNEL_ENERGY, selectedDetailChannel == MatterPylonBlockEntity.CHANNEL_ENERGY)));
         detailLines.add(new DetailTextLine(getDetailChannelSummary(selectedEntry, MatterPylonBlockEntity.CHANNEL_ITEMS), getDetailChannelColor(MatterPylonBlockEntity.CHANNEL_ITEMS, selectedDetailChannel == MatterPylonBlockEntity.CHANNEL_ITEMS)));
         detailLines.add(new DetailTextLine(getDetailChannelSummary(selectedEntry, MatterPylonBlockEntity.CHANNEL_FLUIDS), getDetailChannelColor(MatterPylonBlockEntity.CHANNEL_FLUIDS, selectedDetailChannel == MatterPylonBlockEntity.CHANNEL_FLUIDS)));
         detailLines.add(new DetailTextLine(getDetailChannelSummary(selectedEntry, MatterPylonBlockEntity.CHANNEL_REDSTONE), getDetailChannelColor(MatterPylonBlockEntity.CHANNEL_REDSTONE, selectedDetailChannel == MatterPylonBlockEntity.CHANNEL_REDSTONE)));
         detailLines.add(new DetailTextLine("", 0x404040));
-        detailLines.add(new DetailTextLine("Edit " + getDetailChannelName(selectedDetailChannel) + " " + getModeShortLabel(getSelectedChannelMode(selectedEntry, selectedDetailChannel)) + " #" + getSelectedChannelId(selectedEntry, selectedDetailChannel), 0x404040));
+        detailLines.add(new DetailTextLine(
+                "Editing: " + getDetailChannelName(selectedDetailChannel)
+                        + " | Mode: " + getModeLabel(getSelectedChannelMode(selectedEntry, selectedDetailChannel))
+                        + " | ID: " + getSelectedChannelId(selectedEntry, selectedDetailChannel),
+                0x404040
+        ));
         return detailLines;
     }
 
+    private List<DetailTextLine> getWrappedDetailLines() {
+        return wrapDetailLines(buildDetailTextLines());
+    }
+
+    private List<DetailTextLine> wrapDetailLines(List<DetailTextLine> sourceLines) {
+        List<DetailTextLine> wrappedLines = new ArrayList<>();
+        for (DetailTextLine line : sourceLines) {
+            if (line.text().isEmpty()) {
+                wrappedLines.add(line);
+                continue;
+            }
+
+            String remaining = line.text();
+            while (!remaining.isEmpty()) {
+                String segment = font.plainSubstrByWidth(remaining, DETAIL_INFO_WIDTH);
+                if (segment.isEmpty()) {
+                    segment = remaining.substring(0, 1);
+                } else if (segment.length() < remaining.length()) {
+                    int lastSpace = segment.lastIndexOf(' ');
+                    if (lastSpace > 0) {
+                        segment = segment.substring(0, lastSpace);
+                    }
+                }
+
+                wrappedLines.add(new DetailTextLine(segment, line.color()));
+                remaining = remaining.substring(segment.length()).stripLeading();
+            }
+        }
+        return wrappedLines;
+    }
+
     private void renderSelectedNodeFilterTooltip(GuiGraphics guiGraphics, int mouseX, int mouseY) {
+        Integer slotIndex = null;
         Component tooltip = null;
         if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_ITEMS) {
             if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_WHITELIST;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_BLACKLIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_ITEM_IMPORT_BLACKLIST;
                 tooltip = Component.literal("Blacklist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_WHITELIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_WHITELIST;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_BLACKLIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_ITEM_EXPORT_BLACKLIST;
                 tooltip = Component.literal("Blacklist");
             }
         } else if (menu.getActiveFilterChannel() == MatterPylonBlockEntity.CHANNEL_FLUIDS) {
             if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_WHITELIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_WHITELIST;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_BLACKLIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_FLUID_IMPORT_BLACKLIST;
                 tooltip = Component.literal("Blacklist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST;
                 tooltip = Component.literal("Whitelist");
             } else if (isMouseOverSlot(mouseX, mouseY, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST)) {
+                slotIndex = MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST;
                 tooltip = Component.literal("Blacklist");
             }
         }
 
-        if (tooltip != null) {
-            guiGraphics.renderTooltip(font, tooltip, mouseX, mouseY);
+        if (tooltip == null || slotIndex == null) {
+            return;
         }
+        if (slotIndex < menu.slots.size() && !menu.slots.get(slotIndex).getItem().isEmpty()) {
+            return;
+        }
+
+        guiGraphics.renderTooltip(font, tooltip, mouseX, mouseY);
     }
 
     private void renderInactiveFilterCover(GuiGraphics guiGraphics) {
@@ -979,14 +1034,14 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
 
     private String getDetailChannelSummary(MatterNetworkControllerBlockEntity.ControllerEntry entry, int channel) {
         if (!supportsChannel(entry, channel)) {
-            return getDetailChannelName(channel) + " OFF";
+            return getDetailChannelName(channel) + ": Not supported";
         }
         return getDetailChannelName(channel)
-                + " "
-                + getModeShortLabel(getSelectedChannelMode(entry, channel))
-                + " #"
+                + ": "
+                + getModeLabel(getSelectedChannelMode(entry, channel))
+                + " | ID: "
                 + getSelectedChannelId(entry, channel)
-                + " "
+                + " | "
                 + formatSelectedChannel(getSelectedChannelAmount(entry, channel), getSelectedChannelRole(entry, channel), getChannelUnit(channel));
     }
 
@@ -996,6 +1051,15 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
             case EXPORT -> "OUT";
             case IMPORT -> "IN";
             case IMPORT_EXPORT -> "IO";
+        };
+    }
+
+    private static String getModeLabel(PylonMode mode) {
+        return switch (mode) {
+            case DISABLED -> "Disabled";
+            case EXPORT -> "Export";
+            case IMPORT -> "Import";
+            case IMPORT_EXPORT -> "Import/Export";
         };
     }
 
@@ -1063,14 +1127,21 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
 
     private String formatSelectedChannel(int amount, int roleOrdinal, String suffix) {
         if (amount <= 0) {
-            return "--";
+            return "Current rate: none";
         }
         String rolePrefix = switch (roleOrdinal) {
             case 1 -> "+";
             case 2 -> "-";
             default -> "";
         };
-        return rolePrefix + amount + " " + suffix;
+        String displaySuffix = switch (suffix) {
+            case "fe/t" -> "FE/t";
+            case "i/t" -> "items/t";
+            case "mb/t" -> "mB/t";
+            case "rs" -> "RS";
+            default -> suffix;
+        };
+        return "Current rate: " + rolePrefix + amount + " " + displaySuffix;
     }
 
     private String trimToWidth(String text, int width) {

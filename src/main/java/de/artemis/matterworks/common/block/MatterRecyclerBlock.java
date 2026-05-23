@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterRecyclerBlockEntity;
+import de.artemis.matterworks.common.item.NetworkDataCardItem;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.Containers;
@@ -40,6 +41,9 @@ public class MatterRecyclerBlock extends HorizontalFacingMachineBlock {
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (NetworkDataCardItem.isHeldBy(player)) {
+            return InteractionResult.PASS;
+        }
         if (!level.isClientSide()) {
             BlockEntity blockEntity = level.getBlockEntity(pos);
             if (blockEntity instanceof MatterRecyclerBlockEntity) {

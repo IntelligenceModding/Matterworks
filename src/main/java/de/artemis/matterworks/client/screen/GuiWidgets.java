@@ -1,5 +1,6 @@
 package de.artemis.matterworks.client.screen;
 
+import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.Minecraft;
 import com.mojang.blaze3d.platform.Window;
 import net.minecraft.client.gui.Font;
@@ -7,10 +8,12 @@ import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.resources.sounds.SimpleSoundInstance;
+import net.minecraft.client.renderer.texture.TextureAtlasSprite;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.sounds.SoundEvents;
 import net.minecraft.util.Mth;
+import net.minecraft.world.inventory.InventoryMenu;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.fluids.FluidStack;
 import org.lwjgl.glfw.GLFW;
@@ -254,6 +257,25 @@ public final class GuiWidgets {
         guiGraphics.fill(barLeft, fillTop, barLeft + barWidth, Math.min(barBottom, fillTop + 2), highlightColor);
     }
 
+    public static void drawInsetVerticalFluidBar(
+            GuiGraphics guiGraphics,
+            int frameLeft,
+            int frameTop,
+            int frameWidth,
+            int frameHeight,
+            int filledHeight,
+            FluidStack fluidStack
+    ) {
+        int barLeft = frameLeft + 2;
+        int barTop = frameTop + 2;
+        int barWidth = frameWidth - 4;
+        int barHeight = frameHeight - 4;
+
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, frameLeft, frameTop, frameWidth, frameHeight);
+        guiGraphics.fill(barLeft, barTop, barLeft + barWidth, barTop + barHeight, CONTENT_BACKGROUND);
+        renderVerticalFluidFill(guiGraphics, barLeft, barTop, barWidth, barHeight, filledHeight, fluidStack, 0.95F);
+    }
+
     public static void fillHorizontalGauge(
             GuiGraphics guiGraphics,
             int x,
@@ -291,6 +313,18 @@ public final class GuiWidgets {
         guiGraphics.fill(x, fillTop, x + width, Math.min(y + height, fillTop + 2), highlightColor);
     }
 
+    public static void fillVerticalFluidGauge(
+            GuiGraphics guiGraphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            int filledHeight,
+            FluidStack fluidStack
+    ) {
+        renderVerticalFluidFill(guiGraphics, x, y, width, height, filledHeight, fluidStack, 0.90F);
+    }
+
     public static int getFluidFillColor(FluidStack fluidStack, int fallbackColor) {
         if (fluidStack == null || fluidStack.isEmpty()) {
             return fallbackColor;
@@ -322,6 +356,61 @@ public final class GuiWidgets {
         int innerBottom = y + height - 1;
         guiGraphics.fill(innerLeft, innerTop, innerRight, innerBottom, fillColor);
         guiGraphics.fill(innerLeft, innerTop, innerRight, Math.min(innerBottom, innerTop + 2), highlightColor);
+    }
+
+    private static void renderVerticalFluidFill(
+            GuiGraphics guiGraphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            int filledHeight,
+            FluidStack fluidStack,
+            float alpha
+    ) {
+        if (fluidStack == null || fluidStack.isEmpty() || filledHeight <= 0 || width <= 0 || height <= 0) {
+            return;
+        }
+
+        int clampedHeight = Math.min(filledHeight, height);
+        int fillTop = y + height - clampedHeight;
+        renderFluidTiledRect(guiGraphics, fluidStack, x, fillTop, width, clampedHeight, alpha);
+    }
+
+    private static void renderFluidTiledRect(
+            GuiGraphics guiGraphics,
+            FluidStack fluidStack,
+            int x,
+            int y,
+            int width,
+            int height,
+            float alpha
+    ) {
+        if (fluidStack.isEmpty() || width <= 0 || height <= 0) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null) {
+            return;
+        }
+
+        IClientFluidTypeExtensions extensions = IClientFluidTypeExtensions.of(fluidStack.getFluid());
+        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(extensions.getStillTexture(fluidStack));
+        int tint = extensions.getTintColor(fluidStack);
+        float red = ((tint >> 16) & 0xFF) / 255.0F;
+        float green = ((tint >> 8) & 0xFF) / 255.0F;
+        float blue = (tint & 0xFF) / 255.0F;
+
+        guiGraphics.enableScissor(x, y, x + width, y + height);
+        RenderSystem.setShaderColor(red, green, blue, alpha);
+        for (int drawX = x; drawX < x + width; drawX += 16) {
+            for (int drawY = y + height - 16; drawY > y - 16; drawY -= 16) {
+                guiGraphics.blit(drawX, drawY, 0, 16, 16, sprite);
+            }
+        }
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        guiGraphics.disableScissor();
     }
 
     public static int getHoveredHistorySampleIndex(int mouseX, int mouseY, int frameLeft, int frameTop, int frameWidth, int frameHeight, int historyCapacity) {
@@ -383,7 +472,7 @@ public final class GuiWidgets {
 
         @Override
         protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            drawVanillaButton(guiGraphics, this.getX(), this.getY(), this.width, this.height, this.active, this.isHoveredOrFocused() || isSelectedStyle());
+            drawVanillaButton(guiGraphics, this.getX(), this.getY(), this.width, this.height, this.active, this.isHovered() || isSelectedStyle());
             drawText(guiGraphics, getTextColor());
         }
 
@@ -528,7 +617,7 @@ public final class GuiWidgets {
 
         @Override
         protected void renderWidget(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
-            drawVanillaButton(guiGraphics, this.getX(), this.getY(), this.width, this.height, this.active, this.isHoveredOrFocused() || selected);
+            drawVanillaButton(guiGraphics, this.getX(), this.getY(), this.width, this.height, this.active, this.isHovered() || selected);
             drawText(guiGraphics, getTextColor());
         }
 

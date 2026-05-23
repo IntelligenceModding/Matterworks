@@ -22,16 +22,20 @@ import de.artemis.matterworks.client.screen.MatterNetworkMonitorScreen;
 import de.artemis.matterworks.client.screen.MatterPylonScreen;
 import de.artemis.matterworks.client.screen.MatterRecyclerScreen;
 import de.artemis.matterworks.client.screen.MatterSeparatorScreen;
+import de.artemis.matterworks.client.screen.GraviticCondenserScreen;
 import de.artemis.matterworks.client.screen.MatterStorageBarrelScreen;
 import de.artemis.matterworks.client.screen.MatterStabilizerScreen;
 import de.artemis.matterworks.client.screen.PowerCrystalChargerScreen;
+import de.artemis.matterworks.client.screen.SingularityLinkScreen;
 import de.artemis.matterworks.client.tooltip.MatterFilterClientTooltipComponent;
+import de.artemis.matterworks.client.tooltip.LinkedBlockItemDecorator;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
 import de.artemis.matterworks.common.network.PlaceMatterBatteryPreviewBlockPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.registry.ModParticles;
 import de.artemis.matterworks.common.tooltip.MatterFilterTooltip;
@@ -44,6 +48,7 @@ import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.InputEvent;
 import net.neoforged.neoforge.client.event.RegisterGuiLayersEvent;
+import net.neoforged.neoforge.client.event.RegisterItemDecorationsEvent;
 import net.neoforged.neoforge.client.event.RegisterClientTooltipComponentFactoriesEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
@@ -69,9 +74,11 @@ public class ClientModEvents {
         event.register(ModMenuTypes.FLUID_TANK.get(), FluidTankScreen::new);
         event.register(ModMenuTypes.MATTER_STORAGE_BARREL.get(), MatterStorageBarrelScreen::new);
         event.register(ModMenuTypes.MATTER_PYLON.get(), MatterPylonScreen::new);
+        event.register(ModMenuTypes.SINGULARITY_LINK.get(), SingularityLinkScreen::new);
         event.register(ModMenuTypes.MATTER_NETWORK_CONTROLLER.get(), MatterNetworkControllerScreen::new);
         event.register(ModMenuTypes.MATTER_NETWORK_MONITOR.get(), MatterNetworkMonitorScreen::new);
         event.register(ModMenuTypes.MATTER_SEPARATOR.get(), MatterSeparatorScreen::new);
+        event.register(ModMenuTypes.GRAVITIC_CONDENSER.get(), GraviticCondenserScreen::new);
         event.register(ModMenuTypes.POWER_CRYSTAL_CHARGER.get(), PowerCrystalChargerScreen::new);
     }
 
@@ -87,6 +94,7 @@ public class ClientModEvents {
 
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_PYLON.get(), MatterPylonBlockEntityRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY_LINK.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_NETWORK_CONTROLLER.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_NETWORK_MONITOR.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_ENERGY_CELL.get(), MatterPylonBlockEntityRenderer::new);
@@ -97,6 +105,12 @@ public class ClientModEvents {
 
     public static void registerTooltipComponents(RegisterClientTooltipComponentFactoriesEvent event) {
         event.register(MatterFilterTooltip.class, MatterFilterClientTooltipComponent::new);
+    }
+
+    public static void registerItemDecorations(RegisterItemDecorationsEvent event) {
+        LinkedBlockItemDecorator decorator = new LinkedBlockItemDecorator();
+        event.register(ModItems.NETWORK_DATA_CARD.get(), decorator);
+        event.register(ModItems.NETWORK_REMOTE_TERMINAL.get(), decorator);
     }
 
     public static void addGuiOverlayLayers(RegisterGuiLayersEvent event) {

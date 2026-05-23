@@ -68,30 +68,24 @@ public class MatterSeparatorScreen extends net.minecraft.client.gui.screens.inve
                 ENERGY_FILL_TOP_COLOR
         );
 
-        int refinedFillColor = GuiWidgets.getFluidFillColor(menu.getFluidStack(), 0xFF9CE5FF);
-        int refinedHighlightColor = GuiWidgets.getFluidHighlightColor(menu.getFluidStack(), 0xFFB8ECFF);
-        GuiWidgets.fillVerticalGauge(
+        GuiWidgets.fillVerticalFluidGauge(
                 guiGraphics,
                 leftPos + REFINED_TANK_X,
                 topPos + TANK_Y,
                 TANK_WIDTH,
                 TANK_HEIGHT,
                 menu.getScaledFluidAmount(TANK_HEIGHT),
-                refinedFillColor,
-                refinedHighlightColor
+                menu.getFluidStack()
         );
 
-        int sludgeFillColor = GuiWidgets.getFluidFillColor(menu.getSludgeFluidStack(), 0xFF7B5739);
-        int sludgeHighlightColor = GuiWidgets.getFluidHighlightColor(menu.getSludgeFluidStack(), 0xFF9A7350);
-        GuiWidgets.fillVerticalGauge(
+        GuiWidgets.fillVerticalFluidGauge(
                 guiGraphics,
                 leftPos + SLUDGE_TANK_X,
                 topPos + TANK_Y,
                 TANK_WIDTH,
                 TANK_HEIGHT,
                 menu.getScaledSludgeAmount(TANK_HEIGHT),
-                sludgeFillColor,
-                sludgeHighlightColor
+                menu.getSludgeFluidStack()
         );
     }
 

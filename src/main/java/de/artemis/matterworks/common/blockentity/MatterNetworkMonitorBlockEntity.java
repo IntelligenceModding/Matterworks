@@ -10,9 +10,11 @@ import net.minecraft.nbt.ListTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
@@ -61,6 +63,19 @@ public class MatterNetworkMonitorBlockEntity extends MatterPylonBlockEntity {
             return false;
         }
         return remoteAccess || player.distanceToSqr(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D) <= 64.0D;
+    }
+
+    public void openRemoteMenu(ServerPlayer player) {
+        player.openMenu(
+                new SimpleMenuProvider(
+                        (containerId, inventory, menuPlayer) -> new MatterNetworkMonitorMenu(containerId, inventory, this, true),
+                        getDisplayName()
+                ),
+                buffer -> {
+                    buffer.writeBlockPos(worldPosition);
+                    buffer.writeBoolean(true);
+                }
+        );
     }
 
     @Override

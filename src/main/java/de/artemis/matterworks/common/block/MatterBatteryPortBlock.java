@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
+import de.artemis.matterworks.common.item.NetworkDataCardItem;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
@@ -29,6 +30,9 @@ public class MatterBatteryPortBlock extends AbstractBatteryMultiblockEntityBlock
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (NetworkDataCardItem.isHeldBy(player)) {
+            return InteractionResult.PASS;
+        }
         if (!level.isClientSide() && level.getBlockEntity(pos) instanceof MatterBatteryPortBlockEntity portBlockEntity) {
             if (player.isShiftKeyDown()) {
                 portBlockEntity.handleNetworkLinkUse(player);
