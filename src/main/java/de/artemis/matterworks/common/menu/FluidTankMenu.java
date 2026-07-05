@@ -12,7 +12,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -22,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class FluidTankMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
+public class FluidTankMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int MACHINE_SLOT_COUNT = FluidTankBlockEntity.SLOT_COUNT;
     private static final int PLAYER_INVENTORY_START = MACHINE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
@@ -193,27 +192,14 @@ public class FluidTankMenu extends AbstractContainerMenu implements NamedBlockMe
                 return ItemStack.EMPTY;
             }
         } else if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-            if (!this.moveItemStackTo(sourceStack, FluidTankBlockEntity.CRYSTAL_SLOT, FluidTankBlockEntity.CRYSTAL_SLOT + 1, false)) {
+            if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, FluidTankBlockEntity.CRYSTAL_SLOT)) {
                 return ItemStack.EMPTY;
             }
         } else if (FluidItemHelper.isFluidItem(sourceStack)) {
-            boolean moved = false;
-            if (FluidItemHelper.canProvideFluid(sourceStack)) {
-                moved = this.moveItemStackTo(
-                        sourceStack,
-                        FluidTankBlockEntity.DRAIN_SLOT,
-                        FluidTankBlockEntity.DRAIN_SLOT + 1,
-                        false
-                );
-            }
-            if (!sourceStack.isEmpty()) {
-                moved = this.moveItemStackTo(
-                        sourceStack,
-                        FluidTankBlockEntity.FILL_SLOT,
-                        FluidTankBlockEntity.FILL_SLOT + 1,
-                        false
-                ) || moved;
-            }
+            boolean preferFill = FluidItemHelper.isEmptyFluidContainer(sourceStack) && !FluidItemHelper.isFilledFluidContainer(sourceStack);
+            boolean moved = preferFill
+                    ? moveFluidContainerToFillFirst(sourceStack)
+                    : moveFluidContainerToDrainFirst(sourceStack);
             if (!moved) {
                 if (index < PLAYER_HOTBAR_START) {
                     if (!this.moveItemStackTo(sourceStack, PLAYER_HOTBAR_START, PLAYER_HOTBAR_END, false)) {
@@ -245,25 +231,35 @@ public class FluidTankMenu extends AbstractContainerMenu implements NamedBlockMe
         return copiedStack;
     }
 
-    private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
+    private boolean moveFluidContainerToDrainFirst(ItemStack sourceStack) {
+        boolean moved = false;
+        if (FluidItemHelper.isFilledFluidContainer(sourceStack)) {
+            moved = moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, FluidTankBlockEntity.DRAIN_SLOT);
         }
+        if (!sourceStack.isEmpty()) {
+            moved = moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, FluidTankBlockEntity.FILL_SLOT) || moved;
+        }
+        return moved;
+    }
+
+    private boolean moveFluidContainerToFillFirst(ItemStack sourceStack) {
+        boolean moved = moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, FluidTankBlockEntity.FILL_SLOT);
+        if (!sourceStack.isEmpty()) {
+            moved = moveFluidContainerToDrainFirst(sourceStack) || moved;
+        }
+        return moved;
+    }
+
+    private void addPlayerInventory(Inventory inventory) {
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static FluidTankBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof FluidTankBlockEntity fluidTankBlockEntity) {
-            return fluidTankBlockEntity;
-        }
-        throw new IllegalStateException("Missing Fluid Tank block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, FluidTankBlockEntity.class, "Fluid Tank");
     }
 
     private static final class CrystalSlot extends SlotItemHandler {

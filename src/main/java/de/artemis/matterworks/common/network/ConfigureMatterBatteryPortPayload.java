@@ -1,7 +1,7 @@
 package de.artemis.matterworks.common.network;
 
-import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
+import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;

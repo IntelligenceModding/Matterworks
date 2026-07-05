@@ -23,7 +23,9 @@ public class MatterBatteryPreviewScreen extends AbstractRenamableContainerScreen
     protected void init() {
         super.init();
         previewButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 8, topPos + 62, 68, 20, getPreviewButtonLabel(), button -> {
-            MatterBatteryPreviewState.toggle(menu.getBlockEntity());
+            if (MatterBatteryPreviewState.isActive()) {
+                MatterBatteryPreviewState.clear();
+            }
             refreshPreviewButtons();
         }));
         layerDownButton = addRenderableWidget(GuiWidgets.panelButton(leftPos + 86, topPos + 62, 20, 20, Component.literal("-"), button -> {

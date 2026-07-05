@@ -11,14 +11,13 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class PowerCrystalChargerMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
+public class PowerCrystalChargerMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int PLAYER_INVENTORY_START = PowerCrystalChargerBlockEntity.SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
@@ -158,19 +157,29 @@ public class PowerCrystalChargerMenu extends AbstractContainerMenu implements Na
         } else if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
             boolean moved = false;
             if (PowerCrystalEffects.hasChargerEffect(sourceStack)) {
-                moved = moveItemStackTo(sourceStack, PowerCrystalChargerBlockEntity.SLOT_BOOST, PowerCrystalChargerBlockEntity.SLOT_BOOST + 1, false);
+                moved = moveToContainerSlot(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_BOOST);
             }
             if (!moved
-                    && !moveItemStackTo(sourceStack, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START + PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT, false)) {
+                    && !moveToContainerSlotRange(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT)) {
+                return ItemStack.EMPTY;
+            }
+        } else if (EnergyItemHelper.isPowerBank(sourceStack)) {
+            boolean moved = false;
+            if (EnergyItemHelper.canReceiveEnergy(sourceStack)) {
+                moved = moveToContainerSlotRange(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT);
+            }
+            if (!moved && EnergyItemHelper.canProvideEnergy(sourceStack)) {
+                moved = moveToContainerSlot(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT);
+            }
+            if (!moved) {
                 return ItemStack.EMPTY;
             }
         } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-            if (!moveItemStackTo(sourceStack, PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT, PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT + 1, false)
-                    && !moveItemStackTo(sourceStack, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START + PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT, false)) {
+            if (!moveToContainerSlot(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_POWER_INPUT)) {
                 return ItemStack.EMPTY;
             }
         } else if (EnergyItemHelper.canReceiveEnergy(sourceStack)) {
-            if (!moveItemStackTo(sourceStack, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START + PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT, false)) {
+            if (!moveToContainerSlotRange(sourceStack, PowerCrystalChargerBlockEntity.SLOT_COUNT, PowerCrystalChargerBlockEntity.SLOT_CHARGE_START, PowerCrystalChargerBlockEntity.CHARGE_SLOT_COUNT)) {
                 return ItemStack.EMPTY;
             }
         } else if (index < PLAYER_HOTBAR_START) {
@@ -205,24 +214,15 @@ public class PowerCrystalChargerMenu extends AbstractContainerMenu implements Na
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static PowerCrystalChargerBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof PowerCrystalChargerBlockEntity chargerBlockEntity) {
-            return chargerBlockEntity;
-        }
-        throw new IllegalStateException("Missing Charger block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, PowerCrystalChargerBlockEntity.class, "Charger");
     }
 
     private static final class ChargeTargetSlot extends SlotItemHandler {

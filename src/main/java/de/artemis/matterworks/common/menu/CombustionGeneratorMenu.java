@@ -11,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -19,7 +18,7 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class CombustionGeneratorMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
+public class CombustionGeneratorMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int MACHINE_SLOT_COUNT = CombustionGeneratorBlockEntity.SLOT_COUNT;
     private static final int PLAYER_INVENTORY_START = MACHINE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
@@ -158,16 +157,16 @@ public class CombustionGeneratorMenu extends AbstractContainerMenu implements Na
                 return ItemStack.EMPTY;
             }
         } else if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-            if (!moveItemStackTo(sourceStack, CombustionGeneratorBlockEntity.SLOT_BOOST, CombustionGeneratorBlockEntity.SLOT_BOOST + 1, false)
-                    && !moveItemStackTo(sourceStack, CombustionGeneratorBlockEntity.FUEL_SLOT_START, CombustionGeneratorBlockEntity.FUEL_SLOT_START + CombustionGeneratorBlockEntity.FUEL_SLOT_COUNT, false)) {
+            if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, CombustionGeneratorBlockEntity.SLOT_BOOST)
+                    && !moveToContainerSlotRange(sourceStack, MACHINE_SLOT_COUNT, CombustionGeneratorBlockEntity.FUEL_SLOT_START, CombustionGeneratorBlockEntity.FUEL_SLOT_COUNT)) {
                 return ItemStack.EMPTY;
             }
         } else if (EnergyItemHelper.canReceiveEnergy(sourceStack)) {
-            if (!moveItemStackTo(sourceStack, CombustionGeneratorBlockEntity.SLOT_POWER_BANK, CombustionGeneratorBlockEntity.SLOT_POWER_BANK + 1, false)) {
+            if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, CombustionGeneratorBlockEntity.SLOT_POWER_BANK)) {
                 return ItemStack.EMPTY;
             }
         } else if (isFuel(sourceStack)) {
-            if (!moveItemStackTo(sourceStack, CombustionGeneratorBlockEntity.FUEL_SLOT_START, CombustionGeneratorBlockEntity.FUEL_SLOT_START + CombustionGeneratorBlockEntity.FUEL_SLOT_COUNT, false)) {
+            if (!moveToContainerSlotRange(sourceStack, MACHINE_SLOT_COUNT, CombustionGeneratorBlockEntity.FUEL_SLOT_START, CombustionGeneratorBlockEntity.FUEL_SLOT_COUNT)) {
                 return ItemStack.EMPTY;
             }
         } else if (index < PLAYER_HOTBAR_START) {
@@ -206,17 +205,11 @@ public class CombustionGeneratorMenu extends AbstractContainerMenu implements Na
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static boolean isFuel(ItemStack stack) {
@@ -224,10 +217,7 @@ public class CombustionGeneratorMenu extends AbstractContainerMenu implements Na
     }
 
     private static CombustionGeneratorBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof CombustionGeneratorBlockEntity generatorBlockEntity) {
-            return generatorBlockEntity;
-        }
-        throw new IllegalStateException("Missing Combustion Generator block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, CombustionGeneratorBlockEntity.class, "Combustion Generator");
     }
 
     private static final class FuelSlot extends SlotItemHandler {

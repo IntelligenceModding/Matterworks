@@ -46,18 +46,12 @@ public class MatterConstructorMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     @Override
     protected void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     public int getSludgeAmount() {
@@ -109,23 +103,23 @@ public class MatterConstructorMenu extends AbstractMatterMachineMenu {
             }
         } else if (index >= playerInventoryStart) {
             if (sourceStack.is(ModItems.ENCODED_TEMPLATE.get())) {
-                if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.SLOT_TEMPLATE, MatterConstructorBlockEntity.SLOT_TEMPLATE + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterConstructorBlockEntity.SLOT_TEMPLATE)) {
                     return ItemStack.EMPTY;
                 }
             } else if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.SLOT_CRYSTAL, MatterConstructorBlockEntity.SLOT_CRYSTAL + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterConstructorBlockEntity.SLOT_CRYSTAL)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.SLOT_POWER_INPUT, MatterConstructorBlockEntity.SLOT_POWER_INPUT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterConstructorBlockEntity.SLOT_POWER_INPUT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(ModItems.REFINED_MATTER_BUCKET.get())) {
-                if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT, MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(Items.BUCKET)) {
-                if (!this.moveItemStackTo(sourceStack, MatterConstructorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, MatterConstructorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterConstructorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (index < playerHotbarStart) {
@@ -152,9 +146,6 @@ public class MatterConstructorMenu extends AbstractMatterMachineMenu {
     }
 
     private static MatterConstructorBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterConstructorBlockEntity constructorBlockEntity) {
-            return constructorBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Constructor block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterConstructorBlockEntity.class, "Matter Constructor");
     }
 }

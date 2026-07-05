@@ -157,9 +157,9 @@ public class FluidTankScreen extends AbstractRenamableContainerScreen<FluidTankM
             return;
         }
 
-        GraphHover hover = getHoveredGraph(mouseX, mouseY);
-        if (hover != null) {
-            guiGraphics.renderTooltip(font, hover.lines(), Optional.empty(), mouseX, mouseY);
+        List<Component> hoverLines = getHoveredGraphLines(mouseX, mouseY);
+        if (hoverLines != null) {
+            guiGraphics.renderTooltip(font, hoverLines, Optional.empty(), mouseX, mouseY);
         }
     }
 
@@ -171,33 +171,22 @@ public class FluidTankScreen extends AbstractRenamableContainerScreen<FluidTankM
         guiGraphics.drawString(font, trimmedName, x, y, 0xF0F0F0, false);
     }
 
-    private GraphHover getHoveredGraph(int mouseX, int mouseY) {
-        int historySize = menu.getHistorySize();
-        int historyCapacity = menu.getHistoryCapacity();
-        if (historyCapacity <= 0) {
-            return null;
-        }
-
-        int hoveredVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+    private List<Component> getHoveredGraphLines(int mouseX, int mouseY) {
+        int historyIndex = GuiWidgets.getHoveredHistoryIndex(
                 mouseX,
                 mouseY,
                 leftPos + GRAPH_X,
                 topPos + GRAPH_Y,
                 GRAPH_WIDTH,
                 GRAPH_HEIGHT,
-                historyCapacity
+                menu.getHistorySize(),
+                menu.getHistoryCapacity()
         );
-        if (hoveredVisibleIndex < 0) {
-            return null;
-        }
-
-        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(hoveredVisibleIndex, historySize, historyCapacity);
         if (historyIndex < 0) {
             return null;
         }
-
         FluidTankBlockEntity.TransferHistorySample sample = menu.getHistorySample(historyIndex);
-        return new GraphHover(List.of(GuiWidgets.formatRateComponent(sample.netRate(), "mB/t", true)));
+        return List.of(GuiWidgets.formatRateComponent(sample.netRate(), "mB/t", true));
     }
 
     private FluidTankBlockEntity.TransferHistorySample getVisibleSample(int visibleIndex) {
@@ -226,8 +215,5 @@ public class FluidTankScreen extends AbstractRenamableContainerScreen<FluidTankM
 
     private List<TopCategoryTabs.Tab> buildTabs() {
         return sideConfig.buildTabs(menu, () -> PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos(), menu.isRemoteAccess())));
-    }
-
-    private record GraphHover(List<Component> lines) {
     }
 }

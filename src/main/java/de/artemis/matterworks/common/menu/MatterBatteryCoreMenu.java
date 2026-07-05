@@ -7,13 +7,12 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-public class MatterBatteryCoreMenu extends AbstractContainerMenu implements NamedBlockMenu {
+public class MatterBatteryCoreMenu extends AbstractBaseMenu implements NamedBlockMenu {
     private final MatterBatteryCoreBlockEntity blockEntity;
     private final ContainerData data;
 
@@ -85,23 +84,14 @@ public class MatterBatteryCoreMenu extends AbstractContainerMenu implements Name
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 120 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 120);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 178));
-        }
+        addPlayerHotbarSlots(inventory, 8, 178);
     }
 
     private static MatterBatteryCoreBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterBatteryCoreBlockEntity blockEntity) {
-            return blockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Battery Core block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterBatteryCoreBlockEntity.class, "Matter Battery Core");
     }
 }

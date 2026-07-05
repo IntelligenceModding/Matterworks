@@ -19,6 +19,9 @@ public final class MultiblockPartState {
     private BlockPos localPos = BlockPos.ZERO;
     private Direction front = Direction.NORTH;
     private MultiblockRole role = MultiblockRole.CASING;
+    private int width;
+    private int height;
+    private int depth;
 
     public boolean isFormed() {
         return formed;
@@ -52,6 +55,18 @@ public final class MultiblockPartState {
         return role;
     }
 
+    public int getWidth() {
+        return width;
+    }
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getDepth() {
+        return depth;
+    }
+
     public boolean isController(BlockPos pos) {
         return formed && controllerPos.equals(pos);
     }
@@ -67,7 +82,10 @@ public final class MultiblockPartState {
                 || !Objects.equals(originPos, structure.originPos())
                 || !Objects.equals(localPos, assignedLocalPos)
                 || front != structure.front()
-                || role != assignedRole;
+                || role != assignedRole
+                || width != structure.width()
+                || height != structure.height()
+                || depth != structure.depth();
         formed = true;
         structureId = structure.structureId();
         definitionId = structure.definitionId();
@@ -76,6 +94,9 @@ public final class MultiblockPartState {
         localPos = assignedLocalPos.immutable();
         front = structure.front();
         role = assignedRole;
+        width = structure.width();
+        height = structure.height();
+        depth = structure.depth();
         return changed;
     }
 
@@ -91,6 +112,9 @@ public final class MultiblockPartState {
         localPos = BlockPos.ZERO;
         front = Direction.NORTH;
         role = MultiblockRole.CASING;
+        width = 0;
+        height = 0;
+        depth = 0;
         return true;
     }
 
@@ -114,6 +138,9 @@ public final class MultiblockPartState {
         multiblockTag.putInt("local_z", localPos.getZ());
         multiblockTag.putString("front", front.getName());
         multiblockTag.putString("role", role.name().toLowerCase());
+        multiblockTag.putInt("width", width);
+        multiblockTag.putInt("height", height);
+        multiblockTag.putInt("depth", depth);
         tag.put(TAG_ROOT, multiblockTag);
     }
 
@@ -141,6 +168,9 @@ public final class MultiblockPartState {
             case "internal" -> MultiblockRole.INTERNAL;
             default -> MultiblockRole.CASING;
         };
+        width = Math.max(0, multiblockTag.getInt("width"));
+        height = Math.max(0, multiblockTag.getInt("height"));
+        depth = Math.max(0, multiblockTag.getInt("depth"));
     }
 
     public boolean sync(BlockEntity blockEntity) {

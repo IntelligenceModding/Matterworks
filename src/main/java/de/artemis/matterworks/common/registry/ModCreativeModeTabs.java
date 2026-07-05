@@ -43,6 +43,7 @@ public class ModCreativeModeTabs {
                         output.accept(ModItems.MULTIBLOCK_GLASS_PANE.get());
                         output.accept(ModItems.BATTERY_CORE_ASSEMBLY.get());
                         output.accept(ModItems.EMPTY_TEMPLATE.get());
+                        output.accept(ModItems.MATTER_ARCHITECT.get());
                         output.accept(ModItems.MATTER_ITEM_FILTER.get());
                         output.accept(ModItems.MATTER_FLUID_FILTER.get());
                         output.accept(ModItems.ENCODED_TEMPLATE.get());

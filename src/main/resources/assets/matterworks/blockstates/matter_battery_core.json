@@ -1,16 +1,28 @@
 {
   "variants": {
-    "facing=north": {
+    "facing=north,formed=false": {
       "model": "matterworks:block/matter_battery_core"
     },
-    "facing=east": {
+    "facing=east,formed=false": {
       "model": "matterworks:block/matter_battery_core"
     },
-    "facing=south": {
+    "facing=south,formed=false": {
       "model": "matterworks:block/matter_battery_core"
     },
-    "facing=west": {
+    "facing=west,formed=false": {
       "model": "matterworks:block/matter_battery_core"
+    },
+    "facing=north,formed=true": {
+      "model": "matterworks:block/invisible"
+    },
+    "facing=east,formed=true": {
+      "model": "matterworks:block/invisible"
+    },
+    "facing=south,formed=true": {
+      "model": "matterworks:block/invisible"
+    },
+    "facing=west,formed=true": {
+      "model": "matterworks:block/invisible"
     }
   }
 }

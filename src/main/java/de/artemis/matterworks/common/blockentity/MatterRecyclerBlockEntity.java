@@ -455,19 +455,7 @@ public class MatterRecyclerBlockEntity extends AbstractMatterMachineBlockEntity 
             return;
         }
 
-        moveLegacyStack(13, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
-    }
-
-    private void moveLegacyStack(int fromSlot, int preferredSlot, java.util.function.Predicate<ItemStack> predicate) {
-        ItemStack stack = itemHandler.getStackInSlot(fromSlot);
-        if (stack.isEmpty() || !predicate.test(stack)) {
-            return;
-        }
-
-        if (itemHandler.getStackInSlot(preferredSlot).isEmpty()) {
-            itemHandler.setStackInSlot(preferredSlot, stack.copy());
-            itemHandler.setStackInSlot(fromSlot, ItemStack.EMPTY);
-        }
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 13, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
     }
 
     @Override

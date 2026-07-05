@@ -16,6 +16,8 @@ import org.joml.Vector3f;
 public final class MatterBatteryFormationRenderer {
     private static final Vector3f OUTLINE_COLOR = new Vector3f(0.28F, 0.90F, 0.98F);
     private static final Vector3f CORE_COLOR = new Vector3f(0.82F, 0.45F, 1.0F);
+    private static final Vector3f BROKEN_OUTLINE_COLOR = new Vector3f(0.96F, 0.28F, 0.28F);
+    private static final Vector3f BROKEN_CORE_COLOR = new Vector3f(1.0F, 0.58F, 0.58F);
     private static final float EDGE_HALF_WIDTH = 0.035F;
 
     private MatterBatteryFormationRenderer() {
@@ -55,56 +57,58 @@ public final class MatterBatteryFormationRenderer {
 
     private static void renderPulse(Matrix4f matrix, VertexConsumer consumer, Vec3 cameraPos,
                                     MatterBatteryFormationOverlayState.FormationPulse pulse, long gameTime) {
-        float minX = (float) (pulse.originPos().getX() - cameraPos.x);
-        float minY = (float) (pulse.originPos().getY() - cameraPos.y);
-        float minZ = (float) (pulse.originPos().getZ() - cameraPos.z);
-        float maxX = minX + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
-        float maxY = minY + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
-        float maxZ = minZ + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
+        float minX = (float) (pulse.minPos().getX() - cameraPos.x);
+        float minY = (float) (pulse.minPos().getY() - cameraPos.y);
+        float minZ = (float) (pulse.minPos().getZ() - cameraPos.z);
+        float maxX = minX + pulse.sizeX();
+        float maxY = minY + pulse.sizeY();
+        float maxZ = minZ + pulse.sizeZ();
 
         long remainingTicks = Math.max(0L, pulse.expireTick() - gameTime);
         float fade = Math.min(1.0F, remainingTicks / (float) Math.max(1, pulse.durationTicks()));
-        float pulseWave = 0.70F + 0.30F * (float) Math.sin((gameTime + pulse.originPos().asLong()) * 0.35D);
+        float pulseWave = 0.70F + 0.30F * (float) Math.sin((gameTime + pulse.minPos().asLong()) * 0.35D);
         float edgeAlpha = 0.12F + (0.24F * fade * pulseWave);
         float faceAlpha = 0.03F + (0.06F * fade * pulseWave);
+        Vector3f outlineColor = pulse.pulseType() == MatterBatteryFormationOverlayState.PulseType.BROKEN ? BROKEN_OUTLINE_COLOR : OUTLINE_COLOR;
+        Vector3f coreColor = pulse.pulseType() == MatterBatteryFormationOverlayState.PulseType.BROKEN ? BROKEN_CORE_COLOR : CORE_COLOR;
 
         drawBox(consumer, matrix, minX - EDGE_HALF_WIDTH, minY - EDGE_HALF_WIDTH, minZ - EDGE_HALF_WIDTH,
                 maxX + EDGE_HALF_WIDTH, maxY + EDGE_HALF_WIDTH, maxZ + EDGE_HALF_WIDTH,
-                OUTLINE_COLOR.x(), OUTLINE_COLOR.y(), OUTLINE_COLOR.z(), faceAlpha);
+                outlineColor.x(), outlineColor.y(), outlineColor.z(), faceAlpha);
 
-        drawEdgeX(consumer, matrix, minX, minY, minZ, maxX, edgeAlpha);
-        drawEdgeX(consumer, matrix, minX, minY, maxZ, maxX, edgeAlpha);
-        drawEdgeX(consumer, matrix, minX, maxY, minZ, maxX, edgeAlpha);
-        drawEdgeX(consumer, matrix, minX, maxY, maxZ, maxX, edgeAlpha);
+        drawEdgeX(consumer, matrix, minX, minY, minZ, maxX, edgeAlpha, outlineColor);
+        drawEdgeX(consumer, matrix, minX, minY, maxZ, maxX, edgeAlpha, outlineColor);
+        drawEdgeX(consumer, matrix, minX, maxY, minZ, maxX, edgeAlpha, outlineColor);
+        drawEdgeX(consumer, matrix, minX, maxY, maxZ, maxX, edgeAlpha, outlineColor);
 
-        drawEdgeY(consumer, matrix, minX, minY, minZ, maxY, edgeAlpha);
-        drawEdgeY(consumer, matrix, maxX, minY, minZ, maxY, edgeAlpha);
-        drawEdgeY(consumer, matrix, minX, minY, maxZ, maxY, edgeAlpha);
-        drawEdgeY(consumer, matrix, maxX, minY, maxZ, maxY, edgeAlpha);
+        drawEdgeY(consumer, matrix, minX, minY, minZ, maxY, edgeAlpha, outlineColor);
+        drawEdgeY(consumer, matrix, maxX, minY, minZ, maxY, edgeAlpha, outlineColor);
+        drawEdgeY(consumer, matrix, minX, minY, maxZ, maxY, edgeAlpha, outlineColor);
+        drawEdgeY(consumer, matrix, maxX, minY, maxZ, maxY, edgeAlpha, outlineColor);
 
-        drawEdgeZ(consumer, matrix, minX, minY, minZ, maxZ, edgeAlpha);
-        drawEdgeZ(consumer, matrix, maxX, minY, minZ, maxZ, edgeAlpha);
-        drawEdgeZ(consumer, matrix, minX, maxY, minZ, maxZ, edgeAlpha);
-        drawEdgeZ(consumer, matrix, maxX, maxY, minZ, maxZ, edgeAlpha);
+        drawEdgeZ(consumer, matrix, minX, minY, minZ, maxZ, edgeAlpha, outlineColor);
+        drawEdgeZ(consumer, matrix, maxX, minY, minZ, maxZ, edgeAlpha, outlineColor);
+        drawEdgeZ(consumer, matrix, minX, maxY, minZ, maxZ, edgeAlpha, outlineColor);
+        drawEdgeZ(consumer, matrix, maxX, maxY, minZ, maxZ, edgeAlpha, outlineColor);
 
         float cornerAlpha = Math.min(0.50F, edgeAlpha * 1.8F);
-        drawCornerCube(consumer, matrix, minX, minY, minZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, maxX, minY, minZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, minX, minY, maxZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, maxX, minY, maxZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, minX, maxY, minZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, maxX, maxY, minZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, minX, maxY, maxZ, cornerAlpha);
-        drawCornerCube(consumer, matrix, maxX, maxY, maxZ, cornerAlpha);
+        drawCornerCube(consumer, matrix, minX, minY, minZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, maxX, minY, minZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, minX, minY, maxZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, maxX, minY, maxZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, minX, maxY, minZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, maxX, maxY, minZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, minX, maxY, maxZ, cornerAlpha, coreColor);
+        drawCornerCube(consumer, matrix, maxX, maxY, maxZ, cornerAlpha, coreColor);
     }
 
     private static void spawnOutlineParticles(ClientLevel level, MatterBatteryFormationOverlayState.FormationPulse pulse, long gameTime) {
-        double minX = pulse.originPos().getX();
-        double minY = pulse.originPos().getY();
-        double minZ = pulse.originPos().getZ();
-        double maxX = minX + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
-        double maxY = minY + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
-        double maxZ = minZ + MatterBatteryMultiblockDefinition.STRUCTURE_SIZE;
+        double minX = pulse.minPos().getX();
+        double minY = pulse.minPos().getY();
+        double minZ = pulse.minPos().getZ();
+        double maxX = minX + pulse.sizeX();
+        double maxY = minY + pulse.sizeY();
+        double maxZ = minZ + pulse.sizeZ();
 
         for (int i = 0; i < 5; i++) {
             double t = level.random.nextDouble();
@@ -113,7 +117,8 @@ public final class MatterBatteryFormationRenderer {
             double driftX = (level.random.nextDouble() - 0.5D) * 0.02D;
             double driftY = 0.005D + (level.random.nextDouble() * 0.015D);
             double driftZ = (level.random.nextDouble() - 0.5D) * 0.02D;
-            level.addParticle(new DustParticleOptions(OUTLINE_COLOR, 0.85F), edgePos.x, edgePos.y, edgePos.z, driftX, driftY, driftZ);
+            Vector3f outlineColor = pulse.pulseType() == MatterBatteryFormationOverlayState.PulseType.BROKEN ? BROKEN_OUTLINE_COLOR : OUTLINE_COLOR;
+            level.addParticle(new DustParticleOptions(outlineColor, 0.85F), edgePos.x, edgePos.y, edgePos.z, driftX, driftY, driftZ);
             if (((gameTime + i) & 3L) == 0L) {
                 level.addParticle(ParticleTypes.END_ROD, edgePos.x, edgePos.y, edgePos.z, driftX * 0.35D, driftY * 0.5D, driftZ * 0.35D);
             }
@@ -144,25 +149,25 @@ public final class MatterBatteryFormationRenderer {
         return start + (end - start) * t;
     }
 
-    private static void drawEdgeX(VertexConsumer consumer, Matrix4f matrix, float minX, float y, float z, float maxX, float alpha) {
+    private static void drawEdgeX(VertexConsumer consumer, Matrix4f matrix, float minX, float y, float z, float maxX, float alpha, Vector3f color) {
         drawBox(consumer, matrix, minX, y - EDGE_HALF_WIDTH, z - EDGE_HALF_WIDTH, maxX, y + EDGE_HALF_WIDTH, z + EDGE_HALF_WIDTH,
-                OUTLINE_COLOR.x(), OUTLINE_COLOR.y(), OUTLINE_COLOR.z(), alpha);
+                color.x(), color.y(), color.z(), alpha);
     }
 
-    private static void drawEdgeY(VertexConsumer consumer, Matrix4f matrix, float x, float minY, float z, float maxY, float alpha) {
+    private static void drawEdgeY(VertexConsumer consumer, Matrix4f matrix, float x, float minY, float z, float maxY, float alpha, Vector3f color) {
         drawBox(consumer, matrix, x - EDGE_HALF_WIDTH, minY, z - EDGE_HALF_WIDTH, x + EDGE_HALF_WIDTH, maxY, z + EDGE_HALF_WIDTH,
-                OUTLINE_COLOR.x(), OUTLINE_COLOR.y(), OUTLINE_COLOR.z(), alpha);
+                color.x(), color.y(), color.z(), alpha);
     }
 
-    private static void drawEdgeZ(VertexConsumer consumer, Matrix4f matrix, float x, float y, float minZ, float maxZ, float alpha) {
+    private static void drawEdgeZ(VertexConsumer consumer, Matrix4f matrix, float x, float y, float minZ, float maxZ, float alpha, Vector3f color) {
         drawBox(consumer, matrix, x - EDGE_HALF_WIDTH, y - EDGE_HALF_WIDTH, minZ, x + EDGE_HALF_WIDTH, y + EDGE_HALF_WIDTH, maxZ,
-                OUTLINE_COLOR.x(), OUTLINE_COLOR.y(), OUTLINE_COLOR.z(), alpha);
+                color.x(), color.y(), color.z(), alpha);
     }
 
-    private static void drawCornerCube(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z, float alpha) {
+    private static void drawCornerCube(VertexConsumer consumer, Matrix4f matrix, float x, float y, float z, float alpha, Vector3f color) {
         float halfSize = 0.08F;
         drawBox(consumer, matrix, x - halfSize, y - halfSize, z - halfSize, x + halfSize, y + halfSize, z + halfSize,
-                CORE_COLOR.x(), CORE_COLOR.y(), CORE_COLOR.z(), alpha);
+                color.x(), color.y(), color.z(), alpha);
     }
 
     private static void drawBox(VertexConsumer consumer, Matrix4f matrix,

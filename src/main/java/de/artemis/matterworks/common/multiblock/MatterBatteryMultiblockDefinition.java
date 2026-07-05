@@ -7,11 +7,9 @@ import net.minecraft.world.level.block.state.BlockState;
 public final class MatterBatteryMultiblockDefinition implements MultiblockDefinition {
     public static final String ID = "matter_battery_matrix";
     public static final MatterBatteryMultiblockDefinition INSTANCE = new MatterBatteryMultiblockDefinition();
-    public static final int STRUCTURE_SIZE = 5;
-    public static final int MAX_OFFSET = STRUCTURE_SIZE - 1;
     public static final String DESC_FRAME = "multiblock frame";
     public static final String DESC_CASING = "multiblock casing";
-    public static final String DESC_CONTROLLER = "matter battery core";
+    public static final String DESC_CONTROLLER = "battery core";
     public static final String DESC_CELL = "matter capacitor cell";
 
     private final MultiblockPattern pattern = createPattern();
@@ -35,7 +33,7 @@ public final class MatterBatteryMultiblockDefinition implements MultiblockDefini
     }
 
     private static MultiblockPattern createPattern() {
-        return MultiblockPattern.builder(new BlockPos(2, 0, 4))
+        return MultiblockPattern.builder(new BlockPos(1, 1, 1))
                 .aisle(
                         "FFFFF",
                         "FSSSF",
@@ -45,7 +43,7 @@ public final class MatterBatteryMultiblockDefinition implements MultiblockDefini
                 )
                 .aisle(
                         "FSSSF",
-                        "FIIIF",
+                        "FCIIF",
                         "FIIIF",
                         "FIIIF",
                         "FSSSF"

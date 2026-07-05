@@ -168,6 +168,11 @@ public class ModCapabilities {
                 ModBlockEntities.POWER_CRYSTAL_CHARGER.get(),
                 (blockEntity, side) -> blockEntity.getAutomationHandler(side)
         );
+        event.registerBlockEntity(
+                Capabilities.EnergyStorage.BLOCK,
+                ModBlockEntities.SINGULARITY_LINK.get(),
+                (blockEntity, side) -> blockEntity.getEnergyStorage(side)
+        );
     }
 }
 

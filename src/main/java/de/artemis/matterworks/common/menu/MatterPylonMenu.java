@@ -11,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.ClickType;
@@ -21,7 +20,7 @@ import net.neoforged.neoforge.items.SlotItemHandler;
 
 import java.util.Arrays;
 
-public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlockMenu {
+public class MatterPylonMenu extends AbstractBaseMenu implements NamedBlockMenu {
     public static final int BUTTON_CYCLE_MODE_CHANNEL_1 = 0;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_2 = 1;
     public static final int BUTTON_CYCLE_MODE_CHANNEL_3 = 2;
@@ -233,24 +232,15 @@ public class MatterPylonMenu extends AbstractContainerMenu implements NamedBlock
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static MatterPylonBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterPylonBlockEntity pylonBlockEntity) {
-            return pylonBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Pylon block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterPylonBlockEntity.class, "Matter Pylon");
     }
 
     private static ContainerData createUnsyncedData() {

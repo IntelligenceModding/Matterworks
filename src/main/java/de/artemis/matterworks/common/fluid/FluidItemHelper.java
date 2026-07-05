@@ -19,6 +19,23 @@ public final class FluidItemHelper {
         return getFluidHandler(stack) != null;
     }
 
+    public static boolean isFilledFluidContainer(ItemStack stack) {
+        return canProvideFluid(stack);
+    }
+
+    public static boolean isEmptyFluidContainer(ItemStack stack) {
+        IFluidHandlerItem handler = getFluidHandler(stack);
+        if (handler == null) {
+            return false;
+        }
+        for (int tank = 0; tank < handler.getTanks(); tank++) {
+            if (!handler.getFluidInTank(tank).isEmpty()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     public static boolean canProvideFluid(ItemStack stack) {
         IFluidHandlerItem handler = getFluidHandler(stack);
         if (handler == null) {

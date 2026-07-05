@@ -13,13 +13,14 @@ public final class MatterBatteryFormationOverlayState {
     private MatterBatteryFormationOverlayState() {
     }
 
-    public static void show(BlockPos originPos, int durationTicks) {
+    public static void show(BlockPos minPos, int sizeX, int sizeY, int sizeZ, int durationTicks, PulseType pulseType) {
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.level == null || durationTicks <= 0) {
             return;
         }
         long gameTime = minecraft.level.getGameTime();
-        ACTIVE_PULSES.put(originPos.asLong(), new FormationPulse(originPos.immutable(), gameTime + durationTicks, durationTicks));
+        long key = minPos.asLong() ^ ((long) pulseType.ordinal() << 60);
+        ACTIVE_PULSES.put(key, new FormationPulse(minPos.immutable(), sizeX, sizeY, sizeZ, gameTime + durationTicks, durationTicks, pulseType));
     }
 
     public static Collection<FormationPulse> getActivePulses(long gameTime) {
@@ -31,6 +32,11 @@ public final class MatterBatteryFormationOverlayState {
         ACTIVE_PULSES.clear();
     }
 
-    public record FormationPulse(BlockPos originPos, long expireTick, int durationTicks) {
+    public record FormationPulse(BlockPos minPos, int sizeX, int sizeY, int sizeZ, long expireTick, int durationTicks, PulseType pulseType) {
+    }
+
+    public enum PulseType {
+        FORMED,
+        BROKEN
     }
 }

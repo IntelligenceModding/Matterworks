@@ -289,7 +289,7 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
 
     private List<TopCategoryTabs.Tab> getTabs() {
         return List.of(
-                new TopCategoryTabs.Tab(new ItemStack(ModBlocks.MATTER_BATTERY_CORE.get()), Component.translatable("screen.matterworks.matter_battery.tab_stats"), currentTab == BatteryTab.STATS, () -> currentTab = BatteryTab.STATS),
+                new TopCategoryTabs.Tab(new ItemStack(ModBlocks.MULTIBLOCK_PORT.get()), Component.translatable("screen.matterworks.matter_battery.tab_stats"), currentTab == BatteryTab.STATS, () -> currentTab = BatteryTab.STATS),
                 new TopCategoryTabs.Tab(new ItemStack(ModBlocks.MULTIBLOCK_PORT.get()), Component.translatable("screen.matterworks.matter_battery.tab_ports"), currentTab == BatteryTab.PORTS, () -> currentTab = BatteryTab.PORTS)
         );
     }

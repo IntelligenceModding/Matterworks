@@ -1,9 +1,13 @@
 package de.artemis.matterworks.common.blockentity;
 
+import de.artemis.matterworks.client.render.MatterBatteryFormationOverlayState;
+import de.artemis.matterworks.common.block.MatterBatteryCoreBlock;
+import de.artemis.matterworks.common.block.MatterCapacitorCellBlock;
 import de.artemis.matterworks.common.io.SideAccessMode;
-import de.artemis.matterworks.common.menu.MatterBatteryPreviewMenu;
+import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockDefinition;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
+import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockLayout;
 import de.artemis.matterworks.common.multiblock.MultiblockPartEntity;
 import de.artemis.matterworks.common.multiblock.MultiblockPartState;
 import de.artemis.matterworks.common.multiblock.MultiblockRole;
@@ -52,6 +56,7 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     public static final int DATA_TRANSFER = 3;
     public static final int DATA_CELLS = 4;
     public static final int DATA_COUNT = 5;
+    private static final long RECOVERY_RETRY_TICKS = 5L;
 
     private final MultiblockPartState multiblockPartState = new MultiblockPartState();
     private final BatteryEnergyStorage energyStorage = new BatteryEnergyStorage();
@@ -79,6 +84,12 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     };
 
     private String customName = "";
+    private boolean hasStoredBlueprint;
+    private BlockPos storedOriginPos = BlockPos.ZERO;
+    private Direction storedFront = Direction.NORTH;
+    private int storedWidth;
+    private int storedHeight;
+    private int storedDepth;
     private int storedEnergy;
     private int capacity;
     private int maxTransfer;
@@ -108,8 +119,8 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     @Override
     public void onLoad() {
         super.onLoad();
-        if (level instanceof ServerLevel serverLevel && multiblockPartState.isFormed()) {
-            lastRecoveryAttemptTick = serverLevel.getGameTime() - 20L;
+        if (level instanceof ServerLevel serverLevel && (multiblockPartState.isFormed() || hasStoredBlueprint)) {
+            lastRecoveryAttemptTick = serverLevel.getGameTime() - RECOVERY_RETRY_TICKS;
         }
     }
 
@@ -121,12 +132,20 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         return isFormed() ? storedEnergy : 0;
     }
 
+    public boolean hasStoredBlueprint() {
+        return hasStoredBlueprint && MatterBatteryMultiblockLayout.isValidSize(storedWidth, storedHeight, storedDepth);
+    }
+
     public int getDisplayedEnergyCapacity() {
         return isFormed() ? capacity : 0;
     }
 
     public int getTransferRate() {
         return isFormed() ? maxTransfer : 0;
+    }
+
+    public int getCellCount() {
+        return cellCount;
     }
 
     public BatteryEnergyStorage getEnergyStorage() {
@@ -195,6 +214,14 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             tag.putString("custom_name", customName);
         }
         tag.putInt("stored_energy", storedEnergy);
+        tag.putBoolean("has_stored_blueprint", hasStoredBlueprint);
+        tag.putInt("stored_origin_x", storedOriginPos.getX());
+        tag.putInt("stored_origin_y", storedOriginPos.getY());
+        tag.putInt("stored_origin_z", storedOriginPos.getZ());
+        tag.putString("stored_front", storedFront.getName());
+        tag.putInt("stored_width", storedWidth);
+        tag.putInt("stored_height", storedHeight);
+        tag.putInt("stored_depth", storedDepth);
         tag.putInt("capacity", capacity);
         tag.putInt("max_transfer", maxTransfer);
         tag.putInt("cell_count", cellCount);
@@ -212,6 +239,15 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         multiblockPartState.readFromTag(tag);
         customName = normalizeCustomName(tag.getString("custom_name"));
         storedEnergy = Math.max(0, tag.getInt("stored_energy"));
+        hasStoredBlueprint = tag.getBoolean("has_stored_blueprint");
+        storedOriginPos = new BlockPos(tag.getInt("stored_origin_x"), tag.getInt("stored_origin_y"), tag.getInt("stored_origin_z"));
+        storedFront = Direction.byName(tag.getString("stored_front"));
+        if (storedFront == null || !storedFront.getAxis().isHorizontal()) {
+            storedFront = Direction.NORTH;
+        }
+        storedWidth = Math.max(0, tag.getInt("stored_width"));
+        storedHeight = Math.max(0, tag.getInt("stored_height"));
+        storedDepth = Math.max(0, tag.getInt("stored_depth"));
         capacity = Math.max(0, tag.getInt("capacity"));
         maxTransfer = Math.max(0, tag.getInt("max_transfer"));
         cellCount = Math.max(0, tag.getInt("cell_count"));
@@ -231,6 +267,14 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             tag.putString("custom_name", customName);
         }
         tag.putInt("stored_energy", storedEnergy);
+        tag.putBoolean("has_stored_blueprint", hasStoredBlueprint);
+        tag.putInt("stored_origin_x", storedOriginPos.getX());
+        tag.putInt("stored_origin_y", storedOriginPos.getY());
+        tag.putInt("stored_origin_z", storedOriginPos.getZ());
+        tag.putString("stored_front", storedFront.getName());
+        tag.putInt("stored_width", storedWidth);
+        tag.putInt("stored_height", storedHeight);
+        tag.putInt("stored_depth", storedDepth);
         tag.putInt("capacity", capacity);
         tag.putInt("max_transfer", maxTransfer);
         tag.putInt("cell_count", cellCount);
@@ -250,23 +294,32 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
 
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
-        return new MatterBatteryPreviewMenu(containerId, playerInventory, this, data);
+        return new MatterBatteryCoreMenu(containerId, playerInventory, this, data);
     }
 
     @Override
     public void onMultiblockAssembled(MultiblockStructure structure, MultiblockRole role) {
         if (level instanceof ServerLevel serverLevel && role == MultiblockRole.CONTROLLER) {
+            storeBlueprint(structure);
             recalculateStats(serverLevel, structure);
+            updateInternalVisualStates(serverLevel, structure, true);
             resetTelemetry(serverLevel.getGameTime());
             rebuildPortOverview(serverLevel, structure);
-            broadcastFormationOverlay(serverLevel, structure.originPos());
+            broadcastFormationOverlay(serverLevel, structure, MatterBatteryFormationOverlayState.PulseType.FORMED);
             sync();
         }
     }
 
     @Override
     public void onMultiblockDisassembled(MultiblockStructure structure) {
-        clearStructureStats();
+        if (worldPosition.equals(structure.controllerPos())) {
+            storeBlueprint(structure);
+            if (level instanceof ServerLevel serverLevel) {
+                updateInternalVisualStates(serverLevel, structure, false);
+                broadcastFormationOverlay(serverLevel, structure, MatterBatteryFormationOverlayState.PulseType.BROKEN);
+            }
+        }
+        clearTransientStructureState();
         sync();
     }
 
@@ -327,17 +380,9 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             return;
         }
 
-        if (multiblockPartState.isFormed()
-                && MultiblockStructureRegistry.getByMember(serverLevel, worldPosition).isEmpty()
-                && serverLevel.getGameTime() - lastRecoveryAttemptTick >= 20L) {
+        if (shouldAttemptRecovery(serverLevel)) {
             lastRecoveryAttemptTick = serverLevel.getGameTime();
-            if (!MatterBatteryMultiblockHelper.recoverStructure(serverLevel, worldPosition, multiblockPartState.getFront())) {
-                MatterBatteryMultiblockHelper.clearStoredStates(serverLevel, multiblockPartState.getOriginPos(), worldPosition, multiblockPartState.getFront());
-                multiblockPartState.clear();
-                clearStructureStats();
-                sync();
-                return;
-            }
+            tryRecoverStoredStructure(serverLevel);
         }
 
         if (!multiblockPartState.isFormed()) {
@@ -351,7 +396,7 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     }
 
     private void recalculateStats(ServerLevel serverLevel, MultiblockStructure structure) {
-        int cells = 0;
+        int cells = 1;
         for (BlockPos memberPos : structure.members().keySet()) {
             BlockState memberState = serverLevel.getBlockState(memberPos);
             if (memberState.is(ModBlocks.MATTER_CAPACITOR_CELL.get())) {
@@ -368,10 +413,7 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         setChanged();
     }
 
-    private void clearStructureStats() {
-        capacity = 0;
-        maxTransfer = 0;
-        cellCount = 0;
+    private void clearTransientStructureState() {
         portOverview = List.of();
         historyCursor = 0;
         historySamples = 0;
@@ -384,11 +426,72 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         setChanged();
     }
 
+    private void storeBlueprint(MultiblockStructure structure) {
+        hasStoredBlueprint = true;
+        storedOriginPos = structure.originPos().immutable();
+        storedFront = structure.front();
+        storedWidth = structure.width();
+        storedHeight = structure.height();
+        storedDepth = structure.depth();
+        setChanged();
+    }
+
+    private boolean shouldAttemptRecovery(ServerLevel serverLevel) {
+        if (!hasStoredBlueprint || !MatterBatteryMultiblockLayout.isValidSize(storedWidth, storedHeight, storedDepth)) {
+            return false;
+        }
+        if (MultiblockStructureRegistry.getByMember(serverLevel, worldPosition).isPresent()) {
+            return false;
+        }
+        return serverLevel.getGameTime() - lastRecoveryAttemptTick >= RECOVERY_RETRY_TICKS;
+    }
+
+    public boolean tryRecoverStoredStructure(ServerLevel serverLevel) {
+        return MatterBatteryMultiblockHelper.recoverStructure(serverLevel, storedOriginPos, storedFront, storedWidth, storedHeight, storedDepth);
+    }
+
+    public boolean usesStoredBlueprintPosition(BlockPos pos) {
+        if (!hasStoredBlueprint()) {
+            return false;
+        }
+        MatterBatteryMultiblockLayout.WorldBounds bounds = MatterBatteryMultiblockLayout.getWorldBounds(
+                storedOriginPos, storedFront, storedWidth, storedHeight, storedDepth
+        );
+        BlockPos minPos = bounds.minPos();
+        BlockPos maxPos = minPos.offset(bounds.sizeX() - 1, bounds.sizeY() - 1, bounds.sizeZ() - 1);
+        return pos.getX() >= minPos.getX() && pos.getX() <= maxPos.getX()
+                && pos.getY() >= minPos.getY() && pos.getY() <= maxPos.getY()
+                && pos.getZ() >= minPos.getZ() && pos.getZ() <= maxPos.getZ();
+    }
+
+    private void updateInternalVisualStates(ServerLevel serverLevel, MultiblockStructure structure, boolean formed) {
+        for (var entry : structure.members().entrySet()) {
+            MultiblockRole role = entry.getValue();
+            if (role != MultiblockRole.CONTROLLER && role != MultiblockRole.INTERNAL) {
+                continue;
+            }
+
+            BlockPos memberPos = entry.getKey();
+            BlockState currentState = serverLevel.getBlockState(memberPos);
+            BlockState updatedState = currentState;
+            if (currentState.hasProperty(MatterBatteryCoreBlock.FORMED)) {
+                updatedState = updatedState.setValue(MatterBatteryCoreBlock.FORMED, formed);
+            }
+            if (currentState.hasProperty(MatterCapacitorCellBlock.FORMED)) {
+                updatedState = updatedState.setValue(MatterCapacitorCellBlock.FORMED, formed);
+            }
+            if (updatedState != currentState) {
+                serverLevel.setBlock(memberPos, updatedState, 3);
+            }
+        }
+    }
+
     public void refreshStructureStats(ServerLevel serverLevel, MultiblockStructure structure) {
         if (!worldPosition.equals(structure.controllerPos())) {
             return;
         }
         recalculateStats(serverLevel, structure);
+        updateInternalVisualStates(serverLevel, structure, true);
         rebuildPortOverview(serverLevel, structure);
         sync();
     }
@@ -483,7 +586,10 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             }
             Direction outwardSide = MatterBatteryMultiblockHelper.getOutwardSide(
                     portBlockEntity.getMultiblockPartState().getLocalPos(),
-                    portBlockEntity.getMultiblockPartState().getFront()
+                    portBlockEntity.getMultiblockPartState().getFront(),
+                    portBlockEntity.getMultiblockPartState().getWidth(),
+                    portBlockEntity.getMultiblockPartState().getHeight(),
+                    portBlockEntity.getMultiblockPartState().getDepth()
             );
             entries.add(new PortOverview(
                     memberPos.immutable(),
@@ -580,12 +686,17 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         }
     }
 
-    private void broadcastFormationOverlay(ServerLevel serverLevel, BlockPos originPos) {
-        double centerX = originPos.getX() + (MatterBatteryMultiblockDefinition.STRUCTURE_SIZE / 2.0D);
-        double centerY = originPos.getY() + (MatterBatteryMultiblockDefinition.STRUCTURE_SIZE / 2.0D);
-        double centerZ = originPos.getZ() + (MatterBatteryMultiblockDefinition.STRUCTURE_SIZE / 2.0D);
+    private void broadcastFormationOverlay(ServerLevel serverLevel, MultiblockStructure structure, MatterBatteryFormationOverlayState.PulseType pulseType) {
+        MatterBatteryMultiblockLayout.WorldBounds bounds = MatterBatteryMultiblockLayout.getWorldBounds(
+                structure.originPos(), structure.front(), structure.width(), structure.height(), structure.depth()
+        );
+        double centerX = bounds.minPos().getX() + (bounds.sizeX() / 2.0D);
+        double centerY = bounds.minPos().getY() + (bounds.sizeY() / 2.0D);
+        double centerZ = bounds.minPos().getZ() + (bounds.sizeZ() / 2.0D);
         double maxDistanceSqr = 96.0D * 96.0D;
-        ShowMatterBatteryFormationPayload payload = new ShowMatterBatteryFormationPayload(originPos, 100);
+        ShowMatterBatteryFormationPayload payload = new ShowMatterBatteryFormationPayload(
+                bounds.minPos(), bounds.sizeX(), bounds.sizeY(), bounds.sizeZ(), 100, pulseType.ordinal()
+        );
         for (var player : serverLevel.players()) {
             if (player.distanceToSqr(centerX, centerY, centerZ) <= maxDistanceSqr) {
                 PacketDistributor.sendToPlayer(player, payload);

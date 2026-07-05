@@ -64,6 +64,9 @@ public final class MultiblockStructureRegistry {
                 match.getControllerPos(),
                 match.getOriginPos(),
                 match.getFront(),
+                match.getWidth(),
+                match.getHeight(),
+                match.getDepth(),
                 Map.copyOf(members)
         );
 

@@ -43,18 +43,12 @@ public class MatterRecyclerMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     @Override
     protected void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     @Override
@@ -85,18 +79,18 @@ public class MatterRecyclerMenu extends AbstractMatterMachineMenu {
             }
         } else if (index >= playerInventoryStart) {
             if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterRecyclerBlockEntity.SLOT_CRYSTAL, MatterRecyclerBlockEntity.SLOT_CRYSTAL + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterRecyclerBlockEntity.SLOT_CRYSTAL)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterRecyclerBlockEntity.SLOT_POWER_INPUT, MatterRecyclerBlockEntity.SLOT_POWER_INPUT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterRecyclerBlockEntity.SLOT_POWER_INPUT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(net.minecraft.world.item.Items.BUCKET)) {
-                if (!this.moveItemStackTo(sourceStack, MatterRecyclerBlockEntity.SLOT_BUCKET_INPUT, MatterRecyclerBlockEntity.SLOT_BUCKET_INPUT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, MatterRecyclerBlockEntity.SLOT_BUCKET_INPUT)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(sourceStack, MatterRecyclerBlockEntity.INPUT_SLOT_START, MatterRecyclerBlockEntity.INPUT_SLOT_START + MatterRecyclerBlockEntity.INPUT_SLOT_COUNT, false)) {
+            } else if (!moveToMachineContainerSlotRange(sourceStack, MatterRecyclerBlockEntity.INPUT_SLOT_START, MatterRecyclerBlockEntity.INPUT_SLOT_COUNT)) {
                 if (index < playerHotbarStart) {
                     if (!this.moveItemStackTo(sourceStack, playerHotbarStart, playerHotbarEnd, false)) {
                         return ItemStack.EMPTY;
@@ -122,9 +116,6 @@ public class MatterRecyclerMenu extends AbstractMatterMachineMenu {
     }
 
     private static MatterRecyclerBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterRecyclerBlockEntity recyclerBlockEntity) {
-            return recyclerBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Recycler block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterRecyclerBlockEntity.class, "Matter Recycler");
     }
 }

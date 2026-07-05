@@ -631,6 +631,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                 markNetworkDirty();
                 continue;
             }
+            if (!isRouteUsableForChannel(channel, cachedRoute.path())) {
+                continue;
+            }
             IEnergyStorage targetStorage = targetPylon.getAttachedEnergyStorage(true);
             if (targetStorage != null && targetStorage.canReceive()) {
                 routes.add(new EnergyTransferRoute(cachedRoute.targetPos(), cachedRoute.path(), targetStorage, cachedRoute.priority()));
@@ -649,6 +652,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
             MatterPylonBlockEntity targetPylon = getNode(serverLevel, cachedRoute.targetPos());
             if (targetPylon == null) {
                 markNetworkDirty();
+                continue;
+            }
+            if (!isRouteUsableForChannel(channel, cachedRoute.path())) {
                 continue;
             }
             IItemHandler targetHandler = targetPylon.getAttachedItemHandler();
@@ -671,6 +677,9 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                 markNetworkDirty();
                 continue;
             }
+            if (!isRouteUsableForChannel(channel, cachedRoute.path())) {
+                continue;
+            }
             IFluidHandler targetHandler = targetPylon.getAttachedFluidHandler();
             if (targetHandler != null) {
                 routes.add(new FluidTransferRoute(cachedRoute.targetPos(), cachedRoute.path(), targetPylon, targetHandler, cachedRoute.priority()));
@@ -691,9 +700,25 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
                 markNetworkDirty();
                 continue;
             }
+            if (!isRouteUsableForChannel(channel, cachedRoute.path())) {
+                continue;
+            }
             routes.add(new RedstoneTransferRoute(cachedRoute.targetPos(), cachedRoute.path(), targetPylon, cachedRoute.priority()));
         }
         return routes;
+    }
+
+    private boolean isRouteUsableForChannel(int channel, List<BlockPos> path) {
+        if (!(level instanceof ServerLevel serverLevel) || path.size() < 2) {
+            return true;
+        }
+        for (int index = 0; index < path.size() - 1; index++) {
+            MatterPylonBlockEntity node = getNode(serverLevel, path.get(index));
+            if (node != null && !node.canTransferAlongPathSegment(channel, path, index)) {
+                return false;
+            }
+        }
+        return true;
     }
 
     protected @Nullable IEnergyStorage getAttachedEnergyStorage(boolean importer) {
@@ -836,20 +861,39 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
 
     private int transferPriorityTier(ServerLevel serverLevel, IEnergyStorage sourceStorage, List<EnergyTransferRoute> routes, int maxTransfer) {
         int moved = 0;
+        int roundRobinIndex = 0;
         List<EnergyTransferRoute> activeRoutes = new ArrayList<>(routes);
         Map<BlockPos, Integer> transferredByTarget = new HashMap<>();
 
         while (moved < maxTransfer && !activeRoutes.isEmpty()) {
-            boolean anyMoved = false;
+            boolean movedThisPass = false;
+            int routeCount = activeRoutes.size();
+            int startIndex = roundRobinIndex % routeCount;
 
-            for (int index = 0; index < activeRoutes.size() && moved < maxTransfer; ) {
-                EnergyTransferRoute route = activeRoutes.get(index);
-                if (route.targetStorage.receiveEnergy(1, true) <= 0) {
-                    activeRoutes.remove(index);
+            for (int processed = 0; processed < routeCount && moved < maxTransfer; ) {
+                int listIndex = (startIndex + processed) % routeCount;
+                EnergyTransferRoute route = activeRoutes.get(listIndex);
+                int remaining = maxTransfer - moved;
+                int remainingRoutes = routeCount - processed;
+                int shareBudget = Math.max(1, (remaining + remainingRoutes - 1) / remainingRoutes);
+
+                int extractable = sourceStorage.extractEnergy(shareBudget, true);
+                if (extractable <= 0) {
+                    activeRoutes.clear();
+                    break;
+                }
+
+                int accepted = route.targetStorage.receiveEnergy(extractable, true);
+                if (accepted <= 0) {
+                    activeRoutes.remove(listIndex);
+                    routeCount--;
+                    if (listIndex < startIndex && startIndex > 0) {
+                        startIndex--;
+                    }
                     continue;
                 }
 
-                int extracted = sourceStorage.extractEnergy(1, false);
+                int extracted = sourceStorage.extractEnergy(accepted, false);
                 if (extracted <= 0) {
                     activeRoutes.clear();
                     break;
@@ -857,19 +901,21 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
 
                 int inserted = route.targetStorage.receiveEnergy(extracted, false);
                 if (inserted <= 0) {
-                    activeRoutes.remove(index);
+                    processed++;
                     continue;
                 }
 
                 moved += inserted;
-                anyMoved = true;
+                movedThisPass = true;
                 transferredByTarget.merge(route.targetPos, inserted, Integer::sum);
-                index++;
+                processed++;
             }
 
-            if (!anyMoved) {
+            if (!movedThisPass) {
                 break;
             }
+
+            roundRobinIndex = activeRoutes.isEmpty() ? 0 : (startIndex + 1) % activeRoutes.size();
         }
 
         if (moved > 0) {
@@ -1336,6 +1382,7 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
             MatterPylonBlockEntity pylon = getNode(serverLevel, pos);
             if (pylon != null) {
                 pylon.recordTransfer(channel, amount, resolveDisplayRole(index, path.size()), gameTime);
+                pylon.onTransferAlongPath(channel, path, index, amount, gameTime);
             }
         }
 
@@ -1444,6 +1491,13 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         serverLevel.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 2);
     }
 
+    protected void onTransferAlongPath(int channel, List<BlockPos> path, int index, int amount, long gameTime) {
+    }
+
+    protected boolean canTransferAlongPathSegment(int channel, List<BlockPos> path, int index) {
+        return true;
+    }
+
     private static TransferDisplayRole resolveDisplayRole(int index, int pathSize) {
         if (index == 0) {
             return TransferDisplayRole.SOURCE;
@@ -1524,11 +1578,18 @@ public class MatterPylonBlockEntity extends BlockEntity implements MenuProvider,
         if (other == null || !isValidChannel(channel)) {
             return false;
         }
+        if (!participatesInChannelColorMatching(channel, other) || !other.participatesInChannelColorMatching(channel, this)) {
+            return true;
+        }
         for (int index = 0; index < NETWORK_COLOR_CODE_PARTS; index++) {
             if (getNetworkColor(channel, index) != other.getNetworkColor(channel, index)) {
                 return false;
             }
         }
+        return true;
+    }
+
+    protected boolean participatesInChannelColorMatching(int channel, MatterPylonBlockEntity other) {
         return true;
     }
 

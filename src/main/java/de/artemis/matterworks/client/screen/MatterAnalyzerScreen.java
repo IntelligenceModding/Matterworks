@@ -17,8 +17,6 @@ public class MatterAnalyzerScreen extends net.minecraft.client.gui.screens.inven
     private static final int ENERGY_BAR_Y = 118;
     private static final int BAR_WIDTH = 118;
     private static final int BAR_HEIGHT = 6;
-    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
-    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public MatterAnalyzerScreen(MatterAnalyzerMenu menu, Inventory playerInventory, Component title) {
@@ -43,23 +41,19 @@ public class MatterAnalyzerScreen extends net.minecraft.client.gui.screens.inven
             sideConfig.renderBackground(guiGraphics, leftPos, topPos);
             return;
         }
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalProgressGauge(
                 guiGraphics,
                 leftPos + PROGRESS_BAR_X,
                 topPos + PROGRESS_BAR_Y,
                 menu.getScaledProgress(BAR_WIDTH),
-                BAR_HEIGHT,
-                menu.getProgressBarColor(),
-                menu.getProgressBarColor()
+                BAR_HEIGHT
         );
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalEnergyGauge(
                 guiGraphics,
                 leftPos + ENERGY_BAR_X,
                 topPos + ENERGY_BAR_Y,
                 menu.getScaledEnergyAmount(BAR_WIDTH),
-                BAR_HEIGHT,
-                ENERGY_FILL_COLOR,
-                ENERGY_FILL_TOP_COLOR
+                BAR_HEIGHT
         );
     }
 

@@ -7,12 +7,11 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 
-public class MatterNetworkMonitorMenu extends AbstractContainerMenu implements NamedBlockMenu {
+public class MatterNetworkMonitorMenu extends AbstractBaseMenu implements NamedBlockMenu {
     private static final int PLAYER_INVENTORY_START = 0;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
@@ -92,23 +91,14 @@ public class MatterNetworkMonitorMenu extends AbstractContainerMenu implements N
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static MatterNetworkMonitorBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterNetworkMonitorBlockEntity monitorBlockEntity) {
-            return monitorBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Network Monitor block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterNetworkMonitorBlockEntity.class, "Matter Network Monitor");
     }
 }

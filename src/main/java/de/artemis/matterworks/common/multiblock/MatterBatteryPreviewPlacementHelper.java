@@ -1,6 +1,5 @@
 package de.artemis.matterworks.common.multiblock;
 
-import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -23,33 +22,25 @@ public final class MatterBatteryPreviewPlacementHelper {
     private MatterBatteryPreviewPlacementHelper() {
     }
 
-    public static boolean placeFromInventory(Player player, BlockPos controllerPos, BlockPos targetPos, InteractionHand hand) {
-        if (!(player.level().getBlockEntity(controllerPos) instanceof MatterBatteryCoreBlockEntity controller)) {
-            return false;
-        }
-
-        Direction front = controller.getBlockState().hasProperty(HorizontalDirectionalBlock.FACING)
-                ? controller.getBlockState().getValue(HorizontalDirectionalBlock.FACING)
-                : Direction.NORTH;
-        BlockPos origin = controller.getMultiblockPartState().isFormed()
-                ? controller.getMultiblockPartState().getOriginPos()
-                : MultiblockTransforms.controllerToOrigin(controllerPos, front, MatterBatteryMultiblockDefinition.INSTANCE.getPattern().getControllerOffset());
+    public static boolean placeFromInventory(Player player, BlockPos origin, Direction front, int width, int height, int depth, BlockPos targetPos, InteractionHand hand) {
         BlockPos localPos = MultiblockTransforms.worldToLocal(origin, front, targetPos);
         if (!MultiblockTransforms.localToWorld(origin, front, localPos).equals(targetPos)) {
             return false;
         }
 
-        MultiblockRequirement requirement = MatterBatteryMultiblockDefinition.INSTANCE.getPattern().getRequirements().get(localPos);
-        if (requirement == null) {
+        if (localPos.getX() < 0 || localPos.getX() >= width
+                || localPos.getY() < 0 || localPos.getY() >= height
+                || localPos.getZ() < 0 || localPos.getZ() >= depth) {
             return false;
         }
+        MultiblockRole role = MatterBatteryMultiblockLayout.getRole(localPos, width, height, depth);
 
         BlockState currentState = player.level().getBlockState(targetPos);
-        if (matchesRequirement(requirement, currentState) || (!currentState.isAir() && !currentState.canBeReplaced())) {
+        if (matchesRequirement(role, currentState) || (!currentState.isAir() && !currentState.canBeReplaced())) {
             return false;
         }
 
-        InventoryBlockSelection selection = selectPlacement(player, hand, requirement);
+        InventoryBlockSelection selection = selectPlacement(player, hand, role);
         if (selection == null) {
             return false;
         }
@@ -67,31 +58,33 @@ public final class MatterBatteryPreviewPlacementHelper {
         SoundType soundType = placedState.getSoundType();
         player.level().playSound(null, targetPos, soundType.getPlaceSound(), SoundSource.BLOCKS, (soundType.getVolume() + 1.0F) / 2.0F, soundType.getPitch() * 0.8F);
         player.level().gameEvent(player, GameEvent.BLOCK_PLACE, targetPos);
+        if (player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+            MatterBatteryMultiblockHelper.tryAssembleAtOrigin(serverLevel, origin, front, width, height, depth, null, false);
+        }
         return true;
     }
 
-    public static boolean canPlaceFromInventory(Player player, InteractionHand hand, MultiblockRequirement requirement) {
-        return selectPlacement(player, hand, requirement) != null;
+    public static boolean canPlaceFromInventory(Player player, InteractionHand hand, MultiblockRole role) {
+        return selectPlacement(player, hand, role) != null;
     }
 
-    public static boolean matchesRequirement(MultiblockRequirement requirement, BlockState state) {
-        return switch (requirement.description()) {
-            case MatterBatteryMultiblockDefinition.DESC_CONTROLLER -> state.is(ModBlocks.MATTER_BATTERY_CORE.get());
-            case MatterBatteryMultiblockDefinition.DESC_FRAME -> MatterBatteryMultiblockDefinition.matchesFrameState(state);
-            case MatterBatteryMultiblockDefinition.DESC_CASING -> MatterBatteryMultiblockDefinition.matchesShellFaceState(state);
-            case MatterBatteryMultiblockDefinition.DESC_CELL -> state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
-            default -> false;
+    public static boolean matchesRequirement(MultiblockRole role, BlockState state) {
+        return switch (role) {
+            case CONTROLLER -> state.is(ModBlocks.MATTER_BATTERY_CORE.get());
+            case FRAME -> MatterBatteryMultiblockDefinition.matchesFrameState(state);
+            case CASING, PORT -> MatterBatteryMultiblockDefinition.matchesShellFaceState(state);
+            case INTERNAL -> state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
         };
     }
 
-    public static @Nullable InventoryBlockSelection selectPlacement(Player player, InteractionHand hand, MultiblockRequirement requirement) {
+    public static @Nullable InventoryBlockSelection selectPlacement(Player player, InteractionHand hand, MultiblockRole role) {
         ItemStack heldStack = player.getItemInHand(hand);
-        if (isValidPlacementStack(heldStack, requirement)) {
+        if (isValidPlacementStack(heldStack, role)) {
             return new InventoryBlockSelection(resolveBlock(heldStack), heldStack);
         }
 
         if (player.getAbilities().instabuild) {
-            List<Block> candidates = getCandidateBlocks(requirement);
+            List<Block> candidates = getCandidateBlocks(role);
             if (!candidates.isEmpty()) {
                 return new InventoryBlockSelection(candidates.get(0), ItemStack.EMPTY);
             }
@@ -100,19 +93,19 @@ public final class MatterBatteryPreviewPlacementHelper {
         Inventory inventory = player.getInventory();
         if (hand == InteractionHand.MAIN_HAND) {
             ItemStack selectedStack = inventory.getSelected();
-            if (!selectedStack.isEmpty() && isValidPlacementStack(selectedStack, requirement)) {
+            if (!selectedStack.isEmpty() && isValidPlacementStack(selectedStack, role)) {
                 return new InventoryBlockSelection(resolveBlock(selectedStack), selectedStack);
             }
         }
 
-        for (Block candidate : getCandidateBlocks(requirement)) {
+        for (Block candidate : getCandidateBlocks(role)) {
             ItemStack matchingStack = findMatchingStack(inventory.items, candidate);
             if (matchingStack != null) {
                 return new InventoryBlockSelection(candidate, matchingStack);
             }
         }
 
-        for (Block candidate : getCandidateBlocks(requirement)) {
+        for (Block candidate : getCandidateBlocks(role)) {
             ItemStack matchingStack = findMatchingStack(inventory.offhand, candidate);
             if (matchingStack != null) {
                 return new InventoryBlockSelection(candidate, matchingStack);
@@ -135,22 +128,21 @@ public final class MatterBatteryPreviewPlacementHelper {
         return null;
     }
 
-    private static boolean isValidPlacementStack(ItemStack stack, MultiblockRequirement requirement) {
+    private static boolean isValidPlacementStack(ItemStack stack, MultiblockRole role) {
         Block block = resolveBlock(stack);
-        return block != null && getCandidateBlocks(requirement).contains(block);
+        return block != null && getCandidateBlocks(role).contains(block);
     }
 
     private static @Nullable Block resolveBlock(ItemStack stack) {
         return stack.getItem() instanceof BlockItem blockItem ? blockItem.getBlock() : null;
     }
 
-    private static List<Block> getCandidateBlocks(MultiblockRequirement requirement) {
-        return switch (requirement.description()) {
-            case MatterBatteryMultiblockDefinition.DESC_CONTROLLER -> List.of(ModBlocks.MATTER_BATTERY_CORE.get());
-            case MatterBatteryMultiblockDefinition.DESC_FRAME -> List.of(ModBlocks.MULTIBLOCK_FRAME.get());
-            case MatterBatteryMultiblockDefinition.DESC_CASING -> List.of(ModBlocks.MULTIBLOCK_CASING.get());
-            case MatterBatteryMultiblockDefinition.DESC_CELL -> List.of(ModBlocks.MATTER_CAPACITOR_CELL.get());
-            default -> List.of();
+    private static List<Block> getCandidateBlocks(MultiblockRole role) {
+        return switch (role) {
+            case CONTROLLER -> List.of(ModBlocks.MATTER_BATTERY_CORE.get());
+            case FRAME -> List.of(ModBlocks.MULTIBLOCK_FRAME.get());
+            case CASING, PORT -> List.of(ModBlocks.MULTIBLOCK_CASING.get(), ModBlocks.MULTIBLOCK_GLASS.get(), ModBlocks.MULTIBLOCK_PORT.get());
+            case INTERNAL -> List.of(ModBlocks.MATTER_CAPACITOR_CELL.get());
         };
     }
 

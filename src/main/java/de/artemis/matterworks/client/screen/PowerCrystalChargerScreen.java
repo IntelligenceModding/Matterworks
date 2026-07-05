@@ -29,9 +29,6 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
     private static final int TOOLTIP_BAR_WIDTH = 40;
     private static final int GRAPH_COLOR = 0xFFE23D2D;
     private static final int GRAPH_AREA_COLOR = 0x35E23D2D;
-    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
-    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
-
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public PowerCrystalChargerScreen(PowerCrystalChargerMenu menu, Inventory playerInventory, Component title) {
@@ -55,23 +52,19 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
             return;
         }
         renderChargeGraph(guiGraphics, mouseX, mouseY);
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalProgressGauge(
                 guiGraphics,
                 leftPos + PROGRESS_BAR_X,
                 topPos + PROGRESS_BAR_Y,
                 menu.getScaledProgress(BAR_WIDTH),
-                BAR_HEIGHT,
-                menu.getProgressBarColor(),
-                menu.getProgressBarColor()
+                BAR_HEIGHT
         );
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalEnergyGauge(
                 guiGraphics,
                 leftPos + ENERGY_BAR_X,
                 topPos + ENERGY_BAR_Y,
                 menu.getScaledEnergyAmount(BAR_WIDTH),
-                BAR_HEIGHT,
-                ENERGY_FILL_COLOR,
-                ENERGY_FILL_TOP_COLOR
+                BAR_HEIGHT
         );
     }
 
@@ -139,9 +132,9 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
             return;
         }
 
-        GraphHover hover = getHoveredGraph(mouseX, mouseY);
-        if (hover != null) {
-            guiGraphics.renderTooltip(font, hover.lines(), Optional.empty(), mouseX, mouseY);
+        List<Component> hoverLines = getHoveredGraphLines(mouseX, mouseY);
+        if (hoverLines != null) {
+            guiGraphics.renderTooltip(font, hoverLines, Optional.empty(), mouseX, mouseY);
         }
     }
 
@@ -176,33 +169,22 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
         return Math.round(getEnergyRatio() * 100.0F);
     }
 
-    private GraphHover getHoveredGraph(int mouseX, int mouseY) {
-        int historySize = menu.getHistorySize();
-        int historyCapacity = menu.getHistoryCapacity();
-        if (historyCapacity <= 0) {
-            return null;
-        }
-
-        int hoveredVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+    private List<Component> getHoveredGraphLines(int mouseX, int mouseY) {
+        int historyIndex = GuiWidgets.getHoveredHistoryIndex(
                 mouseX,
                 mouseY,
                 leftPos + GRAPH_X,
                 topPos + GRAPH_Y,
                 GRAPH_WIDTH,
                 GRAPH_HEIGHT,
-                historyCapacity
+                menu.getHistorySize(),
+                menu.getHistoryCapacity()
         );
-        if (hoveredVisibleIndex < 0) {
-            return null;
-        }
-
-        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(hoveredVisibleIndex, historySize, historyCapacity);
         if (historyIndex < 0) {
             return null;
         }
-
         int sampledChargeRate = menu.getHistorySample(historyIndex).chargeRate();
-        return new GraphHover(List.of(GuiWidgets.formatRateComponent(sampledChargeRate, "FE/t", false)));
+        return List.of(GuiWidgets.formatRateComponent(sampledChargeRate, "FE/t", false));
     }
 
     private PowerCrystalChargerBlockEntity.ChargeHistorySample getVisibleSample(int visibleIndex) {
@@ -214,8 +196,5 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
 
     private List<TopCategoryTabs.Tab> buildTabs() {
         return sideConfig.buildTabs(menu, null);
-    }
-
-    private record GraphHover(List<Component> lines) {
     }
 }

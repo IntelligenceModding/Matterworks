@@ -52,9 +52,9 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
 
-        GraphHover hover = getHoveredGraph(mouseX, mouseY);
-        if (hover != null) {
-            guiGraphics.renderTooltip(font, hover.lines(), Optional.empty(), mouseX, mouseY);
+        List<Component> hoverLines = getHoveredGraphLines(mouseX, mouseY);
+        if (hoverLines != null) {
+            guiGraphics.renderTooltip(font, hoverLines, Optional.empty(), mouseX, mouseY);
         }
 
         this.renderTooltip(guiGraphics, mouseX, mouseY);
@@ -153,7 +153,7 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
         }
     }
 
-    private GraphHover getHoveredGraph(int mouseX, int mouseY) {
+    private List<Component> getHoveredGraphLines(int mouseX, int mouseY) {
         MatterNetworkMonitorBlockEntity blockEntity = menu.getBlockEntity();
         int historySize = blockEntity.getHistorySize();
         int historyCapacity = blockEntity.getHistoryCapacity();
@@ -163,34 +163,30 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
 
         for (int graphIndex = 0; graphIndex < GRAPH_SPECS.length; graphIndex++) {
             GraphSpec spec = GRAPH_SPECS[graphIndex];
-            int hoveredSampleIndex = getHoveredSampleIndex(
+            int historyIndex = GuiWidgets.getHoveredHistoryIndex(
                     mouseX,
                     mouseY,
                     leftPos + spec.x(),
                     topPos + spec.y(),
                     spec.width(),
                     spec.height(),
+                    historySize,
                     historyCapacity
             );
-            if (hoveredSampleIndex < 0) {
-                continue;
-            }
-
-            int historyIndex = getHistoryIndexForVisibleIndex(blockEntity, hoveredSampleIndex);
             if (historyIndex < 0) {
-                return null;
+                continue;
             }
             MatterNetworkMonitorBlockEntity.HistorySample sample = blockEntity.getHistorySample(spec.channel(), historyIndex);
             int ticksAgo = (historySize - 1 - historyIndex) * 4;
             List<Component> lines = new ArrayList<>();
             lines.add(Component.literal(spec.title()));
-            lines.add(Component.literal(formatAmount(getNetworkAmount(sample), spec.unit())));
-            lines.add(Component.literal("Import: " + formatAmount(sample.sourceAmount(), spec.unit())));
-            lines.add(Component.literal("Export: " + formatAmount(sample.sinkAmount(), spec.unit())));
+            lines.add(Component.literal("Throughput: " + formatAmount(getNetworkAmount(sample), spec.unit())));
+            lines.add(Component.literal("Export: " + formatAmount(sample.sourceAmount(), spec.unit())));
+            lines.add(Component.literal("Import: " + formatAmount(sample.sinkAmount(), spec.unit())));
             lines.add(Component.literal("Transit: " + formatAmount(sample.transitAmount(), spec.unit())));
             lines.add(Component.literal("Active Nodes: " + sample.activeNodes()));
             lines.add(Component.literal(ticksAgo <= 0 ? "Now" : formatTicksAgo(ticksAgo)));
-            return new GraphHover(lines);
+            return lines;
         }
 
         return null;
@@ -277,7 +273,7 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
     }
 
     private static int getNetworkAmount(MatterNetworkMonitorBlockEntity.HistorySample sample) {
-        return sample.sourceAmount() - sample.sinkAmount();
+        return Math.max(sample.sourceAmount(), sample.sinkAmount());
     }
 
     private static String formatTicksAgo(int ticksAgo) {
@@ -288,8 +284,5 @@ public class MatterNetworkMonitorScreen extends AbstractRenamableContainerScreen
     }
 
     private record GraphSpec(int channel, String title, int color, String unit, int x, int y, int width, int height) {
-    }
-
-    private record GraphHover(List<Component> lines) {
     }
 }

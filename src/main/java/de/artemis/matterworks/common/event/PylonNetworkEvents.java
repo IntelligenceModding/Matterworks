@@ -55,11 +55,16 @@ public final class PylonNetworkEvents {
         boolean placingPort = event.getItemStack().is(ModBlocks.MULTIBLOCK_PORT.get().asItem());
         boolean placingGlass = event.getItemStack().is(ModBlocks.MULTIBLOCK_GLASS.get().asItem());
         boolean placingCasing = event.getItemStack().is(ModBlocks.MULTIBLOCK_CASING.get().asItem());
+        BlockState currentState = event.getLevel().getBlockState(event.getPos());
+        if (isSameBatteryBlockPlacement(event.getItemStack(), currentState)) {
+            event.cancelWithResult(ItemInteractionResult.FAIL);
+            return;
+        }
+
         if (!placingPort && !placingGlass && !placingCasing) {
             return;
         }
 
-        BlockState currentState = event.getLevel().getBlockState(event.getPos());
         if (!canReplaceShellBlock(event.getLevel(), event.getPos(), currentState, placingPort, placingGlass, placingCasing)) {
             if (isBatteryInteractionBlock(currentState)) {
                 event.cancelWithResult(ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION);
@@ -146,11 +151,17 @@ public final class PylonNetworkEvents {
                 || state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
     }
 
+    private static boolean isSameBatteryBlockPlacement(ItemStack stack, BlockState currentState) {
+        return stack.is(ModBlocks.MULTIBLOCK_FRAME.get().asItem()) && currentState.is(ModBlocks.MULTIBLOCK_FRAME.get())
+                || stack.is(ModBlocks.MULTIBLOCK_CASING.get().asItem()) && currentState.is(ModBlocks.MULTIBLOCK_CASING.get())
+                || stack.is(ModBlocks.MULTIBLOCK_PORT.get().asItem()) && currentState.is(ModBlocks.MULTIBLOCK_PORT.get())
+                || stack.is(ModBlocks.MULTIBLOCK_GLASS.get().asItem()) && currentState.is(ModBlocks.MULTIBLOCK_GLASS.get())
+                || stack.is(ModBlocks.MATTER_BATTERY_CORE.get().asItem()) && currentState.is(ModBlocks.MATTER_BATTERY_CORE.get())
+                || stack.is(ModBlocks.MATTER_CAPACITOR_CELL.get().asItem()) && currentState.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
+    }
+
     private static void openBatteryInteraction(ServerPlayer player, ServerLevel level, BlockPos pos, BlockState state) {
-        if (state.is(ModBlocks.MATTER_BATTERY_CORE.get())
-                && level.getBlockEntity(pos) instanceof MatterBatteryCoreBlockEntity controller) {
-            controller.tryAssemble(null, false);
-            player.openMenu((MenuProvider) controller, pos);
+        if (state.is(ModBlocks.MATTER_BATTERY_CORE.get())) {
             return;
         }
 

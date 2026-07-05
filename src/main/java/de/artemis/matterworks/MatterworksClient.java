@@ -11,10 +11,12 @@ public class MatterworksClient {
     public MatterworksClient(IEventBus modEventBus) {
         NeoForge.EVENT_BUS.addListener(ClientModEvents::renderMatterNetworkLinks);
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onInteractionKeyMappingTriggered);
+        NeoForge.EVENT_BUS.addListener(ClientModEvents::onMouseScrolling);
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onClientTick);
         modEventBus.addListener(ClientModEvents::addGuiOverlayLayers);
         modEventBus.addListener(ClientModEvents::onClientSetup);
         modEventBus.addListener(ClientModEvents::registerParticleProviders);
+        modEventBus.addListener(ClientModEvents::registerKeyMappings);
         modEventBus.addListener(ClientModEvents::registerScreens);
         modEventBus.addListener(ClientModEvents::registerRenderers);
         modEventBus.addListener(ClientModEvents::registerTooltipComponents);

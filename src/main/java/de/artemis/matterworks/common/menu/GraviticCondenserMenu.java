@@ -40,18 +40,12 @@ public class GraviticCondenserMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     @Override
     protected void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     public int getUnstableAmount() {
@@ -103,19 +97,19 @@ public class GraviticCondenserMenu extends AbstractMatterMachineMenu {
             }
         } else if (index >= playerInventoryStart) {
             if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, GraviticCondenserBlockEntity.SLOT_CRYSTAL, GraviticCondenserBlockEntity.SLOT_CRYSTAL + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, GraviticCondenserBlockEntity.SLOT_CRYSTAL)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, GraviticCondenserBlockEntity.SLOT_POWER_INPUT, GraviticCondenserBlockEntity.SLOT_POWER_INPUT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, GraviticCondenserBlockEntity.SLOT_POWER_INPUT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(ModItems.RAW_MATTER_BUCKET.get())) {
-                if (!this.moveItemStackTo(sourceStack, GraviticCondenserBlockEntity.RAW_BUCKET_INPUT_SLOT, GraviticCondenserBlockEntity.RAW_BUCKET_INPUT_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, GraviticCondenserBlockEntity.RAW_BUCKET_INPUT_SLOT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(Items.BUCKET)) {
-                if (!this.moveItemStackTo(sourceStack, GraviticCondenserBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, GraviticCondenserBlockEntity.SLUDGE_BUCKET_INPUT_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, GraviticCondenserBlockEntity.SLUDGE_BUCKET_INPUT_SLOT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (index < playerHotbarStart) {
@@ -142,9 +136,6 @@ public class GraviticCondenserMenu extends AbstractMatterMachineMenu {
     }
 
     private static GraviticCondenserBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof GraviticCondenserBlockEntity condenserBlockEntity) {
-            return condenserBlockEntity;
-        }
-        throw new IllegalStateException("Missing Gravitic Condenser block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, GraviticCondenserBlockEntity.class, "Gravitic Condenser");
     }
 }

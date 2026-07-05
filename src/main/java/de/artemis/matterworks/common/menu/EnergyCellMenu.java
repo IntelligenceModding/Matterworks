@@ -11,7 +11,6 @@ import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.ContainerLevelAccess;
 import net.minecraft.world.inventory.SimpleContainerData;
@@ -20,7 +19,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.DyeColor;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
+public class EnergyCellMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     private static final int MACHINE_SLOT_COUNT = EnergyCellBlockEntity.SLOT_COUNT;
     private static final int PLAYER_INVENTORY_START = MACHINE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
@@ -204,34 +203,33 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
                 return ItemStack.EMPTY;
             }
         } else if (de.artemis.matterworks.common.upgrade.PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-            if (!this.moveItemStackTo(sourceStack, EnergyCellBlockEntity.SLOT_CRYSTAL, EnergyCellBlockEntity.SLOT_CRYSTAL + 1, false)) {
+            if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, EnergyCellBlockEntity.SLOT_CRYSTAL)) {
                 return ItemStack.EMPTY;
+            }
+        } else if (EnergyItemHelper.isPowerBank(sourceStack)) {
+            boolean moved = false;
+            if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
+                moved = moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, EnergyCellBlockEntity.SLOT_POWER_BANK);
+            }
+            if (!moved && EnergyItemHelper.canReceiveEnergy(sourceStack)) {
+                moved = moveToContainerSlotRange(sourceStack, MACHINE_SLOT_COUNT, EnergyCellBlockEntity.CHARGE_SLOT_START, EnergyCellBlockEntity.CHARGE_SLOT_COUNT);
+            }
+            if (!moved) {
+                if (index < PLAYER_HOTBAR_START) {
+                    if (!this.moveItemStackTo(sourceStack, PLAYER_HOTBAR_START, PLAYER_HOTBAR_END, false)) {
+                        return ItemStack.EMPTY;
+                    }
+                } else if (!this.moveItemStackTo(sourceStack, PLAYER_INVENTORY_START, PLAYER_HOTBAR_START, false)) {
+                    return ItemStack.EMPTY;
+                }
             }
         } else if (isUsableEnergyItem(sourceStack)) {
             boolean moved = false;
-            if (EnergyItemHelper.canProvideEnergy(sourceStack) && EnergyItemHelper.isPowerBank(sourceStack)) {
-                moved = this.moveItemStackTo(
-                        sourceStack,
-                        EnergyCellBlockEntity.SLOT_POWER_BANK,
-                        EnergyCellBlockEntity.SLOT_POWER_BANK + 1,
-                        false
-                );
-            }
-            if (!sourceStack.isEmpty() && EnergyItemHelper.canReceiveEnergy(sourceStack)) {
-                moved = this.moveItemStackTo(
-                        sourceStack,
-                        EnergyCellBlockEntity.CHARGE_SLOT_START,
-                        EnergyCellBlockEntity.CHARGE_SLOT_START + EnergyCellBlockEntity.CHARGE_SLOT_COUNT,
-                        false
-                ) || moved;
+            if (EnergyItemHelper.canReceiveEnergy(sourceStack)) {
+                moved = moveToContainerSlotRange(sourceStack, MACHINE_SLOT_COUNT, EnergyCellBlockEntity.CHARGE_SLOT_START, EnergyCellBlockEntity.CHARGE_SLOT_COUNT) || moved;
             }
             if (!moved && EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                moved = this.moveItemStackTo(
-                        sourceStack,
-                        EnergyCellBlockEntity.SLOT_POWER_BANK,
-                        EnergyCellBlockEntity.SLOT_POWER_BANK + 1,
-                        false
-                );
+                moved = moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, EnergyCellBlockEntity.SLOT_POWER_BANK);
             }
             if (!moved) {
                 if (index < PLAYER_HOTBAR_START) {
@@ -265,17 +263,11 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static boolean isUsableEnergyItem(ItemStack stack) {
@@ -306,9 +298,6 @@ public class EnergyCellMenu extends AbstractContainerMenu implements NamedBlockM
     }
 
     private static EnergyCellBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof EnergyCellBlockEntity energyCellBlockEntity) {
-            return energyCellBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Energy Cell block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, EnergyCellBlockEntity.class, "Matter Energy Cell");
     }
 }

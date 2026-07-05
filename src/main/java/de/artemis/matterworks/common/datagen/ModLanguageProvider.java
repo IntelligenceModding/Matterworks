@@ -59,6 +59,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         addItem(ModItems.MULTIBLOCK_GLASS_PANE, "Multiblock Glass Pane");
         addItem(ModItems.BATTERY_CORE_ASSEMBLY, "Battery Core Assembly");
         addItem(ModItems.EMPTY_TEMPLATE, "Empty Template");
+        addItem(ModItems.MATTER_ARCHITECT, "Matter Architect");
         addItem(ModItems.MATTER_ITEM_FILTER, "Item Filter Card");
         addItem(ModItems.MATTER_FLUID_FILTER, "Fluid Filter Card");
         addItem(ModItems.ENCODED_TEMPLATE, "Encoded Template");
@@ -137,6 +138,9 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("message.matterworks.matter_battery.disassembled", "Matter Battery disassembled.");
         add("message.matterworks.matter_battery.invalid", "Matter Battery invalid: %s");
         add("message.matterworks.matter_battery.port_mode", "Battery Port mode: %s");
+        add("key.categories.matterworks", "Matterworks");
+        add("key.matterworks.architect.layer_up", "Matter Architect Layer Up");
+        add("key.matterworks.architect.layer_down", "Matter Architect Layer Down");
         add("screen.matterworks.matter_pylon.id", "ID");
         add("screen.matterworks.matter_pylon.mode", "Mode");
         add("screen.matterworks.matter_pylon.channel", "Channel");

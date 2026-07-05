@@ -145,6 +145,7 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
     private int currentInputRate;
     private int currentOutputRate;
     private int currentTransitRate;
+    private int lastTickStoredEnergy = Integer.MIN_VALUE;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -204,14 +205,19 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
             return;
         }
 
-        int inputRate = transferEnergyFromInputItems();
-        int outputRate = transferEnergyToOutputItems();
+        int externalNetRate = sampleExternalEnergyDelta();
+        int inputRate = Math.max(0, externalNetRate);
+        int outputRate = Math.max(0, -externalNetRate);
+
+        inputRate += transferEnergyFromInputItems();
+        outputRate += transferEnergyToOutputItems();
         outputRate += pushEnergyToNeighbors();
         super.serverTick();
         int transitRate = getTransferRoleAmount(CHANNEL_ENERGY, TransferDisplayRole.TRANSIT);
         inputRate += getTransferRoleAmount(CHANNEL_ENERGY, TransferDisplayRole.SINK);
         outputRate += getTransferRoleAmount(CHANNEL_ENERGY, TransferDisplayRole.SOURCE);
         refreshTransferTelemetry(inputRate, outputRate, transitRate);
+        lastTickStoredEnergy = energyStorage.getEnergyStored();
     }
 
     public SimpleContainer createDropInventory() {
@@ -431,10 +437,6 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
                 continue;
             }
 
-            if (targetStorage.getEnergyStored() >= storedEnergy) {
-                continue;
-            }
-
             int offered = Math.min(MAX_SIDE_TRANSFER_PER_TICK, storedEnergy);
             int accepted = targetStorage.receiveEnergy(offered, false);
             if (accepted > 0) {
@@ -444,6 +446,15 @@ public class EnergyCellBlockEntity extends MatterPylonBlockEntity implements Sid
             }
         }
         return movedTotal;
+    }
+
+    private int sampleExternalEnergyDelta() {
+        int storedEnergy = energyStorage.getEnergyStored();
+        if (lastTickStoredEnergy == Integer.MIN_VALUE) {
+            lastTickStoredEnergy = storedEnergy;
+            return 0;
+        }
+        return storedEnergy - lastTickStoredEnergy;
     }
 
     private void refreshTransferTelemetry(int inputRate, int outputRate, int transitRate) {

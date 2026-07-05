@@ -29,9 +29,6 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     private static final int TOOLTIP_BAR_WIDTH = 40;
     private static final int GRAPH_COLOR = 0xFFE23D2D;
     private static final int GRAPH_AREA_COLOR = 0x35E23D2D;
-    private static final int CHARGE_FILL_COLOR = 0xFFE23D2D;
-    private static final int CHARGE_FILL_TOP_COLOR = 0xFFF06A5E;
-
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public EnergyCellScreen(EnergyCellMenu menu, Inventory playerInventory, Component title) {
@@ -133,15 +130,13 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
     }
 
     private void renderChargeBar(GuiGraphics guiGraphics) {
-        GuiWidgets.drawInsetVerticalFillBar(
+        GuiWidgets.drawInsetVerticalEnergyBar(
                 guiGraphics,
                 leftPos + CHARGE_BAR_X,
                 topPos + CHARGE_BAR_Y,
                 CHARGE_BAR_WIDTH,
                 CHARGE_BAR_HEIGHT,
-                menu.getScaledEnergyAmount(CHARGE_BAR_HEIGHT - 4),
-                CHARGE_FILL_COLOR,
-                CHARGE_FILL_TOP_COLOR
+                menu.getScaledEnergyAmount(CHARGE_BAR_HEIGHT - 4)
         );
     }
 
@@ -160,39 +155,28 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
             return;
         }
 
-        GraphHover hover = getHoveredGraph(mouseX, mouseY);
-        if (hover != null) {
-            guiGraphics.renderTooltip(font, hover.lines(), Optional.empty(), mouseX, mouseY);
+        List<Component> hoverLines = getHoveredGraphLines(mouseX, mouseY);
+        if (hoverLines != null) {
+            guiGraphics.renderTooltip(font, hoverLines, Optional.empty(), mouseX, mouseY);
         }
     }
 
-    private GraphHover getHoveredGraph(int mouseX, int mouseY) {
-        int historySize = menu.getHistorySize();
-        int historyCapacity = menu.getHistoryCapacity();
-        if (historyCapacity <= 0) {
-            return null;
-        }
-
-        int hoveredVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+    private List<Component> getHoveredGraphLines(int mouseX, int mouseY) {
+        int historyIndex = GuiWidgets.getHoveredHistoryIndex(
                 mouseX,
                 mouseY,
                 leftPos + GRAPH_X,
                 topPos + GRAPH_Y,
                 GRAPH_WIDTH,
                 GRAPH_HEIGHT,
-                historyCapacity
+                menu.getHistorySize(),
+                menu.getHistoryCapacity()
         );
-        if (hoveredVisibleIndex < 0) {
-            return null;
-        }
-
-        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(hoveredVisibleIndex, historySize, historyCapacity);
         if (historyIndex < 0) {
             return null;
         }
-
         EnergyCellBlockEntity.TransferHistorySample sample = menu.getHistorySample(historyIndex);
-        return new GraphHover(List.of(GuiWidgets.formatRateComponent(sample.netRate(), "FE/t", true)));
+        return List.of(GuiWidgets.formatRateComponent(sample.netRate(), "FE/t", true));
     }
 
     private EnergyCellBlockEntity.TransferHistorySample getVisibleSample(int visibleIndex) {
@@ -217,8 +201,5 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
 
     private List<TopCategoryTabs.Tab> buildTabs() {
         return sideConfig.buildTabs(menu, () -> PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(menu.getBlockPos(), menu.isRemoteAccess())));
-    }
-
-    private record GraphHover(List<Component> lines) {
     }
 }

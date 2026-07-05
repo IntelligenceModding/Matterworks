@@ -545,19 +545,10 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
     }
 
     private void migrateLegacyInventory() {
-        moveLegacySlot(4, REFINED_BUCKET_INPUT_SLOT, stack -> stack.is(ModItems.REFINED_MATTER_BUCKET.get()));
-        moveLegacySlot(5, REFINED_BUCKET_OUTPUT_SLOT, stack -> stack.is(Items.BUCKET));
-        moveLegacySlot(6, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
-        moveLegacySlot(7, SLUDGE_BUCKET_INPUT_SLOT, stack -> stack.is(Items.BUCKET));
-        moveLegacySlot(8, SLUDGE_BUCKET_OUTPUT_SLOT, stack -> stack.is(ModItems.MATTER_SLUDGE_BUCKET.get()));
-    }
-
-    private void moveLegacySlot(int fromSlot, int targetSlot, java.util.function.Predicate<ItemStack> predicate) {
-        ItemStack stack = itemHandler.getStackInSlot(fromSlot);
-        if (stack.isEmpty() || !predicate.test(stack) || !itemHandler.getStackInSlot(targetSlot).isEmpty()) {
-            return;
-        }
-        itemHandler.setStackInSlot(targetSlot, stack.copy());
-        itemHandler.setStackInSlot(fromSlot, ItemStack.EMPTY);
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 4, REFINED_BUCKET_INPUT_SLOT, stack -> stack.is(ModItems.REFINED_MATTER_BUCKET.get()));
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 5, REFINED_BUCKET_OUTPUT_SLOT, stack -> stack.is(Items.BUCKET));
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 6, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 7, SLUDGE_BUCKET_INPUT_SLOT, stack -> stack.is(Items.BUCKET));
+        LegacyInventoryMigration.moveIfMatches(itemHandler, 8, SLUDGE_BUCKET_OUTPUT_SLOT, stack -> stack.is(ModItems.MATTER_SLUDGE_BUCKET.get()));
     }
 }

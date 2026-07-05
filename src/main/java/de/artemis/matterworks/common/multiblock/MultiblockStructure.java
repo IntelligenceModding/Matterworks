@@ -12,6 +12,9 @@ public record MultiblockStructure(
         BlockPos controllerPos,
         BlockPos originPos,
         Direction front,
+        int width,
+        int height,
+        int depth,
         Map<BlockPos, MultiblockRole> members
 ) {
     public boolean contains(BlockPos pos) {

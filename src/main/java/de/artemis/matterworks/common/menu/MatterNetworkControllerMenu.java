@@ -150,10 +150,7 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
     }
 
     private static MatterNetworkControllerBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterNetworkControllerBlockEntity controllerBlockEntity) {
-            return controllerBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Network Controller block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterNetworkControllerBlockEntity.class, "Matter Network Controller");
     }
 
     private static final class SelectedNodeFilterHandler implements IItemHandlerModifiable {

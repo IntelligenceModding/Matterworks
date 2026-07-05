@@ -22,8 +22,6 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
     private static final int FLUID_TANK_Y = 18;
     private static final int FLUID_TANK_WIDTH = 49;
     private static final int FLUID_TANK_HEIGHT = 49;
-    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
-    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public MatterRecyclerScreen(MatterRecyclerMenu menu, Inventory playerInventory, Component title) {
@@ -48,23 +46,19 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
             sideConfig.renderBackground(guiGraphics, leftPos, topPos);
             return;
         }
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalProgressGauge(
                 guiGraphics,
                 leftPos + PROGRESS_BAR_X,
                 topPos + PROGRESS_BAR_Y,
                 menu.getScaledProgress(BAR_WIDTH),
-                BAR_HEIGHT,
-                menu.getProgressBarColor(),
-                menu.getProgressBarColor()
+                BAR_HEIGHT
         );
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalEnergyGauge(
                 guiGraphics,
                 leftPos + ENERGY_BAR_X,
                 topPos + ENERGY_BAR_Y,
                 menu.getScaledEnergyAmount(BAR_WIDTH),
-                BAR_HEIGHT,
-                ENERGY_FILL_COLOR,
-                ENERGY_FILL_TOP_COLOR
+                BAR_HEIGHT
         );
         GuiWidgets.fillVerticalFluidGauge(
                 guiGraphics,

@@ -20,8 +20,8 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class MatterAnalyzerMenu extends net.minecraft.world.inventory.AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
-    private static final int MACHINE_SLOT_COUNT = 6;
+public class MatterAnalyzerMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
+    private static final int MACHINE_SLOT_COUNT = MatterAnalyzerBlockEntity.SLOT_CRYSTAL + 1;
     private static final int PLAYER_INVENTORY_START = MACHINE_SLOT_COUNT;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
@@ -174,24 +174,24 @@ public class MatterAnalyzerMenu extends net.minecraft.world.inventory.AbstractCo
             }
         } else if (index >= PLAYER_INVENTORY_START) {
             if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterAnalyzerBlockEntity.SLOT_CRYSTAL, MatterAnalyzerBlockEntity.SLOT_CRYSTAL + 1, false)) {
+                if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, MatterAnalyzerBlockEntity.SLOT_CRYSTAL)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterAnalyzerBlockEntity.SLOT_POWER_INPUT, MatterAnalyzerBlockEntity.SLOT_POWER_INPUT + 1, false)) {
+                if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, MatterAnalyzerBlockEntity.SLOT_POWER_INPUT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(ModItems.EMPTY_TEMPLATE.get())) {
-                if (!this.moveItemStackTo(sourceStack, MatterAnalyzerBlockEntity.SLOT_EMPTY_TEMPLATE, MatterAnalyzerBlockEntity.SLOT_EMPTY_TEMPLATE + 1, false)) {
+                if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, MatterAnalyzerBlockEntity.SLOT_EMPTY_TEMPLATE)) {
                     return ItemStack.EMPTY;
                 }
             } else if (sourceStack.is(ModItems.ENCODED_TEMPLATE.get())
                     && EncodedTemplateData.hasEncodedItem(sourceStack)
                     && !EncodedTemplateData.isComplete(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, MatterAnalyzerBlockEntity.SLOT_ACTIVE_TEMPLATE, MatterAnalyzerBlockEntity.SLOT_ACTIVE_TEMPLATE + 1, false)) {
+                if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, MatterAnalyzerBlockEntity.SLOT_ACTIVE_TEMPLATE)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(sourceStack, MatterAnalyzerBlockEntity.SLOT_ITEM_INPUT, MatterAnalyzerBlockEntity.SLOT_ITEM_INPUT + 1, false)) {
+            } else if (!moveToContainerSlot(sourceStack, MACHINE_SLOT_COUNT, MatterAnalyzerBlockEntity.SLOT_ITEM_INPUT)) {
                 if (index < PLAYER_HOTBAR_START) {
                     if (!this.moveItemStackTo(sourceStack, PLAYER_HOTBAR_START, PLAYER_HOTBAR_END, false)) {
                         return ItemStack.EMPTY;
@@ -217,23 +217,14 @@ public class MatterAnalyzerMenu extends net.minecraft.world.inventory.AbstractCo
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 140 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 140);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 198));
-        }
+        addPlayerHotbarSlots(inventory, 8, 198);
     }
 
     private static MatterAnalyzerBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof MatterAnalyzerBlockEntity analyzerBlockEntity) {
-            return analyzerBlockEntity;
-        }
-        throw new IllegalStateException("Missing Matter Analyzer block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, MatterAnalyzerBlockEntity.class, "Matter Analyzer");
     }
 }

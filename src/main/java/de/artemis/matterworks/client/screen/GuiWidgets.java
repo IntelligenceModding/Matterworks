@@ -25,6 +25,8 @@ public final class GuiWidgets {
     private static final ResourceLocation VANILLA_BUTTON = ResourceLocation.withDefaultNamespace("widget/button");
     private static final ResourceLocation VANILLA_BUTTON_DISABLED = ResourceLocation.withDefaultNamespace("widget/button_disabled");
     private static final ResourceLocation VANILLA_BUTTON_HIGHLIGHTED = ResourceLocation.withDefaultNamespace("widget/button_highlighted");
+    private static final ResourceLocation ENERGY_FILL_TEXTURE = ResourceLocation.withDefaultNamespace("block/lava_still");
+    private static final ResourceLocation PROGRESS_FILL_TEXTURE = ResourceLocation.withDefaultNamespace("block/water_still");
     private static final int BUTTON_TEXT = 0xFFE0E0E0;
     private static final int BUTTON_TEXT_DISABLED = 0xFFA0A0A0;
     private static final int TEXT_FIELD_TEXT = 0xFFE0E0E0;
@@ -34,6 +36,10 @@ public final class GuiWidgets {
     private static final int GRAPH_GRID = 0x22373737;
     private static final int GRAPH_HOVER_LINE = 0x66FFFFFF;
     private static final int GRAPH_HOVER_POINT = 0xFFFFFFFF;
+    private static final int ENERGY_FILL_TINT = 0xFFE23D2D;
+    private static final int ENERGY_FILL_HIGHLIGHT = 0x88FF8A80;
+    private static final int PROGRESS_FILL_TINT = 0xFF8A2BE2;
+    private static final int PROGRESS_FILL_HIGHLIGHT = 0x88C68BFF;
     private static Double pendingMouseGuiX;
     private static Double pendingMouseGuiY;
 
@@ -229,32 +235,43 @@ public final class GuiWidgets {
         return String.format(Locale.ROOT, "%.2f %s", rate, unit);
     }
 
-    public static void drawInsetVerticalFillBar(
+    public static void drawInsetVerticalAnimatedFillBar(
             GuiGraphics guiGraphics,
             int frameLeft,
             int frameTop,
             int frameWidth,
             int frameHeight,
             int filledHeight,
-            int fillColor,
+            ResourceLocation spriteLocation,
+            int fillTint,
             int highlightColor
     ) {
         int barLeft = frameLeft + 2;
         int barTop = frameTop + 2;
         int barWidth = frameWidth - 4;
         int barHeight = frameHeight - 4;
-        int barBottom = barTop + barHeight;
 
         VanillaGuiHelper.drawInsetPanel(guiGraphics, frameLeft, frameTop, frameWidth, frameHeight);
         guiGraphics.fill(barLeft, barTop, barLeft + barWidth, barTop + barHeight, CONTENT_BACKGROUND);
-        if (filledHeight <= 0) {
-            return;
-        }
+        renderVerticalTiledFill(guiGraphics, spriteLocation, fillTint, highlightColor, barLeft, barTop, barWidth, barHeight, filledHeight, 0.92F);
+    }
 
-        int clampedHeight = Math.min(filledHeight, barHeight);
-        int fillTop = barBottom - clampedHeight;
-        guiGraphics.fill(barLeft, fillTop, barLeft + barWidth, barBottom, fillColor);
-        guiGraphics.fill(barLeft, fillTop, barLeft + barWidth, Math.min(barBottom, fillTop + 2), highlightColor);
+    public static void drawInsetVerticalEnergyBar(
+            GuiGraphics guiGraphics,
+            int frameLeft,
+            int frameTop,
+            int frameWidth,
+            int frameHeight,
+            int filledHeight
+    ) {
+        int barLeft = frameLeft + 2;
+        int barTop = frameTop + 2;
+        int barWidth = frameWidth - 4;
+        int barHeight = frameHeight - 4;
+
+        VanillaGuiHelper.drawInsetPanel(guiGraphics, frameLeft, frameTop, frameWidth, frameHeight);
+        guiGraphics.fill(barLeft, barTop, barLeft + barWidth, barTop + barHeight, CONTENT_BACKGROUND);
+        renderVerticalTiledFill(guiGraphics, ENERGY_FILL_TEXTURE, ENERGY_FILL_TINT, ENERGY_FILL_HIGHLIGHT, barLeft, barTop, barWidth, barHeight, filledHeight, 0.92F);
     }
 
     public static void drawInsetVerticalFluidBar(
@@ -276,41 +293,41 @@ public final class GuiWidgets {
         renderVerticalFluidFill(guiGraphics, barLeft, barTop, barWidth, barHeight, filledHeight, fluidStack, 0.95F);
     }
 
-    public static void fillHorizontalGauge(
+    public static void fillHorizontalEnergyGauge(
             GuiGraphics guiGraphics,
             int x,
             int y,
             int filledWidth,
-            int height,
-            int fillColor,
-            int highlightColor
+            int height
     ) {
         if (filledWidth <= 0 || height <= 0) {
             return;
         }
-
-        guiGraphics.fill(x, y, x + filledWidth, y + height, fillColor);
-        guiGraphics.fill(x, y, x + filledWidth, Math.min(y + height, y + 2), highlightColor);
+        renderHorizontalEnergyFill(guiGraphics, x, y, filledWidth, height, 0.90F);
     }
 
-    public static void fillVerticalGauge(
+    public static void fillHorizontalProgressGauge(
+            GuiGraphics guiGraphics,
+            int x,
+            int y,
+            int filledWidth,
+            int height
+    ) {
+        if (filledWidth <= 0 || height <= 0) {
+            return;
+        }
+        renderHorizontalProgressFill(guiGraphics, x, y, filledWidth, height, 0.90F);
+    }
+
+    public static void fillVerticalEnergyGauge(
             GuiGraphics guiGraphics,
             int x,
             int y,
             int width,
             int height,
-            int filledHeight,
-            int fillColor,
-            int highlightColor
+            int filledHeight
     ) {
-        if (filledHeight <= 0 || width <= 0 || height <= 0) {
-            return;
-        }
-
-        int clampedHeight = Math.min(filledHeight, height);
-        int fillTop = y + height - clampedHeight;
-        guiGraphics.fill(x, fillTop, x + width, y + height, fillColor);
-        guiGraphics.fill(x, fillTop, x + width, Math.min(y + height, fillTop + 2), highlightColor);
+        renderVerticalTiledFill(guiGraphics, ENERGY_FILL_TEXTURE, ENERGY_FILL_TINT, ENERGY_FILL_HIGHLIGHT, x, y, width, height, filledHeight, 0.90F);
     }
 
     public static void fillVerticalFluidGauge(
@@ -377,6 +394,62 @@ public final class GuiWidgets {
         renderFluidTiledRect(guiGraphics, fluidStack, x, fillTop, width, clampedHeight, alpha);
     }
 
+    private static void renderVerticalTiledFill(
+            GuiGraphics guiGraphics,
+            ResourceLocation spriteLocation,
+            int fillTint,
+            int highlightColor,
+            int x,
+            int y,
+            int width,
+            int height,
+            int filledHeight,
+            float alpha
+    ) {
+        if (filledHeight <= 0 || width <= 0 || height <= 0) {
+            return;
+        }
+
+        int clampedHeight = Math.min(filledHeight, height);
+        int fillTop = y + height - clampedHeight;
+        renderAtlasTiledRect(guiGraphics, spriteLocation, fillTint, x, fillTop, width, clampedHeight, alpha);
+        guiGraphics.fill(x, fillTop, x + width, Math.min(y + height, fillTop + 1), highlightColor);
+    }
+
+    private static void renderHorizontalEnergyFill(
+            GuiGraphics guiGraphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            float alpha
+    ) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        renderAtlasTiledRect(guiGraphics, ENERGY_FILL_TEXTURE, ENERGY_FILL_TINT, x, y, width, height, alpha);
+        guiGraphics.fill(x, y, x + width, Math.min(y + height, y + 1), ENERGY_FILL_HIGHLIGHT);
+        guiGraphics.fill(Math.max(x, x + width - 1), y, x + width, y + height, ENERGY_FILL_HIGHLIGHT);
+    }
+
+    private static void renderHorizontalProgressFill(
+            GuiGraphics guiGraphics,
+            int x,
+            int y,
+            int width,
+            int height,
+            float alpha
+    ) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        renderAtlasTiledRect(guiGraphics, PROGRESS_FILL_TEXTURE, PROGRESS_FILL_TINT, x, y, width, height, alpha);
+        guiGraphics.fill(x, y, x + width, Math.min(y + height, y + 1), PROGRESS_FILL_HIGHLIGHT);
+        guiGraphics.fill(Math.max(x, x + width - 1), y, x + width, y + height, PROGRESS_FILL_HIGHLIGHT);
+    }
+
     private static void renderFluidTiledRect(
             GuiGraphics guiGraphics,
             FluidStack fluidStack,
@@ -398,6 +471,42 @@ public final class GuiWidgets {
         IClientFluidTypeExtensions extensions = IClientFluidTypeExtensions.of(fluidStack.getFluid());
         TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(extensions.getStillTexture(fluidStack));
         int tint = extensions.getTintColor(fluidStack);
+        renderTiledSprite(guiGraphics, sprite, tint, x, y, width, height, alpha);
+    }
+
+    private static void renderAtlasTiledRect(
+            GuiGraphics guiGraphics,
+            ResourceLocation spriteLocation,
+            int tint,
+            int x,
+            int y,
+            int width,
+            int height,
+            float alpha
+    ) {
+        if (width <= 0 || height <= 0) {
+            return;
+        }
+
+        Minecraft minecraft = Minecraft.getInstance();
+        if (minecraft == null) {
+            return;
+        }
+
+        TextureAtlasSprite sprite = minecraft.getTextureAtlas(InventoryMenu.BLOCK_ATLAS).apply(spriteLocation);
+        renderTiledSprite(guiGraphics, sprite, tint, x, y, width, height, alpha);
+    }
+
+    private static void renderTiledSprite(
+            GuiGraphics guiGraphics,
+            TextureAtlasSprite sprite,
+            int tint,
+            int x,
+            int y,
+            int width,
+            int height,
+            float alpha
+    ) {
         float red = ((tint >> 16) & 0xFF) / 255.0F;
         float green = ((tint >> 8) & 0xFF) / 255.0F;
         float blue = (tint & 0xFF) / 255.0F;
@@ -430,6 +539,20 @@ public final class GuiWidgets {
         }
         float relative = (mouseX - chartLeft) / (float) Math.max(1, chartWidth - 1);
         return Mth.clamp(Math.round(relative * (historyCapacity - 1)), 0, historyCapacity - 1);
+    }
+
+    public static int getHoveredHistoryIndex(
+            int mouseX,
+            int mouseY,
+            int frameLeft,
+            int frameTop,
+            int frameWidth,
+            int frameHeight,
+            int historySize,
+            int historyCapacity
+    ) {
+        int visibleIndex = getHoveredHistorySampleIndex(mouseX, mouseY, frameLeft, frameTop, frameWidth, frameHeight, historyCapacity);
+        return visibleIndex < 0 ? -1 : getHistoryIndexForVisibleIndex(visibleIndex, historySize, historyCapacity);
     }
 
     public static int getHistoryIndexForVisibleIndex(int visibleIndex, int historySize, int historyCapacity) {

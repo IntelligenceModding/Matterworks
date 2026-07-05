@@ -24,8 +24,6 @@ public class MatterStabilizerScreen extends AbstractContainerScreen<MatterStabil
     private static final int TANK_Y = 18;
     private static final int TANK_WIDTH = 50;
     private static final int TANK_HEIGHT = 49;
-    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
-    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public MatterStabilizerScreen(MatterStabilizerMenu menu, Inventory playerInventory, Component title) {
@@ -50,23 +48,19 @@ public class MatterStabilizerScreen extends AbstractContainerScreen<MatterStabil
             sideConfig.renderBackground(guiGraphics, leftPos, topPos);
             return;
         }
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalProgressGauge(
                 guiGraphics,
                 leftPos + PROGRESS_BAR_X,
                 topPos + PROGRESS_BAR_Y,
                 menu.getScaledProgress(BAR_WIDTH),
-                BAR_HEIGHT,
-                menu.getProgressBarColor(),
-                menu.getProgressBarColor()
+                BAR_HEIGHT
         );
-        GuiWidgets.fillHorizontalGauge(
+        GuiWidgets.fillHorizontalEnergyGauge(
                 guiGraphics,
                 leftPos + ENERGY_BAR_X,
                 topPos + ENERGY_BAR_Y,
                 menu.getScaledEnergyAmount(BAR_WIDTH),
-                BAR_HEIGHT,
-                ENERGY_FILL_COLOR,
-                ENERGY_FILL_TOP_COLOR
+                BAR_HEIGHT
         );
         GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + RAW_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRawMatterAmount(TANK_HEIGHT), menu.getRawMatterFluidStack());
         GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + REFINED_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRefinedMatterAmount(TANK_HEIGHT), menu.getRefinedMatterFluidStack());

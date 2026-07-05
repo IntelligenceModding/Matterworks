@@ -16,6 +16,7 @@ import java.util.Optional;
 
 public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.inventory.AbstractContainerScreen<CombustionGeneratorMenu> {
     private static final ResourceLocation TEXTURE = ResourceLocation.fromNamespaceAndPath(Matterworks.MOD_ID, "textures/gui/combustion_generator.png");
+    private static final ResourceLocation FUEL_FILL_TEXTURE = ResourceLocation.withDefaultNamespace("block/lava_still");
     private static final int FUEL_GRAPH_X = 8;
     private static final int FUEL_GRAPH_Y = 18;
     private static final int FUEL_GRAPH_WIDTH = 77;
@@ -35,13 +36,10 @@ public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.
     private static final int TOOLTIP_BAR_WIDTH = 40;
     private static final int FUEL_GRAPH_COLOR = 0xFFF29B2E;
     private static final int FUEL_GRAPH_AREA_COLOR = 0x35F29B2E;
-    private static final int FUEL_FILL_COLOR = 0xFFF29B2E;
-    private static final int FUEL_FILL_TOP_COLOR = 0xFFFFC266;
+    private static final int FUEL_FILL_COLOR = 0xFFFFC13A;
+    private static final int FUEL_FILL_TOP_COLOR = 0xFFFFF0A0;
     private static final int ENERGY_GRAPH_COLOR = 0xFFE23D2D;
     private static final int ENERGY_GRAPH_AREA_COLOR = 0x35E23D2D;
-    private static final int ENERGY_FILL_COLOR = 0xFFE23D2D;
-    private static final int ENERGY_FILL_TOP_COLOR = 0xFFF06A5E;
-
     private final MachineSideConfigController sideConfig = new MachineSideConfigController();
 
     public CombustionGeneratorScreen(CombustionGeneratorMenu menu, Inventory playerInventory, Component title) {
@@ -75,25 +73,24 @@ public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.
 
         renderFuelUsageGraph(guiGraphics, mouseX, mouseY);
         renderGenerationGraph(guiGraphics, mouseX, mouseY);
-        GuiWidgets.drawInsetVerticalFillBar(
+        GuiWidgets.drawInsetVerticalAnimatedFillBar(
                 guiGraphics,
                 leftPos + FUEL_BAR_X,
                 topPos + FUEL_BAR_Y,
                 FUEL_BAR_WIDTH,
                 FUEL_BAR_HEIGHT,
                 menu.getScaledFuelAmount(FUEL_BAR_HEIGHT - 4),
+                FUEL_FILL_TEXTURE,
                 FUEL_FILL_COLOR,
                 FUEL_FILL_TOP_COLOR
         );
-        GuiWidgets.drawInsetVerticalFillBar(
+        GuiWidgets.drawInsetVerticalEnergyBar(
                 guiGraphics,
                 leftPos + ENERGY_BAR_X,
                 topPos + ENERGY_BAR_Y,
                 ENERGY_BAR_WIDTH,
                 ENERGY_BAR_HEIGHT,
-                menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT - 4),
-                ENERGY_FILL_COLOR,
-                ENERGY_FILL_TOP_COLOR
+                menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT - 4)
         );
     }
 
@@ -197,56 +194,44 @@ public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.
             return;
         }
 
-        GraphHover hover = getHoveredGraph(mouseX, mouseY);
-        if (hover != null) {
-            guiGraphics.renderTooltip(font, hover.lines(), Optional.empty(), mouseX, mouseY);
+        List<Component> hoverLines = getHoveredGraphLines(mouseX, mouseY);
+        if (hoverLines != null) {
+            guiGraphics.renderTooltip(font, hoverLines, Optional.empty(), mouseX, mouseY);
         }
     }
 
-    private GraphHover getHoveredGraph(int mouseX, int mouseY) {
-        int historySize = menu.getHistorySize();
-        int historyCapacity = menu.getHistoryCapacity();
-        if (historyCapacity <= 0) {
-            return null;
-        }
-
-        int fuelVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+    private List<Component> getHoveredGraphLines(int mouseX, int mouseY) {
+        int fuelHistoryIndex = GuiWidgets.getHoveredHistoryIndex(
                 mouseX,
                 mouseY,
                 leftPos + FUEL_GRAPH_X,
                 topPos + FUEL_GRAPH_Y,
                 FUEL_GRAPH_WIDTH,
                 FUEL_GRAPH_HEIGHT,
-                historyCapacity
+                menu.getHistorySize(),
+                menu.getHistoryCapacity()
         );
-        if (fuelVisibleIndex >= 0) {
-            int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(fuelVisibleIndex, historySize, historyCapacity);
-            if (historyIndex >= 0) {
-                CombustionGeneratorBlockEntity.GeneratorHistorySample sample = menu.getHistorySample(historyIndex);
-                return new GraphHover(List.of(GuiWidgets.formatDecimalRateComponent(sample.fuelUsageMilliRate() / 1000.0D, "fuel/t")));
-            }
+        if (fuelHistoryIndex >= 0) {
+            CombustionGeneratorBlockEntity.GeneratorHistorySample sample = menu.getHistorySample(fuelHistoryIndex);
+            return List.of(GuiWidgets.formatDecimalRateComponent(sample.fuelUsageMilliRate() / 1000.0D, "fuel/t"));
         }
 
-        int energyVisibleIndex = GuiWidgets.getHoveredHistorySampleIndex(
+        int energyHistoryIndex = GuiWidgets.getHoveredHistoryIndex(
                 mouseX,
                 mouseY,
                 leftPos + ENERGY_GRAPH_X,
                 topPos + ENERGY_GRAPH_Y,
                 ENERGY_GRAPH_WIDTH,
                 ENERGY_GRAPH_HEIGHT,
-                historyCapacity
+                menu.getHistorySize(),
+                menu.getHistoryCapacity()
         );
-        if (energyVisibleIndex < 0) {
+        if (energyHistoryIndex < 0) {
             return null;
         }
 
-        int historyIndex = GuiWidgets.getHistoryIndexForVisibleIndex(energyVisibleIndex, historySize, historyCapacity);
-        if (historyIndex < 0) {
-            return null;
-        }
-
-        CombustionGeneratorBlockEntity.GeneratorHistorySample sample = menu.getHistorySample(historyIndex);
-        return new GraphHover(List.of(GuiWidgets.formatRateComponent(sample.generationRate(), "FE/t", false)));
+        CombustionGeneratorBlockEntity.GeneratorHistorySample sample = menu.getHistorySample(energyHistoryIndex);
+        return List.of(GuiWidgets.formatRateComponent(sample.generationRate(), "FE/t", false));
     }
 
     private CombustionGeneratorBlockEntity.GeneratorHistorySample getVisibleSample(int visibleIndex) {
@@ -286,8 +271,5 @@ public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.
 
     private List<TopCategoryTabs.Tab> buildTabs() {
         return sideConfig.buildTabs(menu, null);
-    }
-
-    private record GraphHover(List<Component> lines) {
     }
 }

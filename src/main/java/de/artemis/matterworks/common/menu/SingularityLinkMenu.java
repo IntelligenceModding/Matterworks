@@ -1,20 +1,20 @@
 package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.SingularityLinkBlockEntity;
+import de.artemis.matterworks.common.blockentity.SingularityLinkSavedData;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public class SingularityLinkMenu extends AbstractContainerMenu implements NamedBlockMenu {
+public class SingularityLinkMenu extends AbstractBaseMenu implements NamedBlockMenu {
     private static final int PLAYER_INVENTORY_START = 1;
     private static final int PLAYER_INVENTORY_END = PLAYER_INVENTORY_START + 27;
     private static final int PLAYER_HOTBAR_START = PLAYER_INVENTORY_END;
@@ -44,7 +44,7 @@ public class SingularityLinkMenu extends AbstractContainerMenu implements NamedB
         this.data = data;
         this.remoteAccess = remoteAccess;
 
-        addSlot(new SlotItemHandler(blockEntity.getSingularityHandler(), SingularityLinkBlockEntity.SINGULARITY_SLOT, 80, 24));
+        addSlot(new SlotItemHandler(blockEntity.getSingularityHandler(), SingularityLinkBlockEntity.SINGULARITY_SLOT, 80, 18));
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
         addDataSlots(data);
@@ -60,12 +60,46 @@ public class SingularityLinkMenu extends AbstractContainerMenu implements NamedB
         return blockEntity.getDisplayName().getString();
     }
 
+    public SingularityLinkBlockEntity getBlockEntity() {
+        return blockEntity;
+    }
+
     public boolean isStructureFormed() {
         return data.get(SingularityLinkBlockEntity.DATA_FORMED) > 0;
     }
 
     public boolean hasLinkedPartner() {
         return data.get(SingularityLinkBlockEntity.DATA_LINKED) > 0;
+    }
+
+    public boolean hasInsertedSingularity() {
+        return data.get(SingularityLinkBlockEntity.DATA_HAS_SINGULARITY) > 0;
+    }
+
+    public SingularityLinkSavedData.ConnectAvailability getConnectAvailability() {
+        int ordinal = data.get(SingularityLinkBlockEntity.DATA_CONNECT_STATE);
+        SingularityLinkSavedData.ConnectAvailability[] values = SingularityLinkSavedData.ConnectAvailability.values();
+        if (ordinal < 0 || ordinal >= values.length) {
+            return SingularityLinkSavedData.ConnectAvailability.UNAVAILABLE;
+        }
+        return values[ordinal];
+    }
+
+    public int getEnergyStored() {
+        return data.get(SingularityLinkBlockEntity.DATA_ENERGY);
+    }
+
+    public int getEnergyCapacity() {
+        return data.get(SingularityLinkBlockEntity.DATA_ENERGY_CAPACITY);
+    }
+
+    public int getScaledEnergyAmount(int height) {
+        int energyStored = getEnergyStored();
+        int energyCapacity = getEnergyCapacity();
+        if (energyStored <= 0 || energyCapacity <= 0) {
+            return 0;
+        }
+        return Math.max(1, energyStored * height / energyCapacity);
     }
 
     public net.minecraft.world.item.DyeColor getNetworkColor(int index) {
@@ -94,7 +128,7 @@ public class SingularityLinkMenu extends AbstractContainerMenu implements NamedB
                 return ItemStack.EMPTY;
             }
         } else if (sourceStack.is(de.artemis.matterworks.common.registry.ModItems.MATTER_SINGULARITY.get())) {
-            if (!moveItemStackTo(sourceStack, SingularityLinkBlockEntity.SINGULARITY_SLOT, SingularityLinkBlockEntity.SINGULARITY_SLOT + 1, false)) {
+            if (!moveToContainerSlot(sourceStack, SingularityLinkBlockEntity.SINGULARITY_SLOT + 1, SingularityLinkBlockEntity.SINGULARITY_SLOT)) {
                 return ItemStack.EMPTY;
             }
         } else if (index < PLAYER_HOTBAR_START) {
@@ -120,23 +154,14 @@ public class SingularityLinkMenu extends AbstractContainerMenu implements NamedB
     }
 
     private void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 84 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 107);
     }
 
     private void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            addSlot(new Slot(inventory, slot, 8 + slot * 18, 142));
-        }
+        addPlayerHotbarSlots(inventory, 8, 165);
     }
 
     private static SingularityLinkBlockEntity resolveBlockEntity(Inventory inventory, BlockPos pos) {
-        if (inventory.player.level().getBlockEntity(pos) instanceof SingularityLinkBlockEntity linkBlockEntity) {
-            return linkBlockEntity;
-        }
-        throw new IllegalStateException("Missing Singularity Link block entity at " + pos);
+        return MenuHelper.resolveBlockEntity(inventory, pos, SingularityLinkBlockEntity.class, "Singularity Link");
     }
 }

@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.AbstractMatterMachineBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.fluid.FluidItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.slot.BucketInputSlot;
@@ -13,7 +14,6 @@ import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
@@ -21,7 +21,7 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
-public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu implements NamedBlockMenu, SideConfigMenuAccess {
+public abstract class AbstractMatterMachineMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     protected final AbstractMatterMachineBlockEntity blockEntity;
     protected final ContainerData data;
     protected final int machineSlotCount;
@@ -49,17 +49,11 @@ public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu im
     protected abstract void addMachineSlots();
 
     protected void addPlayerInventory(Inventory inventory) {
-        for (int row = 0; row < 3; row++) {
-            for (int column = 0; column < 9; column++) {
-                this.addSlot(new Slot(inventory, column + row * 9 + 9, 8 + column * 18, 84 + row * 18));
-            }
-        }
+        addPlayerInventorySlots(inventory, 8, 84);
     }
 
     protected void addPlayerHotbar(Inventory inventory) {
-        for (int slot = 0; slot < 9; slot++) {
-            this.addSlot(new Slot(inventory, slot, 8 + slot * 18, 142));
-        }
+        addPlayerHotbarSlots(inventory, 8, 142);
     }
 
     protected SlotItemHandler createMachineSlot(int slot, int x, int y) {
@@ -196,30 +190,35 @@ public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu im
         ItemStack sourceStack = sourceSlot.getItem();
         copiedStack = sourceStack.copy();
 
-        if (index == AbstractMatterMachineBlockEntity.ENERGY_ITEM_OUTPUT_SLOT
-                || index == AbstractMatterMachineBlockEntity.INVALID_OUTPUT_SLOT
-                || index == AbstractMatterMachineBlockEntity.FLUID_BUCKET_OUTPUT_SLOT) {
+        int energyOutputMenuSlot = findMenuSlotIndexForContainerSlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_OUTPUT_SLOT);
+        int invalidOutputMenuSlot = findMenuSlotIndexForContainerSlot(AbstractMatterMachineBlockEntity.INVALID_OUTPUT_SLOT);
+        int fluidOutputMenuSlot = findMenuSlotIndexForContainerSlot(AbstractMatterMachineBlockEntity.FLUID_BUCKET_OUTPUT_SLOT);
+
+        if (index == energyOutputMenuSlot
+                || index == invalidOutputMenuSlot
+                || index == fluidOutputMenuSlot) {
             if (!this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarEnd, true)) {
                 return ItemStack.EMPTY;
             }
             sourceSlot.onQuickCraft(sourceStack, copiedStack);
         } else if (index >= playerInventoryStart) {
             if (PowerCrystalEffects.isPowerCrystal(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, AbstractMatterMachineBlockEntity.CRYSTAL_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, AbstractMatterMachineBlockEntity.CRYSTAL_SLOT)) {
                     return ItemStack.EMPTY;
                 }
             } else if (EnergyItemHelper.canProvideEnergy(sourceStack)) {
-                if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT + 1, false)) {
+                if (!moveToMachineContainerSlot(sourceStack, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT)) {
                     return ItemStack.EMPTY;
                 }
-            } else if (!this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT + 1, false)
-                    && !this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.INPUT_SLOT, AbstractMatterMachineBlockEntity.INPUT_SLOT + 1, false)
-                    && !this.moveItemStackTo(sourceStack, AbstractMatterMachineBlockEntity.FLUID_BUCKET_INPUT_SLOT, AbstractMatterMachineBlockEntity.FLUID_BUCKET_INPUT_SLOT + 1, false)) {
-                if (index < playerHotbarStart) {
-                    if (!this.moveItemStackTo(sourceStack, playerHotbarStart, playerHotbarEnd, false)) {
+            } else if (FluidItemHelper.isFluidItem(sourceStack)) {
+                if (!moveToMachineContainerSlot(sourceStack, AbstractMatterMachineBlockEntity.FLUID_BUCKET_INPUT_SLOT)) {
+                    if (!moveToMachineContainerSlot(sourceStack, AbstractMatterMachineBlockEntity.INPUT_SLOT)
+                            && !moveWithinPlayerInventory(index, sourceStack)) {
                         return ItemStack.EMPTY;
                     }
-                } else if (!this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarStart, false)) {
+                }
+            } else if (!moveToMachineContainerSlot(sourceStack, AbstractMatterMachineBlockEntity.INPUT_SLOT)) {
+                if (!moveWithinPlayerInventory(index, sourceStack)) {
                     return ItemStack.EMPTY;
                 }
             }
@@ -239,5 +238,24 @@ public abstract class AbstractMatterMachineMenu extends AbstractContainerMenu im
 
         sourceSlot.onTake(player, sourceStack);
         return copiedStack;
+    }
+
+    protected boolean moveWithinPlayerInventory(int index, ItemStack sourceStack) {
+        if (index < playerHotbarStart) {
+            return this.moveItemStackTo(sourceStack, playerHotbarStart, playerHotbarEnd, false);
+        }
+        return this.moveItemStackTo(sourceStack, playerInventoryStart, playerHotbarStart, false);
+    }
+
+    protected boolean moveToMachineContainerSlot(ItemStack sourceStack, int containerSlot) {
+        return moveToContainerSlot(sourceStack, machineSlotCount, containerSlot);
+    }
+
+    protected boolean moveToMachineContainerSlotRange(ItemStack sourceStack, int containerSlotStart, int containerSlotCount) {
+        return moveToContainerSlotRange(sourceStack, machineSlotCount, containerSlotStart, containerSlotCount);
+    }
+
+    protected int findMenuSlotIndexForContainerSlot(int containerSlot) {
+        return findSlotIndexForContainerSlot(machineSlotCount, containerSlot);
     }
 }

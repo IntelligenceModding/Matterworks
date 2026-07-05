@@ -151,6 +151,7 @@ public class FluidTankBlockEntity extends MatterPylonBlockEntity implements Side
     private int currentInputRate;
     private int currentOutputRate;
     private int currentTransitRate;
+    private int lastTickFluidAmount = Integer.MIN_VALUE;
 
     private final ContainerData data = new ContainerData() {
         @Override
@@ -219,14 +220,19 @@ public class FluidTankBlockEntity extends MatterPylonBlockEntity implements Side
         }
 
         syncFluidCapacity();
-        int inputRate = transferFluidFromInputItem();
-        int outputRate = transferFluidToOutputItem();
+        int externalNetRate = sampleExternalFluidDelta();
+        int inputRate = Math.max(0, externalNetRate);
+        int outputRate = Math.max(0, -externalNetRate);
+
+        inputRate += transferFluidFromInputItem();
+        outputRate += transferFluidToOutputItem();
         outputRate += pushFluidToNeighbors();
         super.serverTick();
         int transitRate = getTransferRoleAmount(CHANNEL_FLUIDS, TransferDisplayRole.TRANSIT);
         inputRate += getTransferRoleAmount(CHANNEL_FLUIDS, TransferDisplayRole.SINK);
         outputRate += getTransferRoleAmount(CHANNEL_FLUIDS, TransferDisplayRole.SOURCE);
         refreshTransferTelemetry(inputRate, outputRate, transitRate);
+        lastTickFluidAmount = fluidTank.getFluidAmount();
     }
 
     public SimpleContainer createDropInventory() {
@@ -442,6 +448,15 @@ public class FluidTankBlockEntity extends MatterPylonBlockEntity implements Side
             }
         }
         return movedTotal;
+    }
+
+    private int sampleExternalFluidDelta() {
+        int fluidAmount = fluidTank.getFluidAmount();
+        if (lastTickFluidAmount == Integer.MIN_VALUE) {
+            lastTickFluidAmount = fluidAmount;
+            return 0;
+        }
+        return fluidAmount - lastTickFluidAmount;
     }
 
     private void refreshTransferTelemetry(int inputRate, int outputRate, int transitRate) {

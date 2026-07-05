@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.item.EncodedTemplateItem;
+import de.artemis.matterworks.common.item.MatterArchitectItem;
 import de.artemis.matterworks.common.item.MatterFilterItem;
 import de.artemis.matterworks.common.item.NetworkDataCardItem;
 import de.artemis.matterworks.common.item.NetworkRemoteTerminalItem;
@@ -109,6 +110,12 @@ public class ModItems {
             "empty_template",
             Item::new,
             UnaryOperator.identity()
+    );
+
+    public static final DeferredItem<MatterArchitectItem> MATTER_ARCHITECT = register(
+            "matter_architect",
+            MatterArchitectItem::new,
+            properties -> properties.rarity(Rarity.UNCOMMON)
     );
 
     public static final DeferredItem<MatterFilterItem> MATTER_ITEM_FILTER = register(
