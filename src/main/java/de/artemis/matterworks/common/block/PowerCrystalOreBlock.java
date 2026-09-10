@@ -6,9 +6,9 @@ import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.entity.BlockEntityTicker;
@@ -45,11 +45,6 @@ public class PowerCrystalOreBlock extends BaseEntityBlock {
     }
 
     @Override
-    public float getDestroyProgress(BlockState state, Player player, BlockGetter level, BlockPos pos) {
-        return super.getDestroyProgress(state, player, level, pos);
-    }
-
-    @Override
     public boolean onDestroyedByPlayer(BlockState state, Level level, BlockPos pos, Player player, boolean willHarvest, FluidState fluid) {
         if (player.isCreative()) {
             return super.onDestroyedByPlayer(state, level, pos, player, willHarvest, fluid);
@@ -59,7 +54,7 @@ public class PowerCrystalOreBlock extends BaseEntityBlock {
             level.setBlock(pos, ModBlocks.POWER_CRYSTAL_REVEAL.get().defaultBlockState(), 3);
             if (level.getBlockEntity(pos) instanceof PowerCrystalOreBlockEntity blockEntity) {
                 if (!blockEntity.startReveal(player)) {
-                    level.setBlock(pos, net.minecraft.world.level.block.Blocks.AIR.defaultBlockState(), 3);
+                    level.setBlock(pos, Blocks.AIR.defaultBlockState(), 3);
                 }
             }
         }

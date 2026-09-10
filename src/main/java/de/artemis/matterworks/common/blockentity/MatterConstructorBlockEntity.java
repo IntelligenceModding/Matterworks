@@ -1,6 +1,9 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.MappedItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.matter.MatterValueManager;
 import de.artemis.matterworks.common.menu.MatterConstructorMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
@@ -203,6 +206,9 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
             return false;
         }
     };
+    private final IItemHandler constructedItemOutputHandler = new MappedItemHandler(itemHandler, false, true, createOutputSlotRange());
+    private final IItemHandler emptyBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, REFINED_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler sludgeBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, SLUDGE_BUCKET_OUTPUT_SLOT);
 
     private final IFluidHandler fluidAutomationHandler = new IFluidHandler() {
         @Override
@@ -290,8 +296,52 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
     }
 
     @Override
+    protected IItemHandler getOutputAutomationHandler(SideAccessMode mode) {
+        return switch (mode) {
+            case OUTPUT_PRIMARY -> constructedItemOutputHandler;
+            case OUTPUT_SECONDARY -> emptyBucketOutputHandler;
+            case OUTPUT_TERTIARY -> sludgeBucketOutputHandler;
+            default -> automationOutputHandler;
+        };
+    }
+
+    @Override
     protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
+    }
+
+    @Override
+    protected boolean supportsTargetedSideOutput(SideConfigType type, SideAccessMode mode) {
+        return type == SideConfigType.ITEMS
+                && (mode == SideAccessMode.OUTPUT_PRIMARY
+                || mode == SideAccessMode.OUTPUT_SECONDARY
+                || mode == SideAccessMode.OUTPUT_TERTIARY);
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Out (Constructed Item)";
+                case OUTPUT_SECONDARY -> "Out (Empty Bucket)";
+                case OUTPUT_TERTIARY -> "Out (Sludge Bucket)";
+                default -> super.getSideAccessModeLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeLabel(type, side, mode);
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Item";
+                case OUTPUT_SECONDARY -> "Emp";
+                case OUTPUT_TERTIARY -> "SlgB";
+                default -> super.getSideAccessModeShortLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeShortLabel(type, side, mode);
     }
 
     @Override
@@ -550,5 +600,13 @@ public class MatterConstructorBlockEntity extends AbstractMatterMachineBlockEnti
         LegacyInventoryMigration.moveIfMatches(itemHandler, 6, SLOT_CRYSTAL, PowerCrystalEffects::isPowerCrystal);
         LegacyInventoryMigration.moveIfMatches(itemHandler, 7, SLUDGE_BUCKET_INPUT_SLOT, stack -> stack.is(Items.BUCKET));
         LegacyInventoryMigration.moveIfMatches(itemHandler, 8, SLUDGE_BUCKET_OUTPUT_SLOT, stack -> stack.is(ModItems.MATTER_SLUDGE_BUCKET.get()));
+    }
+
+    private static int[] createOutputSlotRange() {
+        int[] slots = new int[OUTPUT_SLOT_COUNT];
+        for (int index = 0; index < slots.length; index++) {
+            slots[index] = OUTPUT_SLOT_START + index;
+        }
+        return slots;
     }
 }

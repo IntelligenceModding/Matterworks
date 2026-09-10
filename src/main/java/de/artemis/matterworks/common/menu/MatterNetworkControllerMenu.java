@@ -64,6 +64,11 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
         return blockEntity.getBlockPos();
     }
 
+    @Override
+    public boolean isRemoteAccess() {
+        return remoteAccess;
+    }
+
     @Nullable
     public BlockPos getSelectedTargetPos() {
         return selectedTargetPos;

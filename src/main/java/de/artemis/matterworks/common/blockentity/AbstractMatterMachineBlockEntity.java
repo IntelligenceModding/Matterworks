@@ -36,6 +36,8 @@ import de.artemis.matterworks.common.upgrade.PowerCrystalData;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import org.jetbrains.annotations.NotNull;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -557,6 +559,37 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
         }
     }
 
+    @Override
+    public List<SideAccessMode> getAllowedSideAccessModes(SideConfigType type) {
+        List<SideAccessMode> modes = new ArrayList<>();
+        modes.add(SideAccessMode.DISABLED);
+        if (supportsSideConfigInput(type)) {
+            modes.add(SideAccessMode.INPUT);
+        }
+        if (supportsSideConfigOutput(type)) {
+            modes.add(SideAccessMode.OUTPUT);
+            for (SideAccessMode mode : targetedOutputModes()) {
+                if (supportsTargetedSideOutput(type, mode)) {
+                    modes.add(mode);
+                }
+            }
+        }
+        if (supportsSideConfigInput(type) && supportsSideConfigOutput(type)) {
+            modes.add(SideAccessMode.BOTH);
+        }
+        return modes;
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        return mode.getShortLabel();
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        return mode.getShortLabel();
+    }
+
     protected void syncTankCapacity(FluidTank tank, int capacity) {
         int clampedCapacity = Math.max(0, capacity);
         if (tank.getCapacity() != clampedCapacity) {
@@ -656,8 +689,16 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
         return outputAutomationHandler;
     }
 
+    protected IItemHandler getOutputAutomationHandler(SideAccessMode mode) {
+        return outputAutomationHandler;
+    }
+
     protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidTank;
+    }
+
+    protected IFluidHandler getBaseFluidAutomationHandler(SideAccessMode mode) {
+        return getBaseFluidAutomationHandler();
     }
 
     protected void initializeSideAccessMode(SideConfigType type, Direction side, SideAccessMode mode) {
@@ -676,6 +717,13 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
     }
 
     private SideAccessMode sanitizeSideAccessMode(SideConfigType type, Direction side, SideAccessMode requestedMode) {
+        List<SideAccessMode> allowedModes = getAllowedSideAccessModes(type);
+        if (!supportsSideConfigType(type) || allowedModes.contains(requestedMode)) {
+            return supportsSideConfigType(type) ? requestedMode : SideAccessMode.DISABLED;
+        }
+        if (requestedMode.isTargetedOutput() && supportsSideConfigOutput(type)) {
+            return SideAccessMode.OUTPUT;
+        }
         if (!supportsSideConfigType(type)) {
             return SideAccessMode.DISABLED;
         }
@@ -699,7 +747,7 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
             handlers[side.ordinal()] = new ConfiguredItemHandler(
                     () -> getSideAccessMode(SideConfigType.ITEMS, side),
                     this::getInputAutomationHandler,
-                    this::getOutputAutomationHandler
+                    mode -> getOutputAutomationHandler(mode)
             );
         }
         return handlers;
@@ -710,7 +758,8 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
         for (Direction side : Direction.values()) {
             handlers[side.ordinal()] = new ConfiguredFluidHandler(
                     () -> getSideAccessMode(SideConfigType.FLUIDS, side),
-                    this::getBaseFluidAutomationHandler
+                    this::getBaseFluidAutomationHandler,
+                    mode -> getBaseFluidAutomationHandler(mode)
             );
         }
         return handlers;
@@ -725,5 +774,17 @@ public abstract class AbstractMatterMachineBlockEntity extends BlockEntity imple
             );
         }
         return handlers;
+    }
+
+    protected boolean supportsTargetedSideOutput(SideConfigType type, SideAccessMode mode) {
+        return false;
+    }
+
+    private static SideAccessMode[] targetedOutputModes() {
+        return new SideAccessMode[]{
+                SideAccessMode.OUTPUT_PRIMARY,
+                SideAccessMode.OUTPUT_SECONDARY,
+                SideAccessMode.OUTPUT_TERTIARY
+        };
     }
 }

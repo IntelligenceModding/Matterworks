@@ -10,6 +10,7 @@ import de.artemis.matterworks.common.world.PylonChunkLoading;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
+import net.minecraft.core.SectionPos;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerLevel;
@@ -24,6 +25,7 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.item.DyeColor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.ChunkPos;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
 import net.neoforged.neoforge.items.IItemHandler;
@@ -509,7 +511,7 @@ public class SingularityLinkBlockEntity extends MatterPylonBlockEntity implement
                     continue;
                 }
                 BlockPos framePos = worldPosition.relative(axes.horizontalAxis(), horizontal).relative(axes.verticalAxis(), vertical);
-                if (!level.hasChunkAt(framePos)) {
+                if (!isChunkLoaded(level, framePos)) {
                     return false;
                 }
                 if (!level.getBlockState(framePos).is(ModBlocks.SINGULARITY_LINK_FRAME.get())) {
@@ -622,11 +624,15 @@ public class SingularityLinkBlockEntity extends MatterPylonBlockEntity implement
 
     private boolean areFrameValidationChunksLoaded() {
         for (BlockPos anchor : getAllPotentialFrameChunkAnchors()) {
-            if (!level.hasChunkAt(anchor)) {
+            if (!isChunkLoaded(level, anchor)) {
                 return false;
             }
         }
         return true;
+    }
+
+    private static boolean isChunkLoaded(Level level, BlockPos pos) {
+        return level.hasChunk(SectionPos.blockToSectionCoord(pos.getX()), SectionPos.blockToSectionCoord(pos.getZ()));
     }
 
     private Set<BlockPos> getDesiredFrameChunkAnchors() {

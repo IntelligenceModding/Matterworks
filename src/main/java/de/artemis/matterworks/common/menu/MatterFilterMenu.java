@@ -237,7 +237,7 @@ public class MatterFilterMenu extends AbstractContainerMenu {
             }
             entries.sort(Comparator
                     .comparing((FluidStack fluid) -> fluid.getHoverName().getString(), String.CASE_INSENSITIVE_ORDER)
-                    .thenComparing(fluid -> fluid.getFluid().builtInRegistryHolder().key().location().toString()));
+                    .thenComparing(fluid -> BuiltInRegistries.FLUID.getKey(fluid.getFluid()).toString()));
             clearGhostEntries();
             for (int slot = 0; slot < entries.size() && slot < GHOST_SLOT_COUNT; slot++) {
                 setFluidEntry(slot, entries.get(slot));

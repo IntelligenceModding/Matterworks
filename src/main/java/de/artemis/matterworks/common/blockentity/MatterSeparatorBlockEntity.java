@@ -1,6 +1,9 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.MappedItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -198,6 +201,9 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
             return false;
         }
     };
+    private final IItemHandler dustOutputHandler = new MappedItemHandler(itemHandler, false, true, createOutputSlotRange());
+    private final IItemHandler emptyBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, REFINED_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler sludgeBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, SLUDGE_BUCKET_OUTPUT_SLOT);
 
     private final IFluidHandler fluidAutomationHandler = new IFluidHandler() {
         @Override
@@ -285,8 +291,52 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
     }
 
     @Override
+    protected IItemHandler getOutputAutomationHandler(SideAccessMode mode) {
+        return switch (mode) {
+            case OUTPUT_PRIMARY -> dustOutputHandler;
+            case OUTPUT_SECONDARY -> emptyBucketOutputHandler;
+            case OUTPUT_TERTIARY -> sludgeBucketOutputHandler;
+            default -> automationOutputHandler;
+        };
+    }
+
+    @Override
     protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
+    }
+
+    @Override
+    protected boolean supportsTargetedSideOutput(SideConfigType type, SideAccessMode mode) {
+        return type == SideConfigType.ITEMS
+                && (mode == SideAccessMode.OUTPUT_PRIMARY
+                || mode == SideAccessMode.OUTPUT_SECONDARY
+                || mode == SideAccessMode.OUTPUT_TERTIARY);
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Out (Matter Dust)";
+                case OUTPUT_SECONDARY -> "Out (Empty Bucket)";
+                case OUTPUT_TERTIARY -> "Out (Sludge Bucket)";
+                default -> super.getSideAccessModeLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeLabel(type, side, mode);
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Dust";
+                case OUTPUT_SECONDARY -> "Emp";
+                case OUTPUT_TERTIARY -> "SlgB";
+                default -> super.getSideAccessModeShortLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeShortLabel(type, side, mode);
     }
 
     @Override
@@ -495,5 +545,13 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
             itemHandler.setStackInSlot(SLUDGE_BUCKET_OUTPUT_SLOT, itemHandler.getStackInSlot(SLUDGE_BUCKET_INPUT_SLOT).copy());
             itemHandler.setStackInSlot(SLUDGE_BUCKET_INPUT_SLOT, ItemStack.EMPTY);
         }
+    }
+
+    private static int[] createOutputSlotRange() {
+        int[] slots = new int[OUTPUT_SLOT_COUNT];
+        for (int index = 0; index < slots.length; index++) {
+            slots[index] = OUTPUT_SLOT_START + index;
+        }
+        return slots;
     }
 }

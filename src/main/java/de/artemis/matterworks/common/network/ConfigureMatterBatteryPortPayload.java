@@ -3,12 +3,14 @@ package de.artemis.matterworks.common.network;
 import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record ConfigureMatterBatteryPortPayload(BlockPos controllerPos, BlockPos portPos, int modeOrdinal, int maxTransfer) implements CustomPacketPayload {
@@ -33,14 +35,20 @@ public record ConfigureMatterBatteryPortPayload(BlockPos controllerPos, BlockPos
 
     public static void handle(ConfigureMatterBatteryPortPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (!(context.player().level().getBlockEntity(payload.controllerPos()) instanceof MatterBatteryCoreBlockEntity controller)
-                    || !controller.isMenuStillValid(context.player())) {
+            Player player = context.player();
+            SideAccessMode[] modes = SideAccessMode.values();
+            if (payload.modeOrdinal() < 0
+                    || payload.modeOrdinal() >= modes.length
+                    || !canConfigurePort(player, payload.controllerPos())
+                    || !(player.level().getBlockEntity(payload.controllerPos()) instanceof MatterBatteryCoreBlockEntity controller)) {
                 return;
             }
 
-            SideAccessMode[] modes = SideAccessMode.values();
-            int clampedOrdinal = Math.max(0, Math.min(payload.modeOrdinal(), modes.length - 1));
-            controller.configurePort(payload.portPos(), modes[clampedOrdinal], payload.maxTransfer());
+            controller.configurePort(payload.portPos(), modes[payload.modeOrdinal()], payload.maxTransfer());
         });
+    }
+
+    private static boolean canConfigurePort(Player player, BlockPos controllerPos) {
+        return PayloadMenuGuards.hasOpenMenu(player, controllerPos, MatterBatteryCoreMenu.class);
     }
 }

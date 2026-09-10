@@ -55,6 +55,7 @@ public class MatterStorageBarrelMenu extends AbstractBaseMenu implements NamedBl
         return blockEntity;
     }
 
+    @Override
     public boolean isRemoteAccess() {
         return remoteAccess;
     }

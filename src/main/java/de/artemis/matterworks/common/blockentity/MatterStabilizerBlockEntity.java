@@ -1,6 +1,10 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.MappedItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.io.SingleTankFluidHandler;
 import de.artemis.matterworks.common.menu.MatterStabilizerMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -148,6 +152,12 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
             return drained.isEmpty() ? unstableMatterTank.drain(maxDrain, action) : drained;
         }
     };
+    private final IFluidHandler refinedFluidOutputHandler = new SingleTankFluidHandler(fluidTank, false, true);
+    private final IFluidHandler unstableFluidOutputHandler = new SingleTankFluidHandler(unstableMatterTank, false, true);
+    private final IItemHandler bucketOutputHandler = new MappedItemHandler(itemHandler, false, true, RAW_BUCKET_OUTPUT_SLOT, REFINED_BUCKET_OUTPUT_SLOT, UNSTABLE_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler rawBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, RAW_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler refinedBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, REFINED_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler unstableBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, UNSTABLE_BUCKET_OUTPUT_SLOT);
 
     public MatterStabilizerBlockEntity(BlockPos pos, BlockState blockState) {
         super(
@@ -186,6 +196,74 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
     @Override
     protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
+    }
+
+    @Override
+    protected IFluidHandler getBaseFluidAutomationHandler(SideAccessMode mode) {
+        return switch (mode) {
+            case OUTPUT_PRIMARY -> refinedFluidOutputHandler;
+            case OUTPUT_SECONDARY -> unstableFluidOutputHandler;
+            default -> fluidAutomationHandler;
+        };
+    }
+
+    @Override
+    protected IItemHandler getOutputAutomationHandler(SideAccessMode mode) {
+        return switch (mode) {
+            case OUTPUT_PRIMARY -> rawBucketOutputHandler;
+            case OUTPUT_SECONDARY -> refinedBucketOutputHandler;
+            case OUTPUT_TERTIARY -> unstableBucketOutputHandler;
+            default -> bucketOutputHandler;
+        };
+    }
+
+    @Override
+    protected boolean supportsTargetedSideOutput(SideConfigType type, SideAccessMode mode) {
+        return switch (type) {
+            case FLUIDS -> mode == SideAccessMode.OUTPUT_PRIMARY || mode == SideAccessMode.OUTPUT_SECONDARY;
+            case ITEMS -> mode == SideAccessMode.OUTPUT_PRIMARY || mode == SideAccessMode.OUTPUT_SECONDARY || mode == SideAccessMode.OUTPUT_TERTIARY;
+            case ENERGY -> false;
+        };
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.FLUIDS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Out (Refined Matter)";
+                case OUTPUT_SECONDARY -> "Out (Unstable Matter)";
+                default -> super.getSideAccessModeLabel(type, side, mode);
+            };
+        }
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Out (Empty Bucket)";
+                case OUTPUT_SECONDARY -> "Out (Refined Bucket)";
+                case OUTPUT_TERTIARY -> "Out (Unstable Bucket)";
+                default -> super.getSideAccessModeLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeLabel(type, side, mode);
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.FLUIDS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Ref";
+                case OUTPUT_SECONDARY -> "Unst";
+                default -> super.getSideAccessModeShortLabel(type, side, mode);
+            };
+        }
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Emp";
+                case OUTPUT_SECONDARY -> "RefB";
+                case OUTPUT_TERTIARY -> "UnB";
+                default -> super.getSideAccessModeShortLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeShortLabel(type, side, mode);
     }
 
     @Override

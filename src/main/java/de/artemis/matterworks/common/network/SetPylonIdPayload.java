@@ -2,12 +2,14 @@ package de.artemis.matterworks.common.network;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
+import de.artemis.matterworks.common.menu.MatterPylonMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record SetPylonIdPayload(BlockPos pos, int channel, int pylonId) implements CustomPacketPayload {
@@ -29,10 +31,22 @@ public record SetPylonIdPayload(BlockPos pos, int channel, int pylonId) implemen
 
     public static void handle(SetPylonIdPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().level().getBlockEntity(payload.pos()) instanceof MatterPylonBlockEntity pylonBlockEntity
-                    && context.player().distanceToSqr(payload.pos().getX() + 0.5D, payload.pos().getY() + 0.5D, payload.pos().getZ() + 0.5D) <= 64.0D) {
+            Player player = context.player();
+            if (!isValidChannel(payload.channel()) || !canEditPylon(player, payload.pos())) {
+                return;
+            }
+
+            if (player.level().getBlockEntity(payload.pos()) instanceof MatterPylonBlockEntity pylonBlockEntity) {
                 pylonBlockEntity.setPylonId(payload.channel(), payload.pylonId());
             }
         });
+    }
+
+    private static boolean isValidChannel(int channel) {
+        return channel >= 0 && channel < MatterPylonBlockEntity.CHANNEL_COUNT;
+    }
+
+    private static boolean canEditPylon(Player player, BlockPos pos) {
+        return PayloadMenuGuards.hasOpenMenu(player, pos, MatterPylonMenu.class);
     }
 }

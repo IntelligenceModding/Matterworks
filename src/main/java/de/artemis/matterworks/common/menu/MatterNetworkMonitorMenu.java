@@ -37,6 +37,7 @@ public class MatterNetworkMonitorMenu extends AbstractBaseMenu implements NamedB
         return blockEntity;
     }
 
+    @Override
     public boolean isRemoteAccess() {
         return remoteAccess;
     }

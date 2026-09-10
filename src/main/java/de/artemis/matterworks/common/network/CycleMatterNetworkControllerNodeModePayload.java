@@ -2,12 +2,14 @@ package de.artemis.matterworks.common.network;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
+import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record CycleMatterNetworkControllerNodeModePayload(BlockPos controllerPos, BlockPos targetPos, int channel, boolean backward) implements CustomPacketPayload {
@@ -32,10 +34,18 @@ public record CycleMatterNetworkControllerNodeModePayload(BlockPos controllerPos
 
     public static void handle(CycleMatterNetworkControllerNodeModePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller
-                    && controller.isControllerMenuStillValid(context.player(), false)) {
-                controller.handleCycleTargetMode(context.player(), payload.targetPos(), payload.channel(), payload.backward());
+            Player player = context.player();
+            if (!canUseControllerMenu(player, payload.controllerPos())) {
+                return;
+            }
+
+            if (player.level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller) {
+                controller.handleCycleTargetMode(player, payload.targetPos(), payload.channel(), payload.backward());
             }
         });
+    }
+
+    private static boolean canUseControllerMenu(Player player, BlockPos controllerPos) {
+        return PayloadMenuGuards.hasOpenMenu(player, controllerPos, MatterNetworkControllerMenu.class);
     }
 }

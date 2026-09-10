@@ -66,6 +66,9 @@ public final class SideConfigurationData {
             case "input" -> SideAccessMode.INPUT;
             case "output" -> SideAccessMode.OUTPUT;
             case "both" -> SideAccessMode.BOTH;
+            case "output_primary" -> SideAccessMode.OUTPUT_PRIMARY;
+            case "output_secondary" -> SideAccessMode.OUTPUT_SECONDARY;
+            case "output_tertiary" -> SideAccessMode.OUTPUT_TERTIARY;
             default -> SideAccessMode.DISABLED;
         };
     }

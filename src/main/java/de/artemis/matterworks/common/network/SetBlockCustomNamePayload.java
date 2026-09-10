@@ -7,6 +7,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record SetBlockCustomNamePayload(BlockPos blockPos, String customName) implements CustomPacketPayload {
@@ -28,9 +29,18 @@ public record SetBlockCustomNamePayload(BlockPos blockPos, String customName) im
 
     public static void handle(SetBlockCustomNamePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().level().getBlockEntity(payload.blockPos()) instanceof CustomNamedBlockEntity blockEntity) {
+            Player player = context.player();
+            if (!canEditName(player, payload.blockPos())) {
+                return;
+            }
+
+            if (player.level().getBlockEntity(payload.blockPos()) instanceof CustomNamedBlockEntity blockEntity) {
                 blockEntity.setCustomNameText(payload.customName());
             }
         });
+    }
+
+    private static boolean canEditName(Player player, BlockPos pos) {
+        return PayloadMenuGuards.hasOpenNamedMenu(player, pos);
     }
 }

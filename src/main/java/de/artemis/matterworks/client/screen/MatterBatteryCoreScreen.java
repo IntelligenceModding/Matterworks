@@ -405,6 +405,7 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
             case DISABLED -> SideAccessMode.INPUT;
             case INPUT -> SideAccessMode.OUTPUT;
             case OUTPUT -> SideAccessMode.BOTH;
+            case OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> SideAccessMode.BOTH;
             case BOTH -> SideAccessMode.DISABLED;
         };
     }

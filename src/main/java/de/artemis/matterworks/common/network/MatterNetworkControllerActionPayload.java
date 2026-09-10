@@ -2,12 +2,14 @@ package de.artemis.matterworks.common.network;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
+import de.artemis.matterworks.common.menu.MatterNetworkControllerMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.ByteBufCodecs;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record MatterNetworkControllerActionPayload(BlockPos controllerPos, BlockPos targetPos, int action) implements CustomPacketPayload {
@@ -32,10 +34,18 @@ public record MatterNetworkControllerActionPayload(BlockPos controllerPos, Block
 
     public static void handle(MatterNetworkControllerActionPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (context.player().level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller
-                    && controller.isControllerMenuStillValid(context.player(), false)) {
-                controller.handleAction(context.player(), payload.targetPos(), payload.action());
+            Player player = context.player();
+            if (!canUseControllerMenu(player, payload.controllerPos())) {
+                return;
+            }
+
+            if (player.level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller) {
+                controller.handleAction(player, payload.targetPos(), payload.action());
             }
         });
+    }
+
+    private static boolean canUseControllerMenu(Player player, BlockPos controllerPos) {
+        return PayloadMenuGuards.hasOpenMenu(player, controllerPos, MatterNetworkControllerMenu.class);
     }
 }

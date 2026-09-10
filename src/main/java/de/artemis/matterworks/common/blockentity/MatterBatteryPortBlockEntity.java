@@ -724,6 +724,7 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
             case DISABLED -> PylonMode.DISABLED;
             case INPUT -> PylonMode.IMPORT;
             case OUTPUT -> PylonMode.EXPORT;
+            case OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> PylonMode.EXPORT;
             case BOTH -> PylonMode.IMPORT_EXPORT;
         };
     }

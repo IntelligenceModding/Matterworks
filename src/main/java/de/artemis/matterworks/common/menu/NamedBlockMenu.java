@@ -6,4 +6,8 @@ public interface NamedBlockMenu {
     BlockPos getBlockPos();
 
     String getBlockDisplayName();
+
+    default boolean isRemoteAccess() {
+        return false;
+    }
 }

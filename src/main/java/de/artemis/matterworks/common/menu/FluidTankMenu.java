@@ -69,6 +69,7 @@ public class FluidTankMenu extends AbstractBaseMenu implements NamedBlockMenu, S
         return blockEntity;
     }
 
+    @Override
     public boolean isRemoteAccess() {
         return remoteAccess;
     }

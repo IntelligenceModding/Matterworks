@@ -88,6 +88,7 @@ public class MatterPylonMenu extends AbstractBaseMenu implements NamedBlockMenu 
         return blockEntity;
     }
 
+    @Override
     public boolean isRemoteAccess() {
         return remoteAccess;
     }

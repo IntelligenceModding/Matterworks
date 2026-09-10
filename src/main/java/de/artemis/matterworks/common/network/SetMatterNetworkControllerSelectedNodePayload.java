@@ -8,6 +8,7 @@ import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.world.entity.player.Player;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 import javax.annotation.Nullable;
@@ -36,11 +37,13 @@ public record SetMatterNetworkControllerSelectedNodePayload(BlockPos controllerP
 
     public static void handle(SetMatterNetworkControllerSelectedNodePayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
-            if (!(context.player().containerMenu instanceof MatterNetworkControllerMenu menu)) {
+            Player player = context.player();
+            if (!(player.containerMenu instanceof MatterNetworkControllerMenu menu)
+                    || !menu.getBlockPos().equals(payload.controllerPos())
+                    || !menu.stillValid(player)) {
                 return;
             }
-            if (context.player().level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller
-                    && controller.isControllerMenuStillValid(context.player(), false)) {
+            if (player.level().getBlockEntity(payload.controllerPos()) instanceof MatterNetworkControllerBlockEntity controller) {
                 if (payload.targetPos() == null) {
                     menu.setSelectedTargetPos(null);
                     menu.broadcastChanges();

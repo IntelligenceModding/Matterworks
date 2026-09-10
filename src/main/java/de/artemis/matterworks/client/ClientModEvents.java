@@ -1,6 +1,8 @@
 package de.artemis.matterworks.client;
 
+import com.mojang.blaze3d.shaders.FogShape;
 import com.mojang.blaze3d.platform.InputConstants;
+import com.mojang.blaze3d.systems.RenderSystem;
 import de.artemis.matterworks.client.particle.RawMatterDripParticle;
 import de.artemis.matterworks.client.render.MatterBatteryFormationRenderer;
 import de.artemis.matterworks.client.render.MatterBatteryCoreBlockEntityRenderer;
@@ -34,6 +36,7 @@ import de.artemis.matterworks.client.tooltip.MatterFilterClientTooltipComponent;
 import de.artemis.matterworks.client.tooltip.LinkedBlockItemDecorator;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
+import de.artemis.matterworks.common.fluid.AbstractMatterFluidType;
 import de.artemis.matterworks.common.item.MatterArchitectItem;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
 import de.artemis.matterworks.common.network.MoveMatterArchitectSelectionPayload;
@@ -41,14 +44,16 @@ import de.artemis.matterworks.common.network.PlaceMatterBatteryPreviewBlockPaylo
 import de.artemis.matterworks.common.network.ResizeMatterArchitectSelectionPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.registry.ModParticles;
 import de.artemis.matterworks.common.tooltip.MatterFilterTooltip;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.KeyMapping;
-import net.minecraft.client.renderer.ItemBlockRenderTypes;
-import net.minecraft.client.renderer.RenderType;
+import net.minecraft.client.Camera;
+import net.minecraft.client.multiplayer.ClientLevel;
+import net.minecraft.client.renderer.FogRenderer;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -63,11 +68,13 @@ import net.neoforged.neoforge.client.event.RegisterClientTooltipComponentFactori
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.client.event.RegisterParticleProvidersEvent;
 import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
+import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
+import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
+import org.joml.Vector3f;
 
 public class ClientModEvents {
     private static final String KEY_CATEGORY = "key.categories.matterworks";
@@ -109,13 +116,6 @@ public class ClientModEvents {
         event.register(ARCHITECT_LAYER_DOWN);
     }
 
-    public static void onClientSetup(FMLClientSetupEvent event) {
-        event.enqueueWork(() -> {
-            ItemBlockRenderTypes.setRenderLayer(ModBlocks.MULTIBLOCK_GLASS.get(), RenderType.translucent());
-            ItemBlockRenderTypes.setRenderLayer(ModBlocks.SINGULARITY_LINK.get(), RenderType.translucent());
-        });
-    }
-
     public static void registerRenderers(EntityRenderersEvent.RegisterRenderers event) {
         event.registerBlockEntityRenderer(ModBlockEntities.MATTER_PYLON.get(), MatterPylonBlockEntityRenderer::new);
         event.registerBlockEntityRenderer(ModBlockEntities.SINGULARITY_LINK.get(), SingularityLinkBlockEntityRenderer::new);
@@ -136,6 +136,49 @@ public class ClientModEvents {
         LinkedBlockItemDecorator decorator = new LinkedBlockItemDecorator();
         event.register(ModItems.NETWORK_DATA_CARD.get(), decorator);
         event.register(ModItems.NETWORK_REMOTE_TERMINAL.get(), decorator);
+    }
+
+    public static void registerClientExtensions(RegisterClientExtensionsEvent event) {
+        event.registerFluidType(createFluidTypeExtensions(ModFluids.RAW_MATTER_TYPE.get()), ModFluids.RAW_MATTER_TYPE.get());
+        event.registerFluidType(createFluidTypeExtensions(ModFluids.REFINED_MATTER_TYPE.get()), ModFluids.REFINED_MATTER_TYPE.get());
+        event.registerFluidType(createFluidTypeExtensions(ModFluids.UNSTABLE_MATTER_TYPE.get()), ModFluids.UNSTABLE_MATTER_TYPE.get());
+        event.registerFluidType(createFluidTypeExtensions(ModFluids.MATTER_SLUDGE_TYPE.get()), ModFluids.MATTER_SLUDGE_TYPE.get());
+    }
+
+    private static IClientFluidTypeExtensions createFluidTypeExtensions(AbstractMatterFluidType fluidType) {
+        return new IClientFluidTypeExtensions() {
+            @Override
+            public ResourceLocation getStillTexture() {
+                return fluidType.getStillTexture();
+            }
+
+            @Override
+            public ResourceLocation getFlowingTexture() {
+                return fluidType.getFlowingTexture();
+            }
+
+            @Override
+            public ResourceLocation getOverlayTexture() {
+                return fluidType.getOverlayTexture();
+            }
+
+            @Override
+            public int getTintColor() {
+                return fluidType.getTintColor();
+            }
+
+            @Override
+            public Vector3f modifyFogColor(Camera camera, float partialTick, ClientLevel level, int renderDistance, float darkenWorldAmount, Vector3f fluidFogColor) {
+                return fluidType.getFogColor();
+            }
+
+            @Override
+            public void modifyFogRender(Camera camera, FogRenderer.FogMode mode, float renderDistance, float partialTick, float nearDistance, float farDistance, FogShape shape) {
+                RenderSystem.setShaderFogStart(fluidType.getFogStart());
+                RenderSystem.setShaderFogEnd(Math.max(fluidType.getFogStart() + 4.0F, Math.min(Math.min(renderDistance, farDistance) * fluidType.getFogDistanceScale(), fluidType.getFogDistanceLimit())));
+                RenderSystem.setShaderFogShape(shape);
+            }
+        };
     }
 
     public static void addGuiOverlayLayers(RegisterGuiLayersEvent event) {

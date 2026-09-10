@@ -34,6 +34,6 @@ public abstract class HorizontalFacingMachineBlock extends BaseEntityBlock {
 
     @Override
     protected BlockState mirror(BlockState state, Mirror mirror) {
-        return state.rotate(mirror.getRotation(state.getValue(HorizontalDirectionalBlock.FACING)));
+        return state.setValue(HorizontalDirectionalBlock.FACING, mirror.mirror(state.getValue(HorizontalDirectionalBlock.FACING)));
     }
 }

@@ -3,14 +3,19 @@ package de.artemis.matterworks.common.io;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandler;
 
+import java.util.function.Function;
 import java.util.function.Supplier;
 
 public final class ConfiguredItemHandler implements IItemHandler {
     private final Supplier<SideAccessMode> modeSupplier;
     private final Supplier<IItemHandler> inputSupplier;
-    private final Supplier<IItemHandler> outputSupplier;
+    private final Function<SideAccessMode, IItemHandler> outputSupplier;
 
     public ConfiguredItemHandler(Supplier<SideAccessMode> modeSupplier, Supplier<IItemHandler> inputSupplier, Supplier<IItemHandler> outputSupplier) {
+        this(modeSupplier, inputSupplier, ignored -> outputSupplier.get());
+    }
+
+    public ConfiguredItemHandler(Supplier<SideAccessMode> modeSupplier, Supplier<IItemHandler> inputSupplier, Function<SideAccessMode, IItemHandler> outputSupplier) {
         this.modeSupplier = modeSupplier;
         this.inputSupplier = inputSupplier;
         this.outputSupplier = outputSupplier;
@@ -21,7 +26,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
         return switch (getMode()) {
             case DISABLED -> 0;
             case INPUT -> getInput().getSlots();
-            case OUTPUT -> getOutput().getSlots();
+            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> getOutput(getMode()).getSlots();
             case BOTH -> getInput().getSlots() + getOutput().getSlots();
         };
     }
@@ -31,7 +36,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
         return switch (getMode()) {
             case DISABLED -> ItemStack.EMPTY;
             case INPUT -> getInput().getStackInSlot(slot);
-            case OUTPUT -> getOutput().getStackInSlot(slot);
+            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> getOutput(getMode()).getStackInSlot(slot);
             case BOTH -> getStackInCombinedSlot(slot);
         };
     }
@@ -39,7 +44,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
     @Override
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         return switch (getMode()) {
-            case DISABLED, OUTPUT -> stack;
+            case DISABLED, OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> stack;
             case INPUT -> getInput().insertItem(slot, stack, simulate);
             case BOTH -> insertCombined(slot, stack, simulate);
         };
@@ -49,7 +54,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         return switch (getMode()) {
             case DISABLED, INPUT -> ItemStack.EMPTY;
-            case OUTPUT -> getOutput().extractItem(slot, amount, simulate);
+            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> getOutput(getMode()).extractItem(slot, amount, simulate);
             case BOTH -> extractCombined(slot, amount, simulate);
         };
     }
@@ -59,7 +64,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
         return switch (getMode()) {
             case DISABLED -> 0;
             case INPUT -> getInput().getSlotLimit(slot);
-            case OUTPUT -> getOutput().getSlotLimit(slot);
+            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> getOutput(getMode()).getSlotLimit(slot);
             case BOTH -> getCombinedSlotLimit(slot);
         };
     }
@@ -67,7 +72,7 @@ public final class ConfiguredItemHandler implements IItemHandler {
     @Override
     public boolean isItemValid(int slot, ItemStack stack) {
         return switch (getMode()) {
-            case DISABLED, OUTPUT -> false;
+            case DISABLED, OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> false;
             case INPUT -> getInput().isItemValid(slot, stack);
             case BOTH -> isCombinedItemValid(slot, stack);
         };
@@ -111,6 +116,10 @@ public final class ConfiguredItemHandler implements IItemHandler {
     }
 
     private IItemHandler getOutput() {
-        return outputSupplier.get();
+        return getOutput(SideAccessMode.OUTPUT);
+    }
+
+    private IItemHandler getOutput(SideAccessMode mode) {
+        return outputSupplier.apply(mode);
     }
 }

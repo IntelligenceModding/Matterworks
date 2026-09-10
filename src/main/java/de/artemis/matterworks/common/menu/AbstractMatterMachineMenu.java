@@ -21,6 +21,8 @@ import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
+import java.util.List;
+
 public abstract class AbstractMatterMachineMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     protected final AbstractMatterMachineBlockEntity blockEntity;
     protected final ContainerData data;
@@ -104,6 +106,21 @@ public abstract class AbstractMatterMachineMenu extends AbstractBaseMenu impleme
     @Override
     public SideAccessMode getSideAccessMode(SideConfigType type, net.minecraft.core.Direction side) {
         return blockEntity.getSideAccessMode(type, side);
+    }
+
+    @Override
+    public List<SideAccessMode> getAllowedSideAccessModes(SideConfigType type) {
+        return blockEntity.getAllowedSideAccessModes(type);
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, net.minecraft.core.Direction side, SideAccessMode mode) {
+        return blockEntity.getSideAccessModeLabel(type, side, mode);
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, net.minecraft.core.Direction side, SideAccessMode mode) {
+        return blockEntity.getSideAccessModeShortLabel(type, side, mode);
     }
 
     @Override

@@ -1,6 +1,9 @@
 package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.io.MappedItemHandler;
+import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.GraviticCondenserMenu;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -189,6 +192,9 @@ public class GraviticCondenserBlockEntity extends AbstractMatterMachineBlockEnti
             return false;
         }
     };
+    private final IItemHandler singularityOutputHandler = new MappedItemHandler(itemHandler, false, true, OUTPUT_SLOT);
+    private final IItemHandler emptyBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, RAW_BUCKET_OUTPUT_SLOT);
+    private final IItemHandler unstableBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, SLUDGE_BUCKET_OUTPUT_SLOT);
 
     private final IFluidHandler fluidAutomationHandler = new IFluidHandler() {
         @Override
@@ -271,8 +277,52 @@ public class GraviticCondenserBlockEntity extends AbstractMatterMachineBlockEnti
     }
 
     @Override
+    protected IItemHandler getOutputAutomationHandler(SideAccessMode mode) {
+        return switch (mode) {
+            case OUTPUT_PRIMARY -> singularityOutputHandler;
+            case OUTPUT_SECONDARY -> emptyBucketOutputHandler;
+            case OUTPUT_TERTIARY -> unstableBucketOutputHandler;
+            default -> automationOutputHandler;
+        };
+    }
+
+    @Override
     protected IFluidHandler getBaseFluidAutomationHandler() {
         return fluidAutomationHandler;
+    }
+
+    @Override
+    protected boolean supportsTargetedSideOutput(SideConfigType type, SideAccessMode mode) {
+        return type == SideConfigType.ITEMS
+                && (mode == SideAccessMode.OUTPUT_PRIMARY
+                || mode == SideAccessMode.OUTPUT_SECONDARY
+                || mode == SideAccessMode.OUTPUT_TERTIARY);
+    }
+
+    @Override
+    public String getSideAccessModeLabel(SideConfigType type, net.minecraft.core.Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Out (Matter Singularity)";
+                case OUTPUT_SECONDARY -> "Out (Empty Bucket)";
+                case OUTPUT_TERTIARY -> "Out (Unstable Bucket)";
+                default -> super.getSideAccessModeLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeLabel(type, side, mode);
+    }
+
+    @Override
+    public String getSideAccessModeShortLabel(SideConfigType type, net.minecraft.core.Direction side, SideAccessMode mode) {
+        if (type == SideConfigType.ITEMS) {
+            return switch (mode) {
+                case OUTPUT_PRIMARY -> "Sing";
+                case OUTPUT_SECONDARY -> "Emp";
+                case OUTPUT_TERTIARY -> "UnB";
+                default -> super.getSideAccessModeShortLabel(type, side, mode);
+            };
+        }
+        return super.getSideAccessModeShortLabel(type, side, mode);
     }
 
     @Override

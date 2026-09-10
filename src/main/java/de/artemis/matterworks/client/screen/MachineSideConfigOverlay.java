@@ -87,7 +87,7 @@ public final class MachineSideConfigOverlay {
                         : side.label;
                 guiGraphics.renderTooltip(
                         font,
-                        Component.literal(sideText + ": " + mode.getShortLabel()),
+                        Component.literal(sideText + ": " + menu.getSideAccessModeLabel(type, worldSide, mode)),
                         mouseX,
                         mouseY
                 );
@@ -143,10 +143,10 @@ public final class MachineSideConfigOverlay {
         drawScaledCenteredString(
                 guiGraphics,
                 font,
-                getModeLabel(mode),
+                menu.getSideAccessModeShortLabel(type, worldSide, mode),
                 node[0] + node[2] / 2,
                 node[1] + (node[3] - font.lineHeight) / 2,
-                1.0F,
+                getTextScale(font, menu.getSideAccessModeShortLabel(type, worldSide, mode), node[2] - 2),
                 0xFFE0E0E0
         );
     }
@@ -179,6 +179,9 @@ public final class MachineSideConfigOverlay {
             case DISABLED -> 0xFF5E5E5E;
             case INPUT -> 0xFF365F95;
             case OUTPUT -> 0xFF9B6425;
+            case OUTPUT_PRIMARY -> 0xFFA8702A;
+            case OUTPUT_SECONDARY -> 0xFF8A5A9E;
+            case OUTPUT_TERTIARY -> 0xFF9A4D4D;
             case BOTH -> 0xFF2E7A73;
         };
     }
@@ -188,6 +191,9 @@ public final class MachineSideConfigOverlay {
             case DISABLED -> 0xFF777777;
             case INPUT -> 0xFF5B84BA;
             case OUTPUT -> 0xFFBF8241;
+            case OUTPUT_PRIMARY -> 0xFFD2924A;
+            case OUTPUT_SECONDARY -> 0xFFA979C1;
+            case OUTPUT_TERTIARY -> 0xFFBF6B6B;
             case BOTH -> 0xFF4C9A93;
         };
     }
@@ -211,20 +217,19 @@ public final class MachineSideConfigOverlay {
         return side != RelativeSide.UP && side != RelativeSide.DOWN;
     }
 
-    private static String getModeLabel(SideAccessMode mode) {
-        return switch (mode) {
-            case DISABLED -> "Off";
-            case INPUT -> "In";
-            case OUTPUT -> "Out";
-            case BOTH -> "I/O";
-        };
-    }
-
     private static void drawScaledCenteredString(GuiGraphics guiGraphics, Font font, String text, int centerX, int y, float scale, int color) {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(scale, scale, 1.0F);
         guiGraphics.drawString(font, text, Math.round((centerX - font.width(text) * scale / 2.0F) / scale), Math.round(y / scale), color, false);
         guiGraphics.pose().popPose();
+    }
+
+    private static float getTextScale(Font font, String text, int maxWidth) {
+        int width = font.width(text);
+        if (width <= 0 || width <= maxWidth) {
+            return 1.0F;
+        }
+        return Math.max(0.45F, maxWidth / (float) width);
     }
 
     private static void renderCenterDisplay(GuiGraphics guiGraphics, ItemStack icon, int x, int y, int width, int height) {
@@ -240,19 +245,17 @@ public final class MachineSideConfigOverlay {
     }
 
     private enum RelativeSide {
-        UP("Up", "U"),
-        FRONT("Front", "F"),
-        LEFT("Left", "L"),
-        RIGHT("Right", "R"),
-        BACK("Back", "B"),
-        DOWN("Down", "D");
+        UP("Up"),
+        FRONT("Front"),
+        LEFT("Left"),
+        RIGHT("Right"),
+        BACK("Back"),
+        DOWN("Down");
 
         private final String label;
-        private final String shortLabel;
 
-        RelativeSide(String label, String shortLabel) {
+        RelativeSide(String label) {
             this.label = label;
-            this.shortLabel = shortLabel;
         }
     }
 
@@ -277,17 +280,6 @@ public final class MachineSideConfigOverlay {
     }
 
     private static List<SideAccessMode> getAllowedModes(SideConfigMenuAccess menu, SideConfigType type) {
-        List<SideAccessMode> allowedModes = new ArrayList<>();
-        allowedModes.add(SideAccessMode.DISABLED);
-        if (menu.supportsSideConfigInput(type)) {
-            allowedModes.add(SideAccessMode.INPUT);
-        }
-        if (menu.supportsSideConfigOutput(type)) {
-            allowedModes.add(SideAccessMode.OUTPUT);
-        }
-        if (menu.supportsSideConfigInput(type) && menu.supportsSideConfigOutput(type)) {
-            allowedModes.add(SideAccessMode.BOTH);
-        }
-        return allowedModes;
+        return new ArrayList<>(menu.getAllowedSideAccessModes(type));
     }
 }

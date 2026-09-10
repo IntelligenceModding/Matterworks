@@ -64,6 +64,11 @@ public class SingularityLinkMenu extends AbstractBaseMenu implements NamedBlockM
         return blockEntity;
     }
 
+    @Override
+    public boolean isRemoteAccess() {
+        return remoteAccess;
+    }
+
     public boolean isStructureFormed() {
         return data.get(SingularityLinkBlockEntity.DATA_FORMED) > 0;
     }

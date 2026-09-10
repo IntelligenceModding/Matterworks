@@ -14,12 +14,12 @@ public class MatterworksClient {
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onMouseScrolling);
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onClientTick);
         modEventBus.addListener(ClientModEvents::addGuiOverlayLayers);
-        modEventBus.addListener(ClientModEvents::onClientSetup);
         modEventBus.addListener(ClientModEvents::registerParticleProviders);
         modEventBus.addListener(ClientModEvents::registerKeyMappings);
         modEventBus.addListener(ClientModEvents::registerScreens);
         modEventBus.addListener(ClientModEvents::registerRenderers);
         modEventBus.addListener(ClientModEvents::registerTooltipComponents);
         modEventBus.addListener(ClientModEvents::registerItemDecorations);
+        modEventBus.addListener(ClientModEvents::registerClientExtensions);
     }
 }

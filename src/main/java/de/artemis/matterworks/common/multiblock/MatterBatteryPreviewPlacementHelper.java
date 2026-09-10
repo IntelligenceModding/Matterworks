@@ -55,7 +55,7 @@ public final class MatterBatteryPreviewPlacementHelper {
             player.getInventory().setChanged();
         }
 
-        SoundType soundType = placedState.getSoundType();
+        SoundType soundType = placedState.getSoundType(player.level(), targetPos, player);
         player.level().playSound(null, targetPos, soundType.getPlaceSound(), SoundSource.BLOCKS, (soundType.getVolume() + 1.0F) / 2.0F, soundType.getPitch() * 0.8F);
         player.level().gameEvent(player, GameEvent.BLOCK_PLACE, targetPos);
         if (player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {

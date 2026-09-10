@@ -21,7 +21,6 @@ import net.minecraft.world.entity.item.ItemEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.enchantment.Enchantment;
-import net.minecraft.world.item.enchantment.EnchantmentHelper;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.entity.BlockEntity;
@@ -137,11 +136,13 @@ public class PowerCrystalOreBlockEntity extends BlockEntity {
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
-        revealTicksRemaining = tag.getInt(REVEAL_TICKS_KEY);
-        rewardIndex = tag.getInt(REWARD_INDEX_KEY);
-        rewardChargePercent = tag.getInt(REWARD_CHARGE_KEY);
-        previewOffsetIndex = tag.getInt(PREVIEW_OFFSET_INDEX_KEY);
-        previewEntityUuid = tag.hasUUID(PREVIEW_ENTITY_UUID_KEY) ? tag.getUUID(PREVIEW_ENTITY_UUID_KEY) : null;
+        revealTicksRemaining = Mth.clamp(tag.getInt(REVEAL_TICKS_KEY), 0, REVEAL_DURATION);
+        rewardIndex = Mth.clamp(tag.getInt(REWARD_INDEX_KEY), -1, 2);
+        rewardChargePercent = rewardIndex >= 0 ? Mth.clamp(tag.getInt(REWARD_CHARGE_KEY), 0, PowerCrystalData.MAX_CHARGE) : 0;
+        previewOffsetIndex = Math.floorMod(tag.getInt(PREVIEW_OFFSET_INDEX_KEY), 3);
+        previewEntityUuid = revealTicksRemaining > 0 && rewardIndex >= 0 && tag.hasUUID(PREVIEW_ENTITY_UUID_KEY)
+                ? tag.getUUID(PREVIEW_ENTITY_UUID_KEY)
+                : null;
     }
 
     private void finishReveal(ServerLevel level, BlockPos pos) {
@@ -411,9 +412,6 @@ public class PowerCrystalOreBlockEntity extends BlockEntity {
         }
 
         HolderLookup.RegistryLookup<Enchantment> enchantments = level.registryAccess().lookupOrThrow(Registries.ENCHANTMENT);
-        return EnchantmentHelper.getItemEnchantmentLevel(
-                enchantments.getOrThrow(ModEnchantments.CRYSTAL_TUNING),
-                player.getMainHandItem()
-        );
+        return player.getMainHandItem().getEnchantmentLevel(enchantments.getOrThrow(ModEnchantments.CRYSTAL_TUNING));
     }
 }
