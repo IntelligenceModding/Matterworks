@@ -69,6 +69,7 @@ public class MatterRecyclerScreen extends AbstractContainerScreen<MatterRecycler
                 menu.getScaledFluidAmount(FLUID_TANK_HEIGHT),
                 menu.getFluidStack()
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

@@ -35,9 +35,9 @@ public class MatterSeparatorMenu extends AbstractMatterMachineMenu {
                 this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.OUTPUT_SLOT_START + index, 62 + column * 18, 18 + row * 18));
             }
         }
-        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 8, 72, AbstractMatterMachineMenu::refinedMatterBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 41, 72));
-        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72));
+        this.addSlot(createBucketInputSlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72, AbstractMatterMachineMenu::emptyBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterSeparatorBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT, 152, 72));
         this.addSlot(createCrystalSlot(MatterSeparatorBlockEntity.SLOT_CRYSTAL, 8, 108));
         this.addSlot(createEnergyInputSlot(MatterSeparatorBlockEntity.SLOT_POWER_INPUT, 152, 108));

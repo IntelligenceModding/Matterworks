@@ -5,6 +5,7 @@ import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.fluid.FluidItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.menu.slot.GhostItemSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
@@ -53,8 +54,8 @@ public class FluidTankMenu extends AbstractBaseMenu implements NamedBlockMenu, S
         this.remoteAccess = remoteAccess;
 
         this.addSlot(new CrystalSlot(blockEntity.getItemHandler(), FluidTankBlockEntity.CRYSTAL_SLOT, 8, 108));
-        this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), FluidTankBlockEntity.DRAIN_SLOT, 69, 108));
-        this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), FluidTankBlockEntity.FILL_SLOT, 91, 108));
+        this.addSlot(new DrainSlot(blockEntity.getItemHandler(), FluidTankBlockEntity.DRAIN_SLOT, 69, 108));
+        this.addSlot(new FillSlot(blockEntity.getItemHandler(), FluidTankBlockEntity.FILL_SLOT, 91, 108));
 
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
@@ -263,7 +264,7 @@ public class FluidTankMenu extends AbstractBaseMenu implements NamedBlockMenu, S
         return MenuHelper.resolveBlockEntity(inventory, pos, FluidTankBlockEntity.class, "Fluid Tank");
     }
 
-    private static final class CrystalSlot extends SlotItemHandler {
+    private static final class CrystalSlot extends SlotItemHandler implements GhostItemSlot {
         private CrystalSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
             super(itemHandler, slot, x, y);
         }
@@ -271,6 +272,33 @@ public class FluidTankMenu extends AbstractBaseMenu implements NamedBlockMenu, S
         @Override
         public boolean mayPlace(ItemStack stack) {
             return PowerCrystalEffects.isPowerCrystal(stack);
+        }
+
+        @Override
+        public ItemStack getGhostItemStack() {
+            return de.artemis.matterworks.common.menu.slot.CrystalSlot.getCyclingGhostItemStack();
+        }
+    }
+
+    private static final class DrainSlot extends SlotItemHandler {
+        private DrainSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return FluidItemHelper.isFilledFluidContainer(stack);
+        }
+    }
+
+    private static final class FillSlot extends SlotItemHandler {
+        private FillSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return FluidItemHelper.isFluidItem(stack);
         }
     }
 }

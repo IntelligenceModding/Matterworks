@@ -81,6 +81,7 @@ public class MatterSeparatorScreen extends net.minecraft.client.gui.screens.inve
                 menu.getScaledSludgeAmount(TANK_HEIGHT),
                 menu.getSludgeFluidStack()
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

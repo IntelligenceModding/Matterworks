@@ -55,6 +55,7 @@ public class MatterAnalyzerScreen extends net.minecraft.client.gui.screens.inven
                 menu.getScaledEnergyAmount(BAR_WIDTH),
                 BAR_HEIGHT
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

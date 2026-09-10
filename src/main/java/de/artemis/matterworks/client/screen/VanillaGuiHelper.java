@@ -1,8 +1,11 @@
 package de.artemis.matterworks.client.screen;
 
+import com.mojang.blaze3d.systems.RenderSystem;
+import de.artemis.matterworks.common.menu.slot.GhostItemSlot;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
+import net.minecraft.world.item.ItemStack;
 
 public final class VanillaGuiHelper {
     private static final int PANEL_OUTER = 0xFF8B8B8B;
@@ -45,6 +48,32 @@ public final class VanillaGuiHelper {
         for (Slot slot : menu.slots) {
             drawSlot(guiGraphics, leftPos + slot.x - 1, topPos + slot.y - 1);
         }
+        drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
+    }
+
+    public static void drawGhostSlotItems(GuiGraphics guiGraphics, AbstractContainerMenu menu, int leftPos, int topPos) {
+        for (Slot slot : menu.slots) {
+            if (!slot.isActive() || slot.hasItem() || !(slot instanceof GhostItemSlot ghostItemSlot)) {
+                continue;
+            }
+
+            ItemStack ghostStack = ghostItemSlot.getGhostItemStack();
+            if (ghostStack.isEmpty()) {
+                continue;
+            }
+
+            drawGhostItem(guiGraphics, ghostStack, leftPos + slot.x, topPos + slot.y);
+        }
+    }
+
+    private static void drawGhostItem(GuiGraphics guiGraphics, ItemStack stack, int x, int y) {
+        guiGraphics.pose().pushPose();
+        RenderSystem.enableBlend();
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 0.35F);
+        guiGraphics.renderItem(stack, x, y);
+        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        RenderSystem.disableBlend();
+        guiGraphics.pose().popPose();
     }
 
     public static void drawVerticalBarFrame(GuiGraphics guiGraphics, int x, int y, int width, int height) {

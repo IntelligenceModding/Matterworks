@@ -53,6 +53,7 @@ public class EnergyCellScreen extends AbstractRenamableContainerScreen<EnergyCel
         }
         renderTransferGraph(guiGraphics, mouseX, mouseY);
         renderChargeBar(guiGraphics);
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

@@ -81,6 +81,7 @@ public class GraviticCondenserScreen extends net.minecraft.client.gui.screens.in
                 menu.getScaledUnstableAmount(TANK_HEIGHT),
                 menu.getUnstableFluidStack()
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

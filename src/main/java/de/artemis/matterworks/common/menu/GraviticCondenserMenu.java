@@ -30,9 +30,9 @@ public class GraviticCondenserMenu extends AbstractMatterMachineMenu {
     @Override
     protected void addMachineSlots() {
         this.addSlot(createOutputOnlySlot(GraviticCondenserBlockEntity.OUTPUT_SLOT, 80, 36));
-        this.addSlot(createBucketInputSlot(GraviticCondenserBlockEntity.RAW_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createBucketInputSlot(GraviticCondenserBlockEntity.RAW_BUCKET_INPUT_SLOT, 8, 72, AbstractMatterMachineMenu::rawMatterBucketGhost));
         this.addSlot(createOutputOnlySlot(GraviticCondenserBlockEntity.RAW_BUCKET_OUTPUT_SLOT, 41, 72));
-        this.addSlot(createBucketInputSlot(GraviticCondenserBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72));
+        this.addSlot(createBucketInputSlot(GraviticCondenserBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72, AbstractMatterMachineMenu::emptyBucketGhost));
         this.addSlot(createOutputOnlySlot(GraviticCondenserBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT, 152, 72));
         this.addSlot(createCrystalSlot(GraviticCondenserBlockEntity.SLOT_CRYSTAL, 8, 108));
         this.addSlot(createEnergyInputSlot(GraviticCondenserBlockEntity.SLOT_POWER_INPUT, 152, 108));

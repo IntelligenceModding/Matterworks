@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.menu.slot.CrystalSlot;
+import de.artemis.matterworks.common.menu.slot.GhostHintSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
@@ -16,7 +17,6 @@ import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.DyeColor;
-import net.neoforged.neoforge.items.SlotItemHandler;
 
 import java.util.Arrays;
 
@@ -70,7 +70,7 @@ public class MatterPylonMenu extends AbstractBaseMenu implements NamedBlockMenu 
         addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_WHITELIST, 48, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
         addSlot(new FilterSlot(this, blockEntity, MatterPylonBlockEntity.FILTER_SLOT_FLUID_EXPORT_BLACKLIST, 68, 75, MatterPylonBlockEntity.CHANNEL_FLUIDS));
         for (int slot = 0; slot < MatterPylonBlockEntity.CRYSTAL_SLOT_COUNT; slot++) {
-            addSlot(new CrystalSlot(blockEntity.getCrystalHandler(), slot, 92 + slot * 30, 108));
+            addSlot(new PylonCrystalSlot(this, blockEntity.getCrystalHandler(), slot, 92 + slot * 30, 108));
         }
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
@@ -265,13 +265,13 @@ public class MatterPylonMenu extends AbstractBaseMenu implements NamedBlockMenu 
         };
     }
 
-    private static final class FilterSlot extends SlotItemHandler {
+    private static final class FilterSlot extends GhostHintSlot {
         private final MatterPylonMenu menu;
         private final MatterPylonBlockEntity blockEntity;
         private final int channel;
 
         private FilterSlot(MatterPylonMenu menu, MatterPylonBlockEntity blockEntity, int slot, int x, int y, int channel) {
-            super(blockEntity.getFilterHandler(), slot, x, y);
+            super(blockEntity.getFilterHandler(), slot, x, y, () -> getFilterGhostItem(channel));
             this.menu = menu;
             this.blockEntity = blockEntity;
             this.channel = channel;
@@ -303,6 +303,26 @@ public class MatterPylonMenu extends AbstractBaseMenu implements NamedBlockMenu 
                 return stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
             }
             return false;
+        }
+
+        private static ItemStack getFilterGhostItem(int channel) {
+            return channel == MatterPylonBlockEntity.CHANNEL_FLUIDS
+                    ? ModItems.MATTER_FLUID_FILTER.get().getDefaultInstance()
+                    : ModItems.MATTER_ITEM_FILTER.get().getDefaultInstance();
+        }
+    }
+
+    private static final class PylonCrystalSlot extends CrystalSlot {
+        private final MatterPylonMenu menu;
+
+        private PylonCrystalSlot(MatterPylonMenu menu, net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+            this.menu = menu;
+        }
+
+        @Override
+        public boolean isActive() {
+            return menu.supportsUpgradeCrystals();
         }
     }
 }

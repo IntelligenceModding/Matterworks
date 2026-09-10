@@ -220,6 +220,7 @@ public class MatterNetworkControllerScreen extends AbstractContainerScreen<Matte
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
         renderInactiveFilterCover(guiGraphics);
         renderSelectedNodeSlots(guiGraphics);
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
         int handleTop = getScrollbarHandleTop();
         guiGraphics.blitSprite(
                 displayEntries.size() > VISIBLE_ROWS ? SCROLLER_SPRITE : SCROLLER_DISABLED_SPRITE,

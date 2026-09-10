@@ -15,6 +15,7 @@ public final class ModPayloads {
                 .playToClient(SetMatterNetworkTrackingPayload.TYPE, SetMatterNetworkTrackingPayload.STREAM_CODEC, SetMatterNetworkTrackingPayload::handle)
                 .playToServer(SetBlockCustomNamePayload.TYPE, SetBlockCustomNamePayload.STREAM_CODEC, SetBlockCustomNamePayload::handle)
                 .playToServer(PlaceMatterBatteryPreviewBlockPayload.TYPE, PlaceMatterBatteryPreviewBlockPayload.STREAM_CODEC, PlaceMatterBatteryPreviewBlockPayload::handle)
+                .playToServer(SetMatterArchitectSecondCornerPayload.TYPE, SetMatterArchitectSecondCornerPayload.STREAM_CODEC, SetMatterArchitectSecondCornerPayload::handle)
                 .playToServer(MoveMatterArchitectSelectionPayload.TYPE, MoveMatterArchitectSelectionPayload.STREAM_CODEC, MoveMatterArchitectSelectionPayload::handle)
                 .playToServer(ResizeMatterArchitectSelectionPayload.TYPE, ResizeMatterArchitectSelectionPayload.STREAM_CODEC, ResizeMatterArchitectSelectionPayload::handle)
                 .playToServer(ConfigureMatterBatteryPortPayload.TYPE, ConfigureMatterBatteryPortPayload.STREAM_CODEC, ConfigureMatterBatteryPortPayload::handle)

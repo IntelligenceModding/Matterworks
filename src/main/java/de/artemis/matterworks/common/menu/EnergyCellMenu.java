@@ -5,7 +5,9 @@ import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.menu.slot.GhostItemSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -57,7 +59,7 @@ public class EnergyCellMenu extends AbstractBaseMenu implements NamedBlockMenu, 
                 108
         ));
         for (int slot = 0; slot < EnergyCellBlockEntity.CHARGE_SLOT_COUNT; slot++) {
-            this.addSlot(new SlotItemHandler(
+            this.addSlot(new ChargeTargetSlot(
                     blockEntity.getItemHandler(),
                     EnergyCellBlockEntity.CHARGE_SLOT_START + slot,
                     35 + slot * 18,
@@ -276,7 +278,7 @@ public class EnergyCellMenu extends AbstractBaseMenu implements NamedBlockMenu, 
                 && !(stack.getItem() instanceof de.artemis.matterworks.common.item.PowerCrystalItem);
     }
 
-    private static final class CrystalSlot extends SlotItemHandler {
+    private static final class CrystalSlot extends SlotItemHandler implements GhostItemSlot {
         private CrystalSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
             super(itemHandler, slot, x, y);
         }
@@ -285,9 +287,25 @@ public class EnergyCellMenu extends AbstractBaseMenu implements NamedBlockMenu, 
         public boolean mayPlace(ItemStack stack) {
             return de.artemis.matterworks.common.upgrade.PowerCrystalEffects.isPowerCrystal(stack);
         }
+
+        @Override
+        public ItemStack getGhostItemStack() {
+            return de.artemis.matterworks.common.menu.slot.CrystalSlot.getCyclingGhostItemStack();
+        }
     }
 
-    private static final class PowerBankSlot extends SlotItemHandler {
+    private static final class ChargeTargetSlot extends SlotItemHandler {
+        private ChargeTargetSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
+            super(itemHandler, slot, x, y);
+        }
+
+        @Override
+        public boolean mayPlace(ItemStack stack) {
+            return EnergyItemHelper.canReceiveEnergy(stack);
+        }
+    }
+
+    private static final class PowerBankSlot extends SlotItemHandler implements GhostItemSlot {
         private PowerBankSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
             super(itemHandler, slot, x, y);
         }
@@ -295,6 +313,11 @@ public class EnergyCellMenu extends AbstractBaseMenu implements NamedBlockMenu, 
         @Override
         public boolean mayPlace(ItemStack stack) {
             return EnergyItemHelper.canProvideEnergy(stack);
+        }
+
+        @Override
+        public ItemStack getGhostItemStack() {
+            return ModItems.MATTER_POWER_BANK.get().createChargedStack();
         }
     }
 

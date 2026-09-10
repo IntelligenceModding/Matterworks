@@ -66,6 +66,7 @@ public class PowerCrystalChargerScreen extends AbstractRenamableContainerScreen<
                 menu.getScaledEnergyAmount(BAR_WIDTH),
                 BAR_HEIGHT
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

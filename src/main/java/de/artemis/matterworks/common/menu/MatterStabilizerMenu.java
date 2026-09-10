@@ -39,11 +39,11 @@ public class MatterStabilizerMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addMachineSlots() {
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.RAW_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.RAW_BUCKET_INPUT_SLOT, 8, 72, AbstractMatterMachineMenu::rawMatterBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.RAW_BUCKET_OUTPUT_SLOT, 42, 72));
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.REFINED_BUCKET_INPUT_SLOT, 63, 72));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.REFINED_BUCKET_INPUT_SLOT, 63, 72, AbstractMatterMachineMenu::emptyBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 97, 72));
-        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_INPUT_SLOT, 118, 72));
+        this.addSlot(createBucketInputSlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_INPUT_SLOT, 118, 72, AbstractMatterMachineMenu::emptyBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterStabilizerBlockEntity.UNSTABLE_BUCKET_OUTPUT_SLOT, 152, 72));
         this.addSlot(createCrystalSlot(AbstractMatterMachineBlockEntity.CRYSTAL_SLOT, 8, 108));
         this.addSlot(createEnergyInputSlot(AbstractMatterMachineBlockEntity.ENERGY_ITEM_INPUT_SLOT, 152, 108));

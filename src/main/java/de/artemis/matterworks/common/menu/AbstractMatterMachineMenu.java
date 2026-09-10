@@ -10,6 +10,7 @@ import de.artemis.matterworks.common.menu.slot.CrystalSlot;
 import de.artemis.matterworks.common.menu.slot.EnergyInputSlot;
 import de.artemis.matterworks.common.menu.slot.InputSlot;
 import de.artemis.matterworks.common.menu.slot.OutputOnlySlot;
+import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
@@ -18,10 +19,12 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.Items;
 import net.neoforged.neoforge.fluids.FluidStack;
 import net.neoforged.neoforge.items.SlotItemHandler;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public abstract class AbstractMatterMachineMenu extends AbstractBaseMenu implements NamedBlockMenu, SideConfigMenuAccess {
     protected final AbstractMatterMachineBlockEntity blockEntity;
@@ -66,12 +69,32 @@ public abstract class AbstractMatterMachineMenu extends AbstractBaseMenu impleme
         return new EnergyInputSlot(blockEntity.getItemHandler(), slot, x, y);
     }
 
+    protected SlotItemHandler createEnergyInputSlot(int slot, int x, int y, Supplier<ItemStack> ghostItemStack) {
+        return new EnergyInputSlot(blockEntity.getItemHandler(), slot, x, y, ghostItemStack);
+    }
+
     protected SlotItemHandler createCrystalSlot(int slot, int x, int y) {
         return new CrystalSlot(blockEntity.getItemHandler(), slot, x, y);
     }
 
     protected SlotItemHandler createBucketInputSlot(int slot, int x, int y) {
         return new BucketInputSlot(blockEntity.getItemHandler(), slot, x, y);
+    }
+
+    protected SlotItemHandler createBucketInputSlot(int slot, int x, int y, Supplier<ItemStack> ghostItemStack) {
+        return new BucketInputSlot(blockEntity.getItemHandler(), slot, x, y, ghostItemStack);
+    }
+
+    protected static ItemStack emptyBucketGhost() {
+        return Items.BUCKET.getDefaultInstance();
+    }
+
+    protected static ItemStack rawMatterBucketGhost() {
+        return ModItems.RAW_MATTER_BUCKET.get().getDefaultInstance();
+    }
+
+    protected static ItemStack refinedMatterBucketGhost() {
+        return ModItems.REFINED_MATTER_BUCKET.get().getDefaultInstance();
     }
 
     protected SlotItemHandler createOutputOnlySlot(int slot, int x, int y) {

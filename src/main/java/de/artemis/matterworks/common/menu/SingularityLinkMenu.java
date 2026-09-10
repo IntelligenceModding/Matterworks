@@ -2,7 +2,9 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.SingularityLinkBlockEntity;
 import de.artemis.matterworks.common.blockentity.SingularityLinkSavedData;
+import de.artemis.matterworks.common.menu.slot.GhostHintSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.RegistryFriendlyByteBuf;
@@ -12,7 +14,6 @@ import net.minecraft.world.inventory.ContainerData;
 import net.minecraft.world.inventory.SimpleContainerData;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
-import net.neoforged.neoforge.items.SlotItemHandler;
 
 public class SingularityLinkMenu extends AbstractBaseMenu implements NamedBlockMenu {
     private static final int PLAYER_INVENTORY_START = 1;
@@ -44,7 +45,13 @@ public class SingularityLinkMenu extends AbstractBaseMenu implements NamedBlockM
         this.data = data;
         this.remoteAccess = remoteAccess;
 
-        addSlot(new SlotItemHandler(blockEntity.getSingularityHandler(), SingularityLinkBlockEntity.SINGULARITY_SLOT, 80, 18));
+        addSlot(new GhostHintSlot(
+                blockEntity.getSingularityHandler(),
+                SingularityLinkBlockEntity.SINGULARITY_SLOT,
+                80,
+                18,
+                () -> ModItems.MATTER_SINGULARITY.get().getDefaultInstance()
+        ));
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);
         addDataSlots(data);

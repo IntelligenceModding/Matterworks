@@ -4,7 +4,9 @@ import de.artemis.matterworks.common.blockentity.PowerCrystalChargerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.menu.slot.GhostItemSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
@@ -236,7 +238,7 @@ public class PowerCrystalChargerMenu extends AbstractBaseMenu implements NamedBl
         }
     }
 
-    private static final class BoostCrystalSlot extends SlotItemHandler {
+    private static final class BoostCrystalSlot extends SlotItemHandler implements GhostItemSlot {
         private BoostCrystalSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
             super(itemHandler, slot, x, y);
         }
@@ -245,9 +247,14 @@ public class PowerCrystalChargerMenu extends AbstractBaseMenu implements NamedBl
         public boolean mayPlace(ItemStack stack) {
             return PowerCrystalEffects.hasChargerEffect(stack);
         }
+
+        @Override
+        public ItemStack getGhostItemStack() {
+            return de.artemis.matterworks.common.menu.slot.CrystalSlot.getCyclingGhostItemStack();
+        }
     }
 
-    private static final class EnergySourceSlot extends SlotItemHandler {
+    private static final class EnergySourceSlot extends SlotItemHandler implements GhostItemSlot {
         private EnergySourceSlot(net.neoforged.neoforge.items.IItemHandler itemHandler, int slot, int x, int y) {
             super(itemHandler, slot, x, y);
         }
@@ -255,6 +262,11 @@ public class PowerCrystalChargerMenu extends AbstractBaseMenu implements NamedBl
         @Override
         public boolean mayPlace(ItemStack stack) {
             return EnergyItemHelper.canProvideEnergy(stack);
+        }
+
+        @Override
+        public ItemStack getGhostItemStack() {
+            return ModItems.MATTER_POWER_BANK.get().createChargedStack();
         }
     }
 }

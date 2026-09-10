@@ -53,6 +53,7 @@ public class FluidTankScreen extends AbstractRenamableContainerScreen<FluidTankM
         }
         renderTransferGraph(guiGraphics, mouseX, mouseY);
         renderTankBar(guiGraphics);
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

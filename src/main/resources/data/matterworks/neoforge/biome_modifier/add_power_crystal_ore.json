@@ -1,0 +1,9 @@
+{
+  "type": "neoforge:add_features",
+  "biomes": "#minecraft:is_overworld",
+  "features": [
+    "matterworks:power_crystal_ore",
+    "matterworks:power_crystal_trace_ore"
+  ],
+  "step": "underground_ores"
+}

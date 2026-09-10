@@ -11,6 +11,7 @@ import net.minecraft.network.chat.Component;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
@@ -40,7 +41,7 @@ public class MatterArchitectItem extends Item {
 
         ItemStack stack = context.getItemInHand();
         BlockPos clickedPos = context.getClickedPos().immutable();
-        net.minecraft.world.entity.player.Player player = context.getPlayer();
+        Player player = context.getPlayer();
         if (player == null) {
             return InteractionResult.PASS;
         }
@@ -54,15 +55,9 @@ public class MatterArchitectItem extends Item {
         }
 
         if (!hasCornerB(stack)) {
-            setCornerB(stack, clickedPos);
-            setFront(stack, player.getDirection());
-            setLocked(stack, false);
-            if (hasValidBatterySelection(stack)) {
-                player.displayClientMessage(Component.literal("Battery blueprint ready: " + getWidth(stack) + "x" + getHeight(stack) + "x" + getDepth(stack)), true);
-            } else {
-                player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 16x16x16"), true);
-            }
-            return InteractionResult.SUCCESS;
+            return setSecondCorner(stack, clickedPos, player.getDirection(), player)
+                    ? InteractionResult.SUCCESS
+                    : InteractionResult.PASS;
         }
 
         return tryLockSelection(stack, player);
@@ -117,6 +112,7 @@ public class MatterArchitectItem extends Item {
             }
         } else {
             tooltipComponents.add(Component.literal("Look at a second corner for live preview").withStyle(ChatFormatting.AQUA));
+            tooltipComponents.add(Component.literal("Right click air: set aimed air corner").withStyle(ChatFormatting.DARK_GRAY));
         }
         tooltipComponents.add(Component.literal("Shift + use in air: clear").withStyle(ChatFormatting.DARK_GRAY));
     }
@@ -138,6 +134,24 @@ public class MatterArchitectItem extends Item {
 
     public static boolean isLocked(ItemStack stack) {
         return getCustomDataTag(stack).getBoolean(TAG_LOCKED);
+    }
+
+    public static boolean setSecondCorner(ItemStack stack, BlockPos pos, Direction front, @Nullable Player player) {
+        if (!hasCornerA(stack) || hasCornerB(stack)) {
+            return false;
+        }
+
+        setCornerB(stack, pos.immutable());
+        setFront(stack, front);
+        setLocked(stack, false);
+        if (player != null) {
+            if (hasValidBatterySelection(stack)) {
+                player.displayClientMessage(Component.literal("Battery blueprint ready: " + getWidth(stack) + "x" + getHeight(stack) + "x" + getDepth(stack)), true);
+            } else {
+                player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 16x16x16"), true);
+            }
+        }
+        return true;
     }
 
     public static BlockPos getMinCorner(ItemStack stack) {

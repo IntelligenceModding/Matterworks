@@ -65,6 +65,7 @@ public class MatterStabilizerScreen extends AbstractContainerScreen<MatterStabil
         GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + RAW_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRawMatterAmount(TANK_HEIGHT), menu.getRawMatterFluidStack());
         GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + REFINED_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledRefinedMatterAmount(TANK_HEIGHT), menu.getRefinedMatterFluidStack());
         GuiWidgets.fillVerticalFluidGauge(guiGraphics, leftPos + UNSTABLE_TANK_X, topPos + TANK_Y, TANK_WIDTH, TANK_HEIGHT, menu.getScaledUnstableMatterAmount(TANK_HEIGHT), menu.getUnstableMatterFluidStack());
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

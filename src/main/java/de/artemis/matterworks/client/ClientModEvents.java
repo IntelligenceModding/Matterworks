@@ -42,6 +42,7 @@ import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHel
 import de.artemis.matterworks.common.network.MoveMatterArchitectSelectionPayload;
 import de.artemis.matterworks.common.network.PlaceMatterBatteryPreviewBlockPayload;
 import de.artemis.matterworks.common.network.ResizeMatterArchitectSelectionPayload;
+import de.artemis.matterworks.common.network.SetMatterArchitectSecondCornerPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
@@ -72,6 +73,8 @@ import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtension
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.HitResult;
 import net.minecraft.world.phys.Vec3;
 import org.lwjgl.glfw.GLFW;
 import org.joml.Vector3f;
@@ -80,6 +83,8 @@ public class ClientModEvents {
     private static final String KEY_CATEGORY = "key.categories.matterworks";
     private static final KeyMapping ARCHITECT_LAYER_UP = new KeyMapping("key.matterworks.architect.layer_up", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_PAGE_UP, KEY_CATEGORY);
     private static final KeyMapping ARCHITECT_LAYER_DOWN = new KeyMapping("key.matterworks.architect.layer_down", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_PAGE_DOWN, KEY_CATEGORY);
+    private static int observedPreviewLayer = -1;
+    private static boolean observedPreviewLayerComplete;
 
     private ClientModEvents() {
     }
@@ -243,12 +248,20 @@ public class ClientModEvents {
     }
 
     public static void onInteractionKeyMappingTriggered(InputEvent.InteractionKeyMappingTriggered event) {
-        if (!event.isUseItem() || event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) {
+        if (!event.isUseItem()) {
             return;
         }
 
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.player == null || minecraft.level == null || minecraft.screen != null) {
+            return;
+        }
+
+        if (handleMatterArchitectAirSecondCorner(event, minecraft)) {
+            return;
+        }
+
+        if (event.getHand() != net.minecraft.world.InteractionHand.MAIN_HAND) {
             return;
         }
 
@@ -282,6 +295,29 @@ public class ClientModEvents {
                 previewHit.worldPos(),
                 event.getHand().ordinal()
         ));
+    }
+
+    private static boolean handleMatterArchitectAirSecondCorner(InputEvent.InteractionKeyMappingTriggered event, Minecraft minecraft) {
+        ItemStack stack = minecraft.player.getItemInHand(event.getHand());
+        if (!(stack.getItem() instanceof MatterArchitectItem)
+                || minecraft.player.isShiftKeyDown()
+                || !MatterArchitectItem.hasCornerA(stack)
+                || MatterArchitectItem.hasCornerB(stack)) {
+            return false;
+        }
+
+        BlockPos targetPos = getTargetedAirBlockPos(minecraft);
+        if (targetPos == null) {
+            return false;
+        }
+
+        Direction front = minecraft.player.getDirection();
+        event.setCanceled(true);
+        event.setSwingHand(true);
+        MatterArchitectItem.setSecondCorner(stack, targetPos, front, null);
+        MatterArchitectItem.syncPreviewState(stack, targetPos, front);
+        PacketDistributor.sendToServer(new SetMatterArchitectSecondCornerPayload(event.getHand().ordinal(), targetPos, front.ordinal()));
+        return true;
     }
 
     public static void onMouseScrolling(InputEvent.MouseScrollingEvent event) {
@@ -360,10 +396,12 @@ public class ClientModEvents {
                 while (ARCHITECT_LAYER_DOWN.consumeClick()) {
                     MatterBatteryPreviewState.cycleLayer(-1);
                 }
+                tickLayerAutoAdvance(minecraft);
                 syncedFromTool = true;
             }
             if (!syncedFromTool && MatterBatteryPreviewState.isToolDriven()) {
                 MatterBatteryPreviewState.clear();
+                resetObservedPreviewLayer();
             }
         }
         MatterBatteryFormationRenderer.tickParticles();
@@ -387,6 +425,52 @@ public class ClientModEvents {
             return blockHitResult.getBlockPos();
         }
         return null;
+    }
+
+    private static void tickLayerAutoAdvance(Minecraft minecraft) {
+        if (!MatterBatteryPreviewState.isActive()
+                || !MatterBatteryPreviewState.isValid()
+                || !MatterBatteryPreviewState.isLocked()) {
+            resetObservedPreviewLayer();
+            return;
+        }
+
+        int selectedLayer = MatterBatteryPreviewState.getSelectedLayer();
+        boolean layerComplete = MatterBatteryPreviewRenderer.isSelectedLayerComplete(minecraft);
+        if (selectedLayer != observedPreviewLayer) {
+            observedPreviewLayer = selectedLayer;
+            observedPreviewLayerComplete = layerComplete;
+            return;
+        }
+
+        if (!observedPreviewLayerComplete && layerComplete && selectedLayer < MatterBatteryPreviewState.getHeight() - 1) {
+            MatterBatteryPreviewState.setSelectedLayer(selectedLayer + 1);
+            observedPreviewLayer = MatterBatteryPreviewState.getSelectedLayer();
+            observedPreviewLayerComplete = MatterBatteryPreviewRenderer.isSelectedLayerComplete(minecraft);
+            return;
+        }
+
+        observedPreviewLayerComplete = layerComplete;
+    }
+
+    private static void resetObservedPreviewLayer() {
+        observedPreviewLayer = -1;
+        observedPreviewLayerComplete = false;
+    }
+
+    private static BlockPos getTargetedAirBlockPos(Minecraft minecraft) {
+        if (minecraft.hitResult != null && minecraft.hitResult.getType() != HitResult.Type.MISS) {
+            return null;
+        }
+
+        Vec3 start = minecraft.player.getEyePosition();
+        Vec3 target = minecraft.hitResult != null
+                ? minecraft.hitResult.getLocation()
+                : start.add(minecraft.player.getViewVector(1.0F).scale(8.0D));
+        if (target.distanceToSqr(start) < 1.0E-4D) {
+            target = start.add(minecraft.player.getViewVector(1.0F).scale(8.0D));
+        }
+        return BlockPos.containing(target);
     }
 
     private static int normalizeScrollAmount(double delta) {

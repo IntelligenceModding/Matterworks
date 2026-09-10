@@ -92,6 +92,7 @@ public class CombustionGeneratorScreen extends net.minecraft.client.gui.screens.
                 ENERGY_BAR_HEIGHT,
                 menu.getScaledEnergyAmount(ENERGY_BAR_HEIGHT - 4)
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

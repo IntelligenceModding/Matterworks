@@ -127,6 +127,27 @@ public final class MatterBatteryPreviewRenderer {
         return bestHit;
     }
 
+    public static boolean isSelectedLayerComplete(Minecraft minecraft) {
+        if (!MatterBatteryPreviewState.isActive() || !MatterBatteryPreviewState.isValid() || !MatterBatteryPreviewState.isLocked() || minecraft.level == null) {
+            return false;
+        }
+
+        int selectedLayer = MatterBatteryPreviewState.getSelectedLayer();
+        for (int z = 0; z < MatterBatteryPreviewState.getDepth(); z++) {
+            for (int x = 0; x < MatterBatteryPreviewState.getWidth(); x++) {
+                BlockPos localPos = new BlockPos(x, selectedLayer, z);
+                BlockPos worldPos = MultiblockTransforms.localToWorld(MatterBatteryPreviewState.getOriginPos(), MatterBatteryPreviewState.getFront(), localPos);
+                BlockState actualState = minecraft.level.getBlockState(worldPos);
+                MultiblockRole role = MatterBatteryMultiblockLayout.getRole(localPos, MatterBatteryPreviewState.getWidth(), MatterBatteryPreviewState.getHeight(), MatterBatteryPreviewState.getDepth());
+                if (!MatterBatteryPreviewPlacementHelper.matchesRequirement(role, actualState)) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
     private static void renderLayerHighlights(Minecraft minecraft, MultiBufferSource buffer, Matrix4f matrix, Vec3 cameraPos) {
         int selectedLayer = MatterBatteryPreviewState.getSelectedLayer();
         for (int z = 0; z < MatterBatteryPreviewState.getDepth(); z++) {

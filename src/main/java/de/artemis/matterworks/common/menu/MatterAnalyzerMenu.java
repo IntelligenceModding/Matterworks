@@ -4,6 +4,9 @@ import de.artemis.matterworks.common.blockentity.MatterAnalyzerBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
+import de.artemis.matterworks.common.menu.slot.CrystalSlot;
+import de.artemis.matterworks.common.menu.slot.EnergyInputSlot;
+import de.artemis.matterworks.common.menu.slot.GhostHintSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
@@ -39,8 +42,14 @@ public class MatterAnalyzerMenu extends AbstractBaseMenu implements NamedBlockMe
         this.blockEntity = blockEntity;
         this.data = data;
 
-        this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_POWER_INPUT, 152, 108));
-        this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_EMPTY_TEMPLATE, 80, 57));
+        this.addSlot(new EnergyInputSlot(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_POWER_INPUT, 152, 108));
+        this.addSlot(new GhostHintSlot(
+                blockEntity.getItemHandler(),
+                MatterAnalyzerBlockEntity.SLOT_EMPTY_TEMPLATE,
+                80,
+                57,
+                () -> ModItems.EMPTY_TEMPLATE.get().getDefaultInstance()
+        ));
         this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_ACTIVE_TEMPLATE, 80, 33) {
             @Override
             public boolean mayPlace(ItemStack stack) {
@@ -56,7 +65,7 @@ public class MatterAnalyzerMenu extends AbstractBaseMenu implements NamedBlockMe
                 return false;
             }
         });
-        this.addSlot(new SlotItemHandler(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_CRYSTAL, 8, 108));
+        this.addSlot(new CrystalSlot(blockEntity.getItemHandler(), MatterAnalyzerBlockEntity.SLOT_CRYSTAL, 8, 108));
 
         addPlayerInventory(playerInventory);
         addPlayerHotbar(playerInventory);

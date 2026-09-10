@@ -81,6 +81,7 @@ public class MatterConstructorScreen extends net.minecraft.client.gui.screens.in
                 menu.getScaledSludgeAmount(TANK_HEIGHT),
                 menu.getSludgeFluidStack()
         );
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
     }
 
     @Override

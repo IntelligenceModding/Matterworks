@@ -3,6 +3,7 @@ package de.artemis.matterworks.common.menu;
 import de.artemis.matterworks.common.blockentity.MatterNetworkControllerBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.menu.slot.CrystalSlot;
+import de.artemis.matterworks.common.menu.slot.GhostHintSlot;
 import de.artemis.matterworks.common.registry.ModItems;
 import de.artemis.matterworks.common.registry.ModMenuTypes;
 import net.minecraft.core.BlockPos;
@@ -14,7 +15,6 @@ import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.inventory.Slot;
 import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.items.IItemHandlerModifiable;
-import net.neoforged.neoforge.items.SlotItemHandler;
 
 import javax.annotation.Nullable;
 
@@ -260,12 +260,12 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
         }
     }
 
-    private static final class SelectedNodeFilterSlot extends SlotItemHandler {
+    private static final class SelectedNodeFilterSlot extends GhostHintSlot {
         private final MatterNetworkControllerMenu menu;
         private final int channel;
 
         private SelectedNodeFilterSlot(MatterNetworkControllerMenu menu, IItemHandlerModifiable itemHandler, int index, int xPosition, int yPosition, int channel) {
-            super(itemHandler, index, xPosition, yPosition);
+            super(itemHandler, index, xPosition, yPosition, () -> getFilterGhostItem(channel));
             this.menu = menu;
             this.channel = channel;
         }
@@ -296,6 +296,12 @@ public class MatterNetworkControllerMenu extends AbstractContainerMenu implement
                 return stack.getItem() == ModItems.MATTER_FLUID_FILTER.get();
             }
             return false;
+        }
+
+        private static ItemStack getFilterGhostItem(int channel) {
+            return channel == MatterPylonBlockEntity.CHANNEL_FLUIDS
+                    ? ModItems.MATTER_FLUID_FILTER.get().getDefaultInstance()
+                    : ModItems.MATTER_ITEM_FILTER.get().getDefaultInstance();
         }
     }
 

@@ -175,6 +175,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, 256, 256);
         renderInactiveFilterCover(guiGraphics);
         colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, index -> menu.getNetworkColor(selectedChannel, index));
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
         TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 

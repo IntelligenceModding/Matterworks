@@ -68,6 +68,7 @@ public class SingularityLinkScreen extends AbstractRenamableContainerScreen<Sing
     protected void renderBg(GuiGraphics guiGraphics, float partialTick, int mouseX, int mouseY) {
         guiGraphics.blit(TEXTURE, leftPos, topPos, 0, 0, imageWidth, imageHeight, TEXTURE_SIZE, TEXTURE_SIZE);
         colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, menu::getNetworkColor);
+        VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
         GuiWidgets.fillVerticalEnergyGauge(
                 guiGraphics,
                 leftPos + ENERGY_TANK_X,

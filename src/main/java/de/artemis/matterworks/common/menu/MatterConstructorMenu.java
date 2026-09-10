@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.menu;
 
 import de.artemis.matterworks.common.blockentity.MatterConstructorBlockEntity;
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
+import de.artemis.matterworks.common.menu.slot.GhostHintSlot;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
@@ -29,16 +30,22 @@ public class MatterConstructorMenu extends AbstractMatterMachineMenu {
 
     @Override
     protected void addMachineSlots() {
-        this.addSlot(createMachineSlot(MatterConstructorBlockEntity.SLOT_TEMPLATE, 80, 18));
+        this.addSlot(new GhostHintSlot(
+                blockEntity.getItemHandler(),
+                MatterConstructorBlockEntity.SLOT_TEMPLATE,
+                80,
+                18,
+                () -> ModItems.ENCODED_TEMPLATE.get().getDefaultInstance()
+        ));
         for (int row = 0; row < 2; row++) {
             for (int column = 0; column < 3; column++) {
                 int index = row * 3 + column;
                 this.addSlot(createOutputOnlySlot(MatterConstructorBlockEntity.OUTPUT_SLOT_START + index, 62 + column * 18, 54 + row * 18));
             }
         }
-        this.addSlot(createBucketInputSlot(MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 8, 72));
+        this.addSlot(createBucketInputSlot(MatterConstructorBlockEntity.REFINED_BUCKET_INPUT_SLOT, 8, 72, AbstractMatterMachineMenu::refinedMatterBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterConstructorBlockEntity.REFINED_BUCKET_OUTPUT_SLOT, 41, 72));
-        this.addSlot(createBucketInputSlot(MatterConstructorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72));
+        this.addSlot(createBucketInputSlot(MatterConstructorBlockEntity.SLUDGE_BUCKET_INPUT_SLOT, 119, 72, AbstractMatterMachineMenu::emptyBucketGhost));
         this.addSlot(createOutputOnlySlot(MatterConstructorBlockEntity.SLUDGE_BUCKET_OUTPUT_SLOT, 152, 72));
         this.addSlot(createCrystalSlot(MatterConstructorBlockEntity.SLOT_CRYSTAL, 8, 108));
         this.addSlot(createEnergyInputSlot(MatterConstructorBlockEntity.SLOT_POWER_INPUT, 152, 108));
