@@ -2,6 +2,8 @@ package de.artemis.matterworks.common.multiblock;
 
 import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
+import de.artemis.matterworks.common.block.MatterBatteryCoreBlock;
+import de.artemis.matterworks.common.block.MatterCapacitorCellBlock;
 import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -15,7 +17,10 @@ import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 public final class MatterBatteryMultiblockHelper {
     private MatterBatteryMultiblockHelper() {
@@ -32,9 +37,18 @@ public final class MatterBatteryMultiblockHelper {
 
     public static void onBlockRemoved(Level level, BlockPos pos) {
         if (level instanceof ServerLevel serverLevel) {
-            if (!refreshExistingStructure(serverLevel, pos)) {
-                MultiblockStructureRegistry.disassembleByMember(serverLevel, pos);
+            MultiblockStructure storedStructure = getStoredStructureFromPart(level, pos);
+            if (refreshExistingStructure(serverLevel, pos)) {
+                return;
             }
+            if (MultiblockStructureRegistry.disassembleByMember(serverLevel, pos)) {
+                return;
+            }
+            if (storedStructure != null) {
+                clearStoredStructureState(serverLevel, storedStructure);
+                return;
+            }
+            clearNearbyStoredStructureState(serverLevel, pos);
         }
     }
 
@@ -86,7 +100,7 @@ public final class MatterBatteryMultiblockHelper {
     }
 
     public static boolean recoverStructure(ServerLevel level, BlockPos originPos, Direction front, int width, int height, int depth) {
-        MultiblockMatch match = validateBattery(level, originPos, front, width, height, depth);
+        MultiblockMatch match = validateBattery(level, originPos, front, width, height, depth, null);
         if (match == null) {
             return false;
         }
@@ -94,7 +108,7 @@ public final class MatterBatteryMultiblockHelper {
     }
 
     public static boolean tryAssembleAtOrigin(ServerLevel level, BlockPos originPos, Direction front, int width, int height, int depth, @Nullable Player player, boolean notifyFailure) {
-        MultiblockMatch match = validateBattery(level, originPos, front, width, height, depth);
+        MultiblockMatch match = validateBattery(level, originPos, front, width, height, depth, null);
         if (match == null) {
             if (notifyFailure && player != null) {
                 player.displayClientMessage(net.minecraft.network.chat.Component.literal("Battery blueprint is incomplete"), true);
@@ -125,12 +139,13 @@ public final class MatterBatteryMultiblockHelper {
             return true;
         }
 
-        MultiblockMatch validation = validateBattery(level, structure.originPos(), structure.front(), structure.width(), structure.height(), structure.depth());
+        MultiblockMatch validation = validateBattery(level, structure.originPos(), structure.front(), structure.width(), structure.height(), structure.depth(), structure.structureId());
         if (validation == null) {
             MultiblockStructureRegistry.disassemble(level, structure.structureId());
             return true;
         }
 
+        MultiblockStructureRegistry.refreshMembers(level, structure, validation);
         controller.refreshStructureStats(level, structure);
         return true;
     }
@@ -155,17 +170,43 @@ public final class MatterBatteryMultiblockHelper {
     }
 
     public static void clearStoredStates(ServerLevel level, BlockPos originPos, BlockPos controllerPos, Direction front, int width, int height, int depth) {
+        clearStoredStructureState(level, createStructure(UUID.randomUUID(), controllerPos, originPos, front, width, height, depth));
+    }
+
+    public static MultiblockStructure createStructure(UUID structureId, BlockPos controllerPos, BlockPos originPos, Direction front, int width, int height, int depth) {
+        Map<BlockPos, MultiblockRole> members = new LinkedHashMap<>();
         for (int y = 0; y < height; y++) {
             for (int z = 0; z < depth; z++) {
                 for (int x = 0; x < width; x++) {
-                    BlockPos worldPos = MultiblockTransforms.localToWorld(originPos, front, new BlockPos(x, y, z));
-                    BlockEntity blockEntity = level.getBlockEntity(worldPos);
-                    if (blockEntity instanceof MultiblockPartEntity multiblockPartEntity
-                            && controllerPos.equals(multiblockPartEntity.getMultiblockPartState().getControllerPos())) {
-                        multiblockPartEntity.getMultiblockPartState().clear();
-                        multiblockPartEntity.getMultiblockPartState().sync(blockEntity);
-                    }
+                    BlockPos localPos = new BlockPos(x, y, z);
+                    BlockPos worldPos = MultiblockTransforms.localToWorld(originPos, front, localPos);
+                    members.put(worldPos.immutable(), MatterBatteryMultiblockLayout.getRole(localPos, width, height, depth));
                 }
+            }
+        }
+        return new MultiblockStructure(structureId, MatterBatteryMultiblockDefinition.ID, controllerPos, originPos, front, width, height, depth, Map.copyOf(members));
+    }
+
+    public static void clearStoredStructureState(ServerLevel level, MultiblockStructure structure) {
+        for (BlockPos memberPos : structure.members().keySet()) {
+            BlockState currentState = level.getBlockState(memberPos);
+            BlockState updatedState = currentState;
+            if (updatedState.hasProperty(MatterBatteryCoreBlock.FORMED)) {
+                updatedState = updatedState.setValue(MatterBatteryCoreBlock.FORMED, false);
+            }
+            if (updatedState.hasProperty(MatterCapacitorCellBlock.FORMED)) {
+                updatedState = updatedState.setValue(MatterCapacitorCellBlock.FORMED, false);
+            }
+            if (updatedState != currentState) {
+                level.setBlock(memberPos, updatedState, 3);
+            }
+
+            BlockEntity blockEntity = level.getBlockEntity(memberPos);
+            if (blockEntity instanceof MultiblockPartEntity multiblockPartEntity
+                    && (memberPos.equals(structure.controllerPos()) || belongsToStructure(multiblockPartEntity.getMultiblockPartState(), structure))) {
+                multiblockPartEntity.getMultiblockPartState().clear();
+                multiblockPartEntity.getMultiblockPartState().sync(blockEntity);
+                multiblockPartEntity.onMultiblockDisassembled(structure);
             }
         }
     }
@@ -193,8 +234,8 @@ public final class MatterBatteryMultiblockHelper {
         return front;
     }
 
-    private static @Nullable MultiblockMatch validateBattery(ServerLevel level, BlockPos originPos, Direction front, int width, int height, int depth) {
-        if (!MatterBatteryMultiblockLayout.isValidSize(width, height, depth)) {
+    private static @Nullable MultiblockMatch validateBattery(ServerLevel level, BlockPos originPos, Direction front, int width, int height, int depth, @Nullable UUID allowedStructureId) {
+        if (!front.getAxis().isHorizontal() || !MatterBatteryMultiblockLayout.isValidSize(width, height, depth)) {
             return null;
         }
 
@@ -215,7 +256,8 @@ public final class MatterBatteryMultiblockHelper {
                         return null;
                     }
                     var existing = MultiblockStructureRegistry.getByMember(level, worldPos);
-                    if (existing.isPresent()) {
+                    if (existing.isPresent()
+                            && (allowedStructureId == null || !allowedStructureId.equals(existing.get().structureId()))) {
                         return null;
                     }
                     matchedParts.add(new MultiblockMatchedPart(
@@ -239,5 +281,46 @@ public final class MatterBatteryMultiblockHelper {
             case CASING, PORT -> MatterBatteryMultiblockDefinition.matchesShellFaceState(state);
             case INTERNAL -> MatterBatteryMultiblockDefinition.matchesInternalState(state);
         };
+    }
+
+    private static @Nullable MultiblockStructure getStoredStructureFromPart(Level level, BlockPos pos) {
+        BlockEntity blockEntity = level.getBlockEntity(pos);
+        if (!(blockEntity instanceof MultiblockPartEntity multiblockPartEntity)) {
+            return null;
+        }
+        MultiblockPartState state = multiblockPartEntity.getMultiblockPartState();
+        if (!state.isFormed()
+                || !MatterBatteryMultiblockDefinition.ID.equals(state.getDefinitionId())
+                || !MatterBatteryMultiblockLayout.isValidSize(state.getWidth(), state.getHeight(), state.getDepth())) {
+            return null;
+        }
+        UUID structureId = state.getStructureId() == null ? UUID.randomUUID() : state.getStructureId();
+        return createStructure(structureId, state.getControllerPos(), state.getOriginPos(), state.getFront(), state.getWidth(), state.getHeight(), state.getDepth());
+    }
+
+    private static boolean clearNearbyStoredStructureState(ServerLevel level, BlockPos changedPos) {
+        int radius = MatterBatteryMultiblockLayout.MAX_SIZE;
+        BlockPos minSearch = changedPos.offset(-radius, -radius, -radius);
+        BlockPos maxSearch = changedPos.offset(radius, radius, radius);
+        for (BlockPos scanPos : BlockPos.betweenClosed(minSearch, maxSearch)) {
+            BlockEntity blockEntity = level.getBlockEntity(scanPos);
+            if (!(blockEntity instanceof MatterBatteryCoreBlockEntity controller)
+                    || !controller.hasStoredBlueprint()
+                    || !controller.usesStoredBlueprintPosition(changedPos)) {
+                continue;
+            }
+            MultiblockStructure storedStructure = controller.createStoredBlueprintStructure();
+            if (storedStructure != null) {
+                clearStoredStructureState(level, storedStructure);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static boolean belongsToStructure(MultiblockPartState state, MultiblockStructure structure) {
+        return state.isFormed()
+                && MatterBatteryMultiblockDefinition.ID.equals(state.getDefinitionId())
+                && structure.controllerPos().equals(state.getControllerPos());
     }
 }

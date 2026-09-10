@@ -55,17 +55,18 @@ public final class PylonNetworkEvents {
         boolean placingPort = event.getItemStack().is(ModBlocks.MULTIBLOCK_PORT.get().asItem());
         boolean placingGlass = event.getItemStack().is(ModBlocks.MULTIBLOCK_GLASS.get().asItem());
         boolean placingCasing = event.getItemStack().is(ModBlocks.MULTIBLOCK_CASING.get().asItem());
+        boolean placingFrame = event.getItemStack().is(ModBlocks.MULTIBLOCK_FRAME.get().asItem());
         BlockState currentState = event.getLevel().getBlockState(event.getPos());
         if (isSameBatteryBlockPlacement(event.getItemStack(), currentState)) {
             event.cancelWithResult(ItemInteractionResult.FAIL);
             return;
         }
 
-        if (!placingPort && !placingGlass && !placingCasing) {
+        if (!placingPort && !placingGlass && !placingCasing && !placingFrame) {
             return;
         }
 
-        if (!canReplaceShellBlock(event.getLevel(), event.getPos(), currentState, placingPort, placingGlass, placingCasing)) {
+        if (!canReplaceShellBlock(event.getLevel(), event.getPos(), currentState, placingPort, placingGlass, placingCasing, placingFrame)) {
             if (isBatteryInteractionBlock(currentState)) {
                 event.cancelWithResult(ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION);
                 if (!event.getLevel().isClientSide()) {
@@ -82,7 +83,7 @@ public final class PylonNetworkEvents {
 
         ServerPlayer player = (ServerPlayer) event.getPlayer();
         ServerLevel level = (ServerLevel) event.getLevel();
-        BlockState replacementState = getReplacementState(placingPort, placingGlass, placingCasing);
+        BlockState replacementState = getReplacementState(placingPort, placingGlass, placingCasing, placingFrame);
         if (!level.setBlock(event.getPos(), replacementState, 3)) {
             return;
         }
@@ -97,7 +98,7 @@ public final class PylonNetworkEvents {
         }
     }
 
-    private static boolean canReplaceShellBlock(Level level, BlockPos pos, BlockState currentState, boolean placingPort, boolean placingGlass, boolean placingCasing) {
+    private static boolean canReplaceShellBlock(Level level, BlockPos pos, BlockState currentState, boolean placingPort, boolean placingGlass, boolean placingCasing, boolean placingFrame) {
         if (placingPort) {
             return currentState.is(ModBlocks.MULTIBLOCK_FRAME.get())
                     || currentState.is(ModBlocks.MULTIBLOCK_CASING.get())
@@ -126,10 +127,16 @@ public final class PylonNetworkEvents {
                 return portBlockEntity.getMultiblockPartState().getRole() == MultiblockRole.CASING;
             }
         }
+        if (placingFrame) {
+            return currentState.is(ModBlocks.MULTIBLOCK_PORT.get())
+                    && level.getBlockEntity(pos) instanceof MatterBatteryPortBlockEntity portBlockEntity
+                    && portBlockEntity.getMultiblockPartState().isFormed()
+                    && portBlockEntity.getMultiblockPartState().getRole() == MultiblockRole.FRAME;
+        }
         return false;
     }
 
-    private static BlockState getReplacementState(boolean placingPort, boolean placingGlass, boolean placingCasing) {
+    private static BlockState getReplacementState(boolean placingPort, boolean placingGlass, boolean placingCasing, boolean placingFrame) {
         if (placingPort) {
             return ModBlocks.MULTIBLOCK_PORT.get().defaultBlockState();
         }
@@ -138,6 +145,9 @@ public final class PylonNetworkEvents {
         }
         if (placingCasing) {
             return ModBlocks.MULTIBLOCK_CASING.get().defaultBlockState();
+        }
+        if (placingFrame) {
+            return ModBlocks.MULTIBLOCK_FRAME.get().defaultBlockState();
         }
         throw new IllegalStateException("Unsupported shell replacement item");
     }

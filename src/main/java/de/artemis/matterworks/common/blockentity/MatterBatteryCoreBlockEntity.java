@@ -330,6 +330,12 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         if (MultiblockStructureRegistry.getByMember(serverLevel, worldPosition).isPresent()) {
             return true;
         }
+        if (hasStoredBlueprint() && tryRecoverStoredStructure(serverLevel)) {
+            if (player != null) {
+                player.displayClientMessage(Component.translatable("message.matterworks.matter_battery.assembled"), true);
+            }
+            return true;
+        }
 
         Direction front = getBlockState().getValue(HorizontalDirectionalBlock.FACING);
         var validation = MultiblockStructureRegistry.validate(serverLevel, worldPosition, front, MatterBatteryMultiblockDefinition.INSTANCE);
@@ -462,6 +468,21 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         return pos.getX() >= minPos.getX() && pos.getX() <= maxPos.getX()
                 && pos.getY() >= minPos.getY() && pos.getY() <= maxPos.getY()
                 && pos.getZ() >= minPos.getZ() && pos.getZ() <= maxPos.getZ();
+    }
+
+    public @Nullable MultiblockStructure createStoredBlueprintStructure() {
+        if (!hasStoredBlueprint()) {
+            return null;
+        }
+        return MatterBatteryMultiblockHelper.createStructure(
+                java.util.UUID.randomUUID(),
+                worldPosition,
+                storedOriginPos,
+                storedFront,
+                storedWidth,
+                storedHeight,
+                storedDepth
+        );
     }
 
     private void updateInternalVisualStates(ServerLevel serverLevel, MultiblockStructure structure, boolean formed) {

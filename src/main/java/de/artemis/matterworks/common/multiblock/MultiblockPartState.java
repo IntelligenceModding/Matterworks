@@ -174,6 +174,7 @@ public final class MultiblockPartState {
     }
 
     public boolean sync(BlockEntity blockEntity) {
+        blockEntity.setChanged();
         if (blockEntity.getLevel() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
             serverLevel.sendBlockUpdated(blockEntity.getBlockPos(), blockEntity.getBlockState(), blockEntity.getBlockState(), 3);
             return true;

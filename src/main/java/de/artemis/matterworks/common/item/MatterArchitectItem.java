@@ -60,7 +60,7 @@ public class MatterArchitectItem extends Item {
             if (hasValidBatterySelection(stack)) {
                 player.displayClientMessage(Component.literal("Battery blueprint ready: " + getWidth(stack) + "x" + getHeight(stack) + "x" + getDepth(stack)), true);
             } else {
-                player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 15x15x15"), true);
+                player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 16x16x16"), true);
             }
             return InteractionResult.SUCCESS;
         }

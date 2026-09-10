@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.network;
 
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockLayout;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -51,6 +52,11 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
             Direction front = payload.frontOrdinal >= 0 && payload.frontOrdinal < directions.length
                     ? directions[payload.frontOrdinal]
                     : Direction.NORTH;
+            if (!front.getAxis().isHorizontal()
+                    || !MatterBatteryMultiblockLayout.isValidSize(payload.width(), payload.height(), payload.depth())
+                    || !canPlacePreviewBlock(context.player(), payload, front)) {
+                return;
+            }
             MatterBatteryPreviewPlacementHelper.placeFromInventory(
                     context.player(),
                     payload.originPos(),
@@ -62,5 +68,24 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
                     hand
             );
         });
+    }
+
+    private static boolean canPlacePreviewBlock(net.minecraft.world.entity.player.Player player, PlaceMatterBatteryPreviewBlockPayload payload, Direction front) {
+        if (!player.level().isLoaded(payload.targetPos())) {
+            return false;
+        }
+        if (player.distanceToSqr(payload.targetPos().getX() + 0.5D, payload.targetPos().getY() + 0.5D, payload.targetPos().getZ() + 0.5D) > 64.0D) {
+            return false;
+        }
+
+        MatterBatteryMultiblockLayout.WorldBounds bounds = MatterBatteryMultiblockLayout.getWorldBounds(
+                payload.originPos(), front, payload.width(), payload.height(), payload.depth()
+        );
+        BlockPos minPos = bounds.minPos();
+        BlockPos maxPos = minPos.offset(bounds.sizeX() - 1, bounds.sizeY() - 1, bounds.sizeZ() - 1);
+        BlockPos targetPos = payload.targetPos();
+        return targetPos.getX() >= minPos.getX() && targetPos.getX() <= maxPos.getX()
+                && targetPos.getY() >= minPos.getY() && targetPos.getY() <= maxPos.getY()
+                && targetPos.getZ() >= minPos.getZ() && targetPos.getZ() <= maxPos.getZ();
     }
 }

@@ -2,8 +2,10 @@ package de.artemis.matterworks.common.block;
 
 import com.mojang.serialization.MapCodec;
 import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
+import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.util.Mth;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
@@ -34,6 +36,19 @@ public class MatterBatteryCoreBlock extends AbstractBatteryMultiblockHorizontalB
 
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player, BlockHitResult hitResult) {
+        if (level.isClientSide()) {
+            return InteractionResult.SUCCESS;
+        }
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return InteractionResult.PASS;
+        }
+        if (MatterBatteryMultiblockHelper.tryOpenBatteryMenu(serverLevel, pos, player)) {
+            return InteractionResult.SUCCESS;
+        }
+        if (level.getBlockEntity(pos) instanceof MatterBatteryCoreBlockEntity controller) {
+            controller.tryAssemble(player, true);
+            return InteractionResult.SUCCESS;
+        }
         return InteractionResult.PASS;
     }
 

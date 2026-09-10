@@ -70,7 +70,7 @@ public final class MultiblockStructureRegistry {
                 Map.copyOf(members)
         );
 
-            state.structuresById.put(structure.structureId(), structure);
+        state.structuresById.put(structure.structureId(), structure);
         for (var entry : structure.members().entrySet()) {
             state.memberToStructure.put(entry.getKey(), structure.structureId());
             BlockEntity blockEntity = level.getBlockEntity(entry.getKey());
@@ -82,6 +82,23 @@ public final class MultiblockStructureRegistry {
             }
         }
         return Optional.of(structure);
+    }
+
+    public static void refreshMembers(ServerLevel level, MultiblockStructure structure, MultiblockMatch match) {
+        DimensionState state = STATES.computeIfAbsent(level, ignored -> new DimensionState());
+        state.structuresById.put(structure.structureId(), structure);
+        for (var entry : structure.members().entrySet()) {
+            state.memberToStructure.put(entry.getKey(), structure.structureId());
+            BlockEntity blockEntity = level.getBlockEntity(entry.getKey());
+            if (blockEntity instanceof MultiblockPartEntity multiblockPartEntity) {
+                BlockPos localPos = findLocalPos(match, entry.getKey());
+                boolean changed = multiblockPartEntity.getMultiblockPartState().applyAssembly(structure, entry.getValue(), localPos);
+                multiblockPartEntity.getMultiblockPartState().sync(blockEntity);
+                if (changed) {
+                    multiblockPartEntity.onMultiblockAssembled(structure, entry.getValue());
+                }
+            }
+        }
     }
 
     public static boolean disassembleByMember(ServerLevel level, BlockPos pos) {
