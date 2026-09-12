@@ -55,6 +55,10 @@ public final class MachineSideConfigOverlay {
     private static final int VISUAL_TOGGLE_BUTTON_MIN_WIDTH = 12;
     private static final String VISUAL_TEXT_TOGGLE_TEXT = "Text";
     private static final String VISUAL_OVERLAY_TOGGLE_TEXT = "Overlay";
+    private static final String VISUAL_GHOST_TOGGLE_TEXT = "Ghost";
+    private static final String VISUAL_CLEAR_BUTTON_TEXT = "Clear";
+    private static final String VISUAL_ALL_BUTTON_TEXT = "All";
+    private static final String CENTER_VISUAL_MODE_TEXT = "3D";
     private static final double VISUAL_SCALE = 34.0D;
     private static final float VISUAL_FACE_HALF_SIZE = 0.505F;
     private static final float VISUAL_FACE_OFFSET = 0.512F;
@@ -76,6 +80,7 @@ public final class MachineSideConfigOverlay {
     private static boolean visualMode;
     private static boolean visualTextVisible = true;
     private static boolean visualOverlayVisible = true;
+    private static boolean visualGhostVisible = true;
     private static double visualYaw = Math.toRadians(35.0D);
     private static double visualPitch = Math.toRadians(24.0D);
     private boolean draggingVisualCamera;
@@ -120,7 +125,16 @@ public final class MachineSideConfigOverlay {
         }
 
         int[] centerBounds = getCenterBounds(leftPos, topPos);
-        renderCenterDisplay(guiGraphics, menu.getPrimaryTabIcon(), centerBounds[0], centerBounds[1], centerBounds[2], centerBounds[3]);
+        renderCenterDisplay(
+                guiGraphics,
+                font,
+                menu.getPrimaryTabIcon(),
+                centerBounds[0],
+                centerBounds[1],
+                centerBounds[2],
+                centerBounds[3],
+                isInside(mouseX, mouseY, centerBounds[0], centerBounds[1], centerBounds[2], centerBounds[3])
+        );
         if (!titleText.isEmpty()) {
             guiGraphics.drawString(font, titleText, leftPos + titleX, topPos + titleY, titleColor, false);
         }
@@ -146,6 +160,12 @@ public final class MachineSideConfigOverlay {
     ) {
         if (visualMode) {
             renderVisualTooltip(guiGraphics, font, menu, type, leftPos, topPos, mouseX, mouseY);
+            return;
+        }
+
+        int[] centerBounds = getCenterBounds(leftPos, topPos);
+        if (isInside(mouseX, mouseY, centerBounds[0], centerBounds[1], centerBounds[2], centerBounds[3])) {
+            guiGraphics.renderTooltip(font, Component.literal("Open 3D View"), mouseX, mouseY);
             return;
         }
 
@@ -336,6 +356,24 @@ public final class MachineSideConfigOverlay {
             return;
         }
 
+        int[] ghostButton = getVisualGhostToggleBounds(font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, ghostButton[0], ghostButton[1], ghostButton[2], ghostButton[3])) {
+            guiGraphics.renderTooltip(font, Component.literal("Ghost Blocks: " + getToggleStateLabel(visualGhostVisible)), mouseX, mouseY);
+            return;
+        }
+
+        int[] clearButton = getVisualClearButtonBounds(font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, clearButton[0], clearButton[1], clearButton[2], clearButton[3])) {
+            guiGraphics.renderTooltip(font, Component.literal("Set all sides Off"), mouseX, mouseY);
+            return;
+        }
+
+        int[] allButton = getVisualAllButtonBounds(font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, allButton[0], allButton[1], allButton[2], allButton[3])) {
+            guiGraphics.renderTooltip(font, Component.literal("Cycle all sides"), mouseX, mouseY);
+            return;
+        }
+
         int[] backButton = getVisualBackButtonBounds(font, leftPos, topPos);
         if (isInside(mouseX, mouseY, backButton[0], backButton[1], backButton[2], backButton[3])) {
             guiGraphics.renderTooltip(font, Component.literal("Back"), mouseX, mouseY);
@@ -395,6 +433,31 @@ public final class MachineSideConfigOverlay {
             return true;
         }
 
+        int[] ghostButton = getVisualGhostToggleBounds(Minecraft.getInstance().font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, ghostButton[0], ghostButton[1], ghostButton[2], ghostButton[3])) {
+            if (button == 0) {
+                visualGhostVisible = !visualGhostVisible;
+                GuiWidgets.playButtonClickSound();
+            }
+            return true;
+        }
+
+        int[] clearButton = getVisualClearButtonBounds(Minecraft.getInstance().font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, clearButton[0], clearButton[1], clearButton[2], clearButton[3])) {
+            if (button == 0) {
+                clearSideModes(menu, type);
+            }
+            return true;
+        }
+
+        int[] allButton = getVisualAllButtonBounds(Minecraft.getInstance().font, leftPos, topPos);
+        if (isInside(mouseX, mouseY, allButton[0], allButton[1], allButton[2], allButton[3])) {
+            if (button == 0) {
+                cycleAllSideModes(menu, type);
+            }
+            return true;
+        }
+
         if (!isInside(mouseX, mouseY, leftPos + VISUAL_VIEWPORT_X, topPos + VISUAL_VIEWPORT_Y, VISUAL_VIEWPORT_WIDTH, VISUAL_VIEWPORT_HEIGHT)) {
             return isInside(mouseX, mouseY, leftPos, topPos, TEXTURE_WIDTH, TEXTURE_HEIGHT);
         }
@@ -411,6 +474,15 @@ public final class MachineSideConfigOverlay {
 
         int[] overlayButton = getVisualOverlayToggleBounds(font, leftPos, topPos);
         renderVisualButton(guiGraphics, font, overlayButton, VISUAL_OVERLAY_TOGGLE_TEXT, visualOverlayVisible, mouseX, mouseY);
+
+        int[] ghostButton = getVisualGhostToggleBounds(font, leftPos, topPos);
+        renderVisualButton(guiGraphics, font, ghostButton, VISUAL_GHOST_TOGGLE_TEXT, visualGhostVisible, mouseX, mouseY);
+
+        int[] clearButton = getVisualClearButtonBounds(font, leftPos, topPos);
+        renderVisualButton(guiGraphics, font, clearButton, VISUAL_CLEAR_BUTTON_TEXT, true, mouseX, mouseY);
+
+        int[] allButton = getVisualAllButtonBounds(font, leftPos, topPos);
+        renderVisualButton(guiGraphics, font, allButton, VISUAL_ALL_BUTTON_TEXT, true, mouseX, mouseY);
 
         int[] backButton = getVisualBackButtonBounds(font, leftPos, topPos);
         renderVisualButton(guiGraphics, font, backButton, VISUAL_BACK_BUTTON_TEXT, true, mouseX, mouseY);
@@ -451,32 +523,58 @@ public final class MachineSideConfigOverlay {
 
     private static int[] getVisualBackButtonBounds(Font font, int leftPos, int topPos) {
         int minWidth = VISUAL_BACK_BUTTON_RIGHT - VISUAL_BACK_BUTTON_MIN_LEFT + 1;
-        int textWidth = Mth.ceil(font.width(VISUAL_BACK_BUTTON_TEXT) * VISUAL_BACK_BUTTON_TEXT_SCALE) + 6;
-        int width = Math.max(minWidth, textWidth);
-        int right = leftPos + VISUAL_BACK_BUTTON_RIGHT;
-        return new int[]{
-                right - width + 1,
-                topPos + VISUAL_BACK_BUTTON_TOP,
-                width,
-                VISUAL_BACK_BUTTON_BOTTOM - VISUAL_BACK_BUTTON_TOP + 1
-        };
+        return getVisualControlButtonBounds(font, leftPos, topPos, 5, VISUAL_BACK_BUTTON_TEXT, minWidth);
     }
 
     private static int[] getVisualTextToggleBounds(Font font, int leftPos, int topPos) {
-        int[] overlayButton = getVisualOverlayToggleBounds(font, leftPos, topPos);
-        int width = getVisualButtonWidth(font, VISUAL_TEXT_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
-        return getVisualToggleBounds(overlayButton[0] - VISUAL_CONTROL_GAP - width, topPos, width);
+        return getVisualControlButtonBounds(font, leftPos, topPos, 0, VISUAL_TEXT_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
     }
 
     private static int[] getVisualOverlayToggleBounds(Font font, int leftPos, int topPos) {
-        int[] backButton = getVisualBackButtonBounds(font, leftPos, topPos);
-        int width = getVisualButtonWidth(font, VISUAL_OVERLAY_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
-        return getVisualToggleBounds(backButton[0] - VISUAL_CONTROL_GAP - width, topPos, width);
+        return getVisualControlButtonBounds(font, leftPos, topPos, 4, VISUAL_OVERLAY_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
     }
 
-    private static int[] getVisualToggleBounds(int left, int topPos, int width) {
+    private static int[] getVisualGhostToggleBounds(Font font, int leftPos, int topPos) {
+        return getVisualControlButtonBounds(font, leftPos, topPos, 3, VISUAL_GHOST_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
+    }
+
+    private static int[] getVisualClearButtonBounds(Font font, int leftPos, int topPos) {
+        return getVisualControlButtonBounds(font, leftPos, topPos, 2, VISUAL_CLEAR_BUTTON_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
+    }
+
+    private static int[] getVisualAllButtonBounds(Font font, int leftPos, int topPos) {
+        return getVisualControlButtonBounds(font, leftPos, topPos, 1, VISUAL_ALL_BUTTON_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH);
+    }
+
+    private static int[] getVisualControlButtonBounds(Font font, int leftPos, int topPos, int index, String text, int minWidth) {
+        int[] widths = {
+                getVisualButtonWidth(font, VISUAL_TEXT_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH),
+                getVisualButtonWidth(font, VISUAL_ALL_BUTTON_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH),
+                getVisualButtonWidth(font, VISUAL_CLEAR_BUTTON_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH),
+                getVisualButtonWidth(font, VISUAL_GHOST_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH),
+                getVisualButtonWidth(font, VISUAL_OVERLAY_TOGGLE_TEXT, VISUAL_TOGGLE_BUTTON_MIN_WIDTH),
+                getVisualButtonWidth(font, VISUAL_BACK_BUTTON_TEXT, VISUAL_BACK_BUTTON_RIGHT - VISUAL_BACK_BUTTON_MIN_LEFT + 1)
+        };
+        int width = Math.max(minWidth, getVisualButtonWidth(font, text, minWidth));
+        int totalWidth = 0;
+        for (int buttonWidth : widths) {
+            totalWidth += buttonWidth;
+        }
+
+        int left = leftPos + VISUAL_VIEWPORT_X;
+        int right = leftPos + VISUAL_BACK_BUTTON_RIGHT;
+        int availableWidth = right - left + 1;
+        double gap = Math.max(0.0D, (availableWidth - totalWidth) / (double) (widths.length - 1));
+        double x = left;
+        for (int i = 0; i < index; i++) {
+            x += widths[i] + gap;
+        }
+        if (index == widths.length - 1) {
+            x = right - width + 1;
+        }
+
         return new int[]{
-                left,
+                (int) Math.round(x),
                 topPos + VISUAL_BACK_BUTTON_TOP,
                 width,
                 VISUAL_BACK_BUTTON_BOTTOM - VISUAL_BACK_BUTTON_TOP + 1
@@ -519,11 +617,13 @@ public final class MachineSideConfigOverlay {
         guiGraphics.pose().mulPose(Axis.XP.rotation((float) visualPitch));
         guiGraphics.pose().mulPose(Axis.YP.rotation((float) visualYaw));
 
-        for (Direction direction : Direction.values()) {
-            BlockPos blockPos = menu.getBlockPos().relative(direction);
-            BlockState blockState = minecraft.level.getBlockState(blockPos);
-            if (!blockState.isAir()) {
-                renderLivePreviewBlock(guiGraphics, minecraft, blockPos, direction.getStepX(), direction.getStepY(), direction.getStepZ(), true);
+        if (visualGhostVisible) {
+            for (Direction direction : Direction.values()) {
+                BlockPos blockPos = menu.getBlockPos().relative(direction);
+                BlockState blockState = minecraft.level.getBlockState(blockPos);
+                if (!blockState.isAir()) {
+                    renderLivePreviewBlock(guiGraphics, minecraft, blockPos, direction.getStepX(), direction.getStepY(), direction.getStepZ(), true);
+                }
             }
         }
         guiGraphics.flush();
@@ -761,6 +861,9 @@ public final class MachineSideConfigOverlay {
         float backgroundHalfHeight = font.lineHeight * VISUAL_FACE_LABEL_SCALE * 0.5F + 0.035F;
         guiGraphics.pose().pushPose();
         orientToSide(guiGraphics, direction, VISUAL_FACE_OFFSET + VISUAL_FACE_LABEL_OFFSET);
+        if (shouldRotateHorizontalFaceLabel(direction)) {
+            guiGraphics.pose().mulPose(Axis.ZP.rotationDegrees(180.0F));
+        }
         Matrix4f matrix = guiGraphics.pose().last().pose();
         VertexConsumer background = guiGraphics.bufferSource().getBuffer(RenderType.debugQuads());
         addQuad(
@@ -791,6 +894,18 @@ public final class MachineSideConfigOverlay {
                 LightTexture.FULL_BRIGHT
         );
         guiGraphics.pose().popPose();
+    }
+
+    private static boolean shouldRotateHorizontalFaceLabel(Direction direction) {
+        if (direction != Direction.UP && direction != Direction.DOWN) {
+            return false;
+        }
+
+        double projectedTextUpY = Math.cos(visualYaw) * Math.sin(visualPitch);
+        if (direction == Direction.DOWN) {
+            projectedTextUpY = -projectedTextUpY;
+        }
+        return projectedTextUpY < 0.0D;
     }
 
     private static void orientToSide(GuiGraphics guiGraphics, Direction direction, float offset) {
@@ -1013,7 +1128,9 @@ public final class MachineSideConfigOverlay {
         return Math.max(0.45F, maxWidth / (float) width);
     }
 
-    private static void renderCenterDisplay(GuiGraphics guiGraphics, ItemStack icon, int x, int y, int width, int height) {
+    private static void renderCenterDisplay(GuiGraphics guiGraphics, Font font, ItemStack icon, int x, int y, int width, int height, boolean hovered) {
+        renderCenterButtonFrame(guiGraphics, x, y, width, height, hovered);
+
         float scale = Math.min(width / 16.0F, height / 16.0F);
         float renderSize = 16.0F * scale;
         float offsetX = x + (width - renderSize) / 2.0F;
@@ -1023,6 +1140,44 @@ public final class MachineSideConfigOverlay {
         guiGraphics.pose().scale(scale, scale, 1.0F);
         guiGraphics.renderItem(icon, 0, 0);
         guiGraphics.pose().popPose();
+
+        renderCenterModeBadge(guiGraphics, font, x, y, width, height, hovered);
+    }
+
+    private static void renderCenterButtonFrame(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean hovered) {
+        if (!hovered) {
+            return;
+        }
+
+        int highlight = 0xCCA9D8FF;
+        guiGraphics.fill(x, y, x + width, y + 1, highlight);
+        guiGraphics.fill(x, y + height - 1, x + width, y + height, highlight);
+        guiGraphics.fill(x, y, x + 1, y + height, highlight);
+        guiGraphics.fill(x + width - 1, y, x + width, y + height, highlight);
+    }
+
+    private static void renderCenterModeBadge(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height, boolean hovered) {
+        int badgeWidth = font.width(CENTER_VISUAL_MODE_TEXT) + 5;
+        int badgeHeight = font.lineHeight + 1;
+        int badgeX = x + width - badgeWidth - 1;
+        int badgeY = y + 1;
+        guiGraphics.flush();
+        RenderSystem.disableDepthTest();
+        guiGraphics.pose().pushPose();
+        guiGraphics.pose().translate(0.0F, 0.0F, 120.0F);
+        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, hovered ? 0xFF2B5F98 : 0xFF1E3144);
+        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + 1, hovered ? 0xFFA9D8FF : 0xFF6C8DA8);
+        guiGraphics.drawString(
+                font,
+                CENTER_VISUAL_MODE_TEXT,
+                badgeX + 3,
+                badgeY + 1,
+                hovered ? 0xFFFFFFFF : 0xFFE5EDF5,
+                false
+        );
+        guiGraphics.pose().popPose();
+        guiGraphics.flush();
+        RenderSystem.enableDepthTest();
     }
 
     private enum RelativeSide {
@@ -1070,6 +1225,47 @@ public final class MachineSideConfigOverlay {
                 : getNextMode(menu, type, direction);
         PacketDistributor.sendToServer(new SetSideConfigPayload(menu.getBlockPos(), type.ordinal(), direction.ordinal(), mode.ordinal()));
         GuiWidgets.playButtonClickSound();
+    }
+
+    private static void clearSideModes(SideConfigMenuAccess menu, SideConfigType type) {
+        for (Direction direction : Direction.values()) {
+            if (menu.getSideAccessMode(type, direction) == SideAccessMode.DISABLED) {
+                continue;
+            }
+            PacketDistributor.sendToServer(new SetSideConfigPayload(menu.getBlockPos(), type.ordinal(), direction.ordinal(), SideAccessMode.DISABLED.ordinal()));
+        }
+        GuiWidgets.playButtonClickSound();
+    }
+
+    private static void cycleAllSideModes(SideConfigMenuAccess menu, SideConfigType type) {
+        List<SideAccessMode> allowedModes = getAllowedModes(menu, type);
+        SideAccessMode sharedMode = getSharedSideMode(menu, type);
+        int index = sharedMode == null ? 0 : allowedModes.indexOf(sharedMode);
+        if (index < 0) {
+            index = 0;
+        }
+
+        SideAccessMode targetMode = allowedModes.get((index + 1) % allowedModes.size());
+        for (Direction direction : Direction.values()) {
+            if (menu.getSideAccessMode(type, direction) == targetMode) {
+                continue;
+            }
+            PacketDistributor.sendToServer(new SetSideConfigPayload(menu.getBlockPos(), type.ordinal(), direction.ordinal(), targetMode.ordinal()));
+        }
+        GuiWidgets.playButtonClickSound();
+    }
+
+    private static SideAccessMode getSharedSideMode(SideConfigMenuAccess menu, SideConfigType type) {
+        SideAccessMode sharedMode = null;
+        for (Direction direction : Direction.values()) {
+            SideAccessMode mode = menu.getSideAccessMode(type, direction);
+            if (sharedMode == null) {
+                sharedMode = mode;
+            } else if (sharedMode != mode) {
+                return null;
+            }
+        }
+        return sharedMode;
     }
 
     private record VisualVector(double x, double y, double z) {
