@@ -115,6 +115,22 @@ public class MatterConstructorScreen extends net.minecraft.client.gui.screens.in
     }
 
     @Override
+    public boolean mouseDragged(double mouseX, double mouseY, int button, double dragX, double dragY) {
+        if (sideConfig.mouseDragged(menu, mouseX, mouseY, button, dragX, dragY, leftPos, topPos, imageWidth, imageHeight)) {
+            return true;
+        }
+        return super.mouseDragged(mouseX, mouseY, button, dragX, dragY);
+    }
+
+    @Override
+    public boolean mouseReleased(double mouseX, double mouseY, int button) {
+        if (sideConfig.mouseReleased(menu, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight)) {
+            return true;
+        }
+        return super.mouseReleased(mouseX, mouseY, button);
+    }
+
+    @Override
     public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
         if (super.keyPressed(keyCode, scanCode, modifiers)) {
             return true;

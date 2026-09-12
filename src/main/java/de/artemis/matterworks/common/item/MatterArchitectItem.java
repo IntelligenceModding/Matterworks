@@ -1,6 +1,8 @@
 package de.artemis.matterworks.common.item;
 
 import de.artemis.matterworks.client.render.MatterBatteryPreviewState;
+import de.artemis.matterworks.common.menu.MatterArchitectMenu;
+import de.artemis.matterworks.common.multiblock.MatterArchitectBlueprintType;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockLayout;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
@@ -8,6 +10,7 @@ import net.minecraft.core.Direction;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.nbt.CompoundTag;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.InteractionResultHolder;
@@ -17,6 +20,8 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.item.context.UseOnContext;
+import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleMenuProvider;
 import net.minecraft.world.level.Level;
 import org.jetbrains.annotations.Nullable;
 
@@ -28,6 +33,7 @@ public class MatterArchitectItem extends Item {
     private static final String TAG_FRONT = "front";
     private static final String TAG_LAYER = "layer";
     private static final String TAG_LOCKED = "locked";
+    private static final String TAG_BLUEPRINT_TYPE = "blueprint_type";
 
     public MatterArchitectItem(Properties properties) {
         super(properties.stacksTo(1));
@@ -35,22 +41,34 @@ public class MatterArchitectItem extends Item {
 
     @Override
     public InteractionResult useOn(UseOnContext context) {
+        ItemStack stack = context.getItemInHand();
         if (context.getLevel().isClientSide()) {
             return InteractionResult.SUCCESS;
         }
 
-        ItemStack stack = context.getItemInHand();
         BlockPos clickedPos = context.getClickedPos().immutable();
         Player player = context.getPlayer();
         if (player == null) {
             return InteractionResult.PASS;
         }
 
+        if (player.isShiftKeyDown()) {
+            clearSelection(stack);
+            player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.cleared"), true);
+            return InteractionResult.SUCCESS;
+        }
+
+        MatterArchitectBlueprintType blueprintType = getBlueprintType(stack);
+        if (blueprintType == null) {
+            openBlueprintMenu(player, context.getHand(), stack);
+            return InteractionResult.SUCCESS;
+        }
+
         if (!hasCornerA(stack)) {
             setCornerA(stack, clickedPos);
             clearCornerB(stack);
             setLocked(stack, false);
-            player.displayClientMessage(Component.literal("Set battery corner A"), true);
+            player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.corner_a", blueprintType.displayName()), true);
             return InteractionResult.SUCCESS;
         }
 
@@ -72,8 +90,13 @@ public class MatterArchitectItem extends Item {
 
         if (player.isShiftKeyDown()) {
             clearSelection(stack);
-            player.displayClientMessage(Component.literal("Cleared battery blueprint"), true);
+            player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.cleared"), true);
             return InteractionResultHolder.success(stack);
+        }
+
+        if (getBlueprintType(stack) == null || !hasCornerA(stack)) {
+            openBlueprintMenu(player, usedHand, stack);
+            return InteractionResultHolder.sidedSuccess(stack, level.isClientSide());
         }
 
         if (hasCornerB(stack) && !isLocked(stack)) {
@@ -86,39 +109,47 @@ public class MatterArchitectItem extends Item {
 
     @Override
     public void appendHoverText(ItemStack stack, TooltipContext context, List<Component> tooltipComponents, TooltipFlag flag) {
+        MatterArchitectBlueprintType blueprintType = getBlueprintType(stack);
+        if (blueprintType == null) {
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.no_blueprint").withStyle(ChatFormatting.GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.open_menu").withStyle(ChatFormatting.AQUA));
+            return;
+        }
+
+        tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.blueprint", blueprintType.displayName()).withStyle(ChatFormatting.AQUA));
         if (!hasCornerA(stack)) {
-            tooltipComponents.add(Component.literal("Right click: set first corner").withStyle(ChatFormatting.GRAY));
-            tooltipComponents.add(Component.literal("Right click again: set opposite corner").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.set_first_corner").withStyle(ChatFormatting.GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.change_blueprint").withStyle(ChatFormatting.DARK_GRAY));
             return;
         }
 
         BlockPos cornerA = getCornerA(stack);
         BlockPos cornerB = getCornerB(stack);
-        tooltipComponents.add(Component.literal("Corner A: " + formatPos(cornerA)).withStyle(ChatFormatting.GRAY));
+        tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.corner_a", formatPos(cornerA)).withStyle(ChatFormatting.GRAY));
         if (cornerB != null) {
-            tooltipComponents.add(Component.literal("Corner B: " + formatPos(cornerB)).withStyle(ChatFormatting.GRAY));
-            tooltipComponents.add(Component.literal("Size: " + getWidth(stack) + "x" + getHeight(stack) + "x" + getDepth(stack)).withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.corner_b", formatPos(cornerB)).withStyle(ChatFormatting.GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.size", getWidth(stack), getHeight(stack), getDepth(stack)).withStyle(ChatFormatting.DARK_GRAY));
             if (isLocked(stack)) {
-                tooltipComponents.add(Component.literal("Locked Preview").withStyle(ChatFormatting.AQUA));
-                tooltipComponents.add(Component.literal("Shift + Scroll: next or previous layer").withStyle(ChatFormatting.DARK_GRAY));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.locked").withStyle(ChatFormatting.AQUA));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.layer_scroll").withStyle(ChatFormatting.DARK_GRAY));
             } else if (hasValidBatterySelection(stack)) {
-                tooltipComponents.add(Component.literal("Right click: lock preview").withStyle(ChatFormatting.AQUA));
-                tooltipComponents.add(Component.literal("Shift + Scroll: move in look direction").withStyle(ChatFormatting.DARK_GRAY));
-                tooltipComponents.add(Component.literal("Ctrl + Scroll: resize in look direction").withStyle(ChatFormatting.DARK_GRAY));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.lock_preview").withStyle(ChatFormatting.AQUA));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.move_scroll").withStyle(ChatFormatting.DARK_GRAY));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.resize_scroll").withStyle(ChatFormatting.DARK_GRAY));
             } else {
-                tooltipComponents.add(Component.literal("Selection must stay between 3 and 16 blocks per axis").withStyle(ChatFormatting.RED));
-                tooltipComponents.add(Component.literal("Shift + Scroll: move in look direction").withStyle(ChatFormatting.DARK_GRAY));
-                tooltipComponents.add(Component.literal("Ctrl + Scroll: resize in look direction").withStyle(ChatFormatting.DARK_GRAY));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.invalid_size").withStyle(ChatFormatting.RED));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.move_scroll").withStyle(ChatFormatting.DARK_GRAY));
+                tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.resize_scroll").withStyle(ChatFormatting.DARK_GRAY));
             }
         } else {
-            tooltipComponents.add(Component.literal("Look at a second corner for live preview").withStyle(ChatFormatting.AQUA));
-            tooltipComponents.add(Component.literal("Right click air: set aimed air corner").withStyle(ChatFormatting.DARK_GRAY));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.second_corner_preview").withStyle(ChatFormatting.AQUA));
+            tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.set_air_corner").withStyle(ChatFormatting.DARK_GRAY));
         }
-        tooltipComponents.add(Component.literal("Shift + use in air: clear").withStyle(ChatFormatting.DARK_GRAY));
+        tooltipComponents.add(Component.translatable("tooltip.matterworks.matter_architect.clear").withStyle(ChatFormatting.DARK_GRAY));
     }
 
     public static boolean hasValidBatterySelection(ItemStack stack) {
-        if (!hasCornerA(stack) || !hasCornerB(stack)) {
+        if (getBlueprintType(stack) != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack) || !hasCornerB(stack)) {
             return false;
         }
         return MatterBatteryMultiblockLayout.isValidSize(getWidth(stack), getHeight(stack), getDepth(stack));
@@ -137,7 +168,8 @@ public class MatterArchitectItem extends Item {
     }
 
     public static boolean setSecondCorner(ItemStack stack, BlockPos pos, Direction front, @Nullable Player player) {
-        if (!hasCornerA(stack) || hasCornerB(stack)) {
+        MatterArchitectBlueprintType blueprintType = getBlueprintType(stack);
+        if (blueprintType != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack) || hasCornerB(stack)) {
             return false;
         }
 
@@ -146,9 +178,9 @@ public class MatterArchitectItem extends Item {
         setLocked(stack, false);
         if (player != null) {
             if (hasValidBatterySelection(stack)) {
-                player.displayClientMessage(Component.literal("Battery blueprint ready: " + getWidth(stack) + "x" + getHeight(stack) + "x" + getDepth(stack)), true);
+                player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.ready", blueprintType.displayName(), getWidth(stack), getHeight(stack), getDepth(stack)), true);
             } else {
-                player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 16x16x16"), true);
+                player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.invalid_size"), true);
             }
         }
         return true;
@@ -185,12 +217,27 @@ public class MatterArchitectItem extends Item {
         return front != null && front.getAxis().isHorizontal() ? front : Direction.NORTH;
     }
 
+    public static @Nullable MatterArchitectBlueprintType getBlueprintType(ItemStack stack) {
+        CompoundTag tag = getCustomDataTag(stack);
+        if (tag.contains(TAG_BLUEPRINT_TYPE)) {
+            return MatterArchitectBlueprintType.bySerializedName(tag.getString(TAG_BLUEPRINT_TYPE));
+        }
+        return tag.contains(TAG_CORNER_A) ? MatterArchitectBlueprintType.MATTER_BATTERY : null;
+    }
+
+    public static void setBlueprintType(ItemStack stack, MatterArchitectBlueprintType blueprintType) {
+        clearSelection(stack);
+        CompoundTag tag = getCustomDataTag(stack);
+        tag.putString(TAG_BLUEPRINT_TYPE, blueprintType.serializedName());
+        stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
+    }
+
     public static int getSelectedLayer(ItemStack stack) {
         return Math.max(0, Math.min(MatterBatteryMultiblockLayout.MAX_SIZE - 1, getCustomDataTag(stack).getInt(TAG_LAYER)));
     }
 
     public static void syncPreviewState(ItemStack stack, @Nullable BlockPos hoveredCorner, Direction lookDirection) {
-        if (!hasCornerA(stack)) {
+        if (getBlueprintType(stack) != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack)) {
             if (MatterBatteryPreviewState.isToolDriven()) {
                 MatterBatteryPreviewState.clear();
             }
@@ -223,7 +270,7 @@ public class MatterArchitectItem extends Item {
     }
 
     public static void shiftSelection(ItemStack stack, int dx, int dy, int dz) {
-        if (!hasCornerA(stack) || !hasCornerB(stack)) {
+        if (getBlueprintType(stack) != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack) || !hasCornerB(stack)) {
             return;
         }
         BlockPos offset = new BlockPos(dx, dy, dz);
@@ -232,7 +279,7 @@ public class MatterArchitectItem extends Item {
     }
 
     public static boolean resizeSelection(ItemStack stack, Direction direction, int amount) {
-        if (!hasCornerA(stack) || !hasCornerB(stack) || amount == 0) {
+        if (getBlueprintType(stack) != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack) || !hasCornerB(stack) || amount == 0) {
             return false;
         }
 
@@ -257,6 +304,20 @@ public class MatterArchitectItem extends Item {
         setCornerA(stack, min);
         setCornerB(stack, max);
         return true;
+    }
+
+    public static boolean matchesLockedSelection(ItemStack stack, BlockPos origin, Direction front, int width, int height, int depth) {
+        if (getBlueprintType(stack) != MatterArchitectBlueprintType.MATTER_BATTERY || !hasCornerA(stack) || !hasCornerB(stack) || !isLocked(stack)) {
+            return false;
+        }
+        BlockPos min = getMinCorner(stack);
+        BlockPos max = getMaxCorner(stack);
+        Direction stackFront = getFront(stack);
+        return stackFront == getHorizontal(front)
+                && MatterBatteryMultiblockLayout.getOrigin(min, max, stackFront).equals(origin)
+                && getWidth(stack) == width
+                && getHeight(stack) == height
+                && getDepth(stack) == depth;
     }
 
     private static BlockPos getCornerA(ItemStack stack) {
@@ -287,13 +348,14 @@ public class MatterArchitectItem extends Item {
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
-    private static void clearSelection(ItemStack stack) {
+    public static void clearSelection(ItemStack stack) {
         CompoundTag tag = getCustomDataTag(stack);
         tag.remove(TAG_CORNER_A);
         tag.remove(TAG_CORNER_B);
         tag.remove(TAG_FRONT);
         tag.remove(TAG_LAYER);
         tag.remove(TAG_LOCKED);
+        tag.remove(TAG_BLUEPRINT_TYPE);
         stack.set(DataComponents.CUSTOM_DATA, CustomData.of(tag));
     }
 
@@ -365,12 +427,24 @@ public class MatterArchitectItem extends Item {
 
     private static InteractionResult tryLockSelection(ItemStack stack, net.minecraft.world.entity.player.Player player) {
         if (!hasValidBatterySelection(stack)) {
-            player.displayClientMessage(Component.literal("Battery blueprint must stay between 3x3x3 and 16x16x16"), true);
+            player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.invalid_size"), true);
             return InteractionResult.FAIL;
         }
         setLocked(stack, true);
-        player.displayClientMessage(Component.literal("Battery blueprint locked"), true);
+        player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.locked"), true);
         return InteractionResult.SUCCESS;
+    }
+
+    private static void openBlueprintMenu(Player player, InteractionHand hand, ItemStack stack) {
+        if (!(player instanceof ServerPlayer serverPlayer)) {
+            return;
+        }
+
+        MenuProvider provider = new SimpleMenuProvider(
+                (containerId, inventory, menuPlayer) -> new MatterArchitectMenu(containerId, inventory, hand),
+                stack.getHoverName()
+        );
+        serverPlayer.openMenu(provider, buffer -> buffer.writeVarInt(hand.ordinal()));
     }
 
     private static @Nullable ResizeBounds resizeOne(BlockPos min, BlockPos max, Direction direction, int step) {

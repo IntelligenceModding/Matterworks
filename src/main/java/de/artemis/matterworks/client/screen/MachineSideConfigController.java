@@ -3,6 +3,7 @@ package de.artemis.matterworks.client.screen;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.SideConfigMenuAccess;
 import de.artemis.matterworks.common.registry.ModBlocks;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.inventory.AbstractContainerMenu;
 import net.minecraft.world.inventory.Slot;
@@ -13,6 +14,7 @@ import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import java.lang.reflect.Field;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.IdentityHashMap;
 import java.util.List;
 import java.util.Map;
@@ -25,19 +27,33 @@ public final class MachineSideConfigController {
     private static final int HIDDEN_SLOT_Y = -10_000;
     private static final Field SLOT_X_FIELD = findSlotField("x", "f_40220_");
     private static final Field SLOT_Y_FIELD = findSlotField("y", "f_40221_");
+    private static final Map<BlockPos, SideConfigType> LAST_SELECTED_TYPES = new HashMap<>();
     private final MachineSideConfigOverlay overlay = new MachineSideConfigOverlay();
     private final Map<Slot, SlotPosition> originalSlotPositions = new IdentityHashMap<>();
+    private BlockPos blockPos;
     private SideConfigType selectedType;
 
     public void init(SideConfigMenuAccess menu) {
+        blockPos = menu.getBlockPos().immutable();
         SideConfigType pendingType = PendingMachineTabSelection.consume(menu.getBlockPos());
         if (pendingType != null && menu.supportsSideConfigType(pendingType)) {
             selectedType = pendingType;
+            LAST_SELECTED_TYPES.put(blockPos, selectedType);
+            return;
+        }
+
+        SideConfigType rememberedType = LAST_SELECTED_TYPES.get(blockPos);
+        if (rememberedType != null && menu.supportsSideConfigType(rememberedType)) {
+            selectedType = rememberedType;
         }
     }
 
     public boolean isShowing() {
         return selectedType != null;
+    }
+
+    public boolean isVisualMode() {
+        return selectedType != null && overlay.isVisualMode();
     }
 
     public void renderBackground(GuiGraphics guiGraphics, int leftPos, int topPos) {
@@ -124,16 +140,60 @@ public final class MachineSideConfigController {
                 && overlay.mouseClicked(menu, selectedType, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight);
     }
 
+    public boolean mouseDragged(
+            SideConfigMenuAccess menu,
+            double mouseX,
+            double mouseY,
+            int button,
+            double dragX,
+            double dragY,
+            int leftPos,
+            int topPos,
+            int imageWidth,
+            int imageHeight
+    ) {
+        return selectedType != null
+                && overlay.mouseDragged(menu, selectedType, mouseX, mouseY, button, dragX, dragY, leftPos, topPos, imageWidth, imageHeight);
+    }
+
+    public boolean mouseReleased(
+            SideConfigMenuAccess menu,
+            double mouseX,
+            double mouseY,
+            int button,
+            int leftPos,
+            int topPos,
+            int imageWidth,
+            int imageHeight
+    ) {
+        return selectedType != null
+                && overlay.mouseReleased(menu, selectedType, mouseX, mouseY, button, leftPos, topPos, imageWidth, imageHeight);
+    }
+
     public List<TopCategoryTabs.Tab> buildTabs(SideConfigMenuAccess menu, Runnable networkAction) {
         List<TopCategoryTabs.Tab> tabs = new ArrayList<>();
-        tabs.add(new TopCategoryTabs.Tab(menu.getPrimaryTabIcon(), Component.literal(menu.getBlockDisplayName()), selectedType == null, () -> selectedType = null));
+        tabs.add(new TopCategoryTabs.Tab(menu.getPrimaryTabIcon(), Component.literal(menu.getBlockDisplayName()), selectedType == null, () -> setSelectedType(null)));
         for (SideConfigType type : getSupportedTypes(menu)) {
-            tabs.add(new TopCategoryTabs.Tab(getTabIcon(type), Component.literal(type.getLabel() + " Config"), type == selectedType, () -> selectedType = type));
+            tabs.add(new TopCategoryTabs.Tab(getTabIcon(type), Component.literal(type.getLabel() + " Config"), type == selectedType, () -> setSelectedType(type)));
         }
         if (networkAction != null) {
             tabs.add(new TopCategoryTabs.Tab(ModBlocks.MATTER_PYLON.get().asItem().getDefaultInstance(), Component.literal("Network"), false, networkAction));
         }
         return tabs;
+    }
+
+    private void setSelectedType(SideConfigType type) {
+        if (selectedType != type) {
+            overlay.cancelVisualDrag();
+        }
+        selectedType = type;
+        if (blockPos != null) {
+            if (type == null) {
+                LAST_SELECTED_TYPES.remove(blockPos);
+            } else {
+                LAST_SELECTED_TYPES.put(blockPos, type);
+            }
+        }
     }
 
     private static List<SideConfigType> getSupportedTypes(SideConfigMenuAccess menu) {

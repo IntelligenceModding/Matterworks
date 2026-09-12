@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.menu.MatterAnalyzerMenu;
+import de.artemis.matterworks.common.menu.MatterArchitectMenu;
 import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import de.artemis.matterworks.common.menu.MatterBatteryPreviewMenu;
 import de.artemis.matterworks.common.menu.MatterConstructorMenu;
@@ -61,6 +62,10 @@ public class ModMenuTypes {
     public static final DeferredHolder<MenuType<?>, MenuType<MatterBatteryPreviewMenu>> MATTER_BATTERY_PREVIEW =
             MENU_TYPES.register("matter_battery_preview",
                     () -> IMenuTypeExtension.create(MatterBatteryPreviewMenu::new));
+
+    public static final DeferredHolder<MenuType<?>, MenuType<MatterArchitectMenu>> MATTER_ARCHITECT =
+            MENU_TYPES.register("matter_architect",
+                    () -> IMenuTypeExtension.create(MatterArchitectMenu::new));
 
     public static final DeferredHolder<MenuType<?>, MenuType<FluidTankMenu>> FLUID_TANK =
             MENU_TYPES.register("fluid_tank",

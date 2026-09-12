@@ -89,7 +89,7 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         VanillaGuiHelper.drawMenuSlots(guiGraphics, menu, leftPos, topPos);
 
         if (currentTab == BatteryTab.STATS) {
-            renderStatsTabBackground(guiGraphics);
+            renderStatsTabBackground(guiGraphics, mouseX, mouseY);
         } else {
             renderPortsTabBackground(guiGraphics);
         }
@@ -184,19 +184,17 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         return 120;
     }
 
-    private void renderStatsTabBackground(GuiGraphics guiGraphics) {
+    private void renderStatsTabBackground(GuiGraphics guiGraphics, int mouseX, int mouseY) {
         VanillaGuiHelper.drawInsetPanel(guiGraphics, leftPos + 8, topPos + 20, 112, 82);
         VanillaGuiHelper.drawInsetPanel(guiGraphics, leftPos + 128, topPos + 20, 112, 82);
         VanillaGuiHelper.drawInsetPanel(guiGraphics, leftPos + 8, topPos + 106, 232, 8);
-        drawHistoryGraph(guiGraphics, leftPos + 12, topPos + 44, 104, 52,
-                menu.getBlockEntity().getOrderedEnergyHistory(), null,
-                Math.max(1, menu.getEnergyCapacity()),
-                0xFF5FD06E, 0);
-        drawHistoryGraph(guiGraphics, leftPos + 132, topPos + 44, 104, 52,
-                menu.getBlockEntity().getOrderedInputHistory(),
-                menu.getBlockEntity().getOrderedOutputHistory(),
-                Math.max(1, Math.max(menu.getTransferRate(), Math.max(menu.getBlockEntity().getLatestInputRate(), menu.getBlockEntity().getLatestOutputRate()))),
-                0xFF4CB4FF, 0xFFE97A4D);
+        int[] energyHistory = menu.getBlockEntity().getOrderedEnergyHistory();
+        int[] inputHistory = menu.getBlockEntity().getOrderedInputHistory();
+        int[] outputHistory = menu.getBlockEntity().getOrderedOutputHistory();
+        drawHistoryGraph(guiGraphics, mouseX, mouseY, leftPos + 12, topPos + 44, 104, 52,
+                energyHistory, null, menu.getEnergyStored(), 0xFF5FD06E, 0);
+        drawHistoryGraph(guiGraphics, mouseX, mouseY, leftPos + 132, topPos + 44, 104, 52,
+                inputHistory, outputHistory, Math.max(menu.getBlockEntity().getLatestInputRate(), menu.getBlockEntity().getLatestOutputRate()), 0xFF4CB4FF, 0xFFE97A4D);
     }
 
     private void renderStatsTabLabels(GuiGraphics guiGraphics) {
@@ -250,41 +248,67 @@ public class MatterBatteryCoreScreen extends AbstractRenamableContainerScreen<Ma
         }
 
         if (isWithin(mouseX, mouseY, leftPos + 12, topPos + 44, 104, 52)) {
-            guiGraphics.renderTooltip(font, Component.translatable("tooltip.matterworks.energy", menu.getEnergyStored(), menu.getEnergyCapacity()), mouseX, mouseY);
+            int[] energyHistory = menu.getBlockEntity().getOrderedEnergyHistory();
+            int historyIndex = GuiWidgets.getHoveredHistoryIndex(mouseX, mouseY, leftPos + 12, topPos + 44, 104, 52, energyHistory.length, energyHistory.length);
+            int energy = historyIndex >= 0 ? energyHistory[historyIndex] : menu.getEnergyStored();
+            guiGraphics.renderTooltip(font, Component.translatable("tooltip.matterworks.energy", energy, menu.getEnergyCapacity()), mouseX, mouseY);
         } else if (isWithin(mouseX, mouseY, leftPos + 132, topPos + 44, 104, 52)) {
+            int[] inputHistory = menu.getBlockEntity().getOrderedInputHistory();
+            int[] outputHistory = menu.getBlockEntity().getOrderedOutputHistory();
+            int historySize = Math.max(inputHistory.length, outputHistory.length);
+            int historyIndex = GuiWidgets.getHoveredHistoryIndex(mouseX, mouseY, leftPos + 132, topPos + 44, 104, 52, historySize, historySize);
+            int inputRate = getHistoryValue(inputHistory, historyIndex);
+            int outputRate = getHistoryValue(outputHistory, historyIndex);
+            if (historyIndex < 0) {
+                inputRate = menu.getBlockEntity().getLatestInputRate();
+                outputRate = menu.getBlockEntity().getLatestOutputRate();
+            }
             guiGraphics.renderTooltip(font, Component.literal(
-                    "In " + GuiWidgets.formatRateText(menu.getBlockEntity().getLatestInputRate(), "FE/t", false)
-                            + " | Out " + GuiWidgets.formatRateText(menu.getBlockEntity().getLatestOutputRate(), "FE/t", false)
+                    "In " + GuiWidgets.formatRateText(inputRate, "FE/t", false)
+                            + " | Out " + GuiWidgets.formatRateText(outputRate, "FE/t", false)
             ), mouseX, mouseY);
         }
     }
 
-    private void drawHistoryGraph(GuiGraphics guiGraphics, int x, int y, int width, int height, int[] primary, int[] secondary, int maxValue, int primaryColor, int secondaryColor) {
-        guiGraphics.fill(x, y, x + width, y + height, 0xFF1F1F1F);
-        guiGraphics.fill(x, y + height / 2, x + width, y + height / 2 + 1, 0xFF3A3A3A);
-        if (primary.length == 0 && (secondary == null || secondary.length == 0)) {
+    private void drawHistoryGraph(GuiGraphics guiGraphics, int mouseX, int mouseY, int x, int y, int width, int height, int[] primary, int[] secondary, int currentValue, int primaryColor, int secondaryColor) {
+        int historyCapacity = Math.max(primary.length, secondary == null ? 0 : secondary.length);
+        if (secondary != null) {
+            GuiWidgets.drawInsetGraph(
+                    guiGraphics,
+                    x,
+                    y,
+                    width,
+                    height,
+                    historyCapacity,
+                    historyCapacity,
+                    currentValue,
+                    GuiWidgets.getHoveredHistorySampleIndex(mouseX, mouseY, x, y, width, height, historyCapacity),
+                    new GuiWidgets.GraphSeries(visibleIndex -> getHistoryValue(primary, visibleIndex), primaryColor, withAlpha(primaryColor, 0x35)),
+                    new GuiWidgets.GraphSeries(visibleIndex -> getHistoryValue(secondary, visibleIndex), secondaryColor, withAlpha(secondaryColor, 0x35))
+            );
             return;
         }
 
-        drawGraphSeries(guiGraphics, x, y, width, height, primary, maxValue, primaryColor);
-        if (secondary != null) {
-            drawGraphSeries(guiGraphics, x, y, width, height, secondary, maxValue, secondaryColor);
-        }
+        GuiWidgets.drawInsetGraph(
+                guiGraphics,
+                x,
+                y,
+                width,
+                height,
+                historyCapacity,
+                historyCapacity,
+                currentValue,
+                GuiWidgets.getHoveredHistorySampleIndex(mouseX, mouseY, x, y, width, height, historyCapacity),
+                new GuiWidgets.GraphSeries(visibleIndex -> getHistoryValue(primary, visibleIndex), primaryColor, withAlpha(primaryColor, 0x35))
+        );
     }
 
-    private void drawGraphSeries(GuiGraphics guiGraphics, int x, int y, int width, int height, int[] values, int maxValue, int color) {
-        if (values.length == 0 || maxValue <= 0) {
-            return;
-        }
+    private static int getHistoryValue(int[] values, int index) {
+        return index >= 0 && index < values.length ? values[index] : 0;
+    }
 
-        for (int column = 0; column < width; column++) {
-            int sampleIndex = (int) Math.floor(column * (values.length / (double) width));
-            sampleIndex = Math.max(0, Math.min(sampleIndex, values.length - 1));
-            int barHeight = Mth.clamp((int) Math.round((values[sampleIndex] / (double) maxValue) * (height - 2)), 0, height - 2);
-            if (barHeight > 0) {
-                guiGraphics.fill(x + column, y + height - 1 - barHeight, x + column + 1, y + height - 1, color);
-            }
-        }
+    private static int withAlpha(int color, int alpha) {
+        return (alpha << 24) | (color & 0x00FFFFFF);
     }
 
     private List<TopCategoryTabs.Tab> getTabs() {

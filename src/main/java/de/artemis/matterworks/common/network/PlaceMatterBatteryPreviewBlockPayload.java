@@ -1,15 +1,19 @@
 package de.artemis.matterworks.common.network;
 
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.item.MatterArchitectItem;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockLayout;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.network.chat.Component;
 import net.minecraft.network.RegistryFriendlyByteBuf;
 import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionHand;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.network.handling.IPayloadContext;
 
 public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int frontOrdinal, int width, int height, int depth, BlockPos targetPos, int handOrdinal) implements CustomPacketPayload {
@@ -57,8 +61,9 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
                     || !canPlacePreviewBlock(context.player(), payload, front)) {
                 return;
             }
-            MatterBatteryPreviewPlacementHelper.placeFromInventory(
-                    context.player(),
+            Player player = context.player();
+            boolean placed = MatterBatteryPreviewPlacementHelper.placeFromInventory(
+                    player,
                     payload.originPos(),
                     front,
                     payload.width(),
@@ -67,6 +72,9 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
                     payload.targetPos(),
                     hand
             );
+            if (placed && MatterBatteryPreviewPlacementHelper.isComplete(player.level(), payload.originPos(), front, payload.width(), payload.height(), payload.depth())) {
+                clearMatchingMatterArchitect(player, payload.originPos(), front, payload.width(), payload.height(), payload.depth());
+            }
         });
     }
 
@@ -87,5 +95,32 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
         return targetPos.getX() >= minPos.getX() && targetPos.getX() <= maxPos.getX()
                 && targetPos.getY() >= minPos.getY() && targetPos.getY() <= maxPos.getY()
                 && targetPos.getZ() >= minPos.getZ() && targetPos.getZ() <= maxPos.getZ();
+    }
+
+    private static void clearMatchingMatterArchitect(Player player, BlockPos origin, Direction front, int width, int height, int depth) {
+        if (clearIfMatches(player.getMainHandItem(), origin, front, width, height, depth)
+                || clearIfMatches(player.getOffhandItem(), origin, front, width, height, depth)) {
+            player.getInventory().setChanged();
+            player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.complete"), true);
+            return;
+        }
+
+        for (ItemStack stack : player.getInventory().items) {
+            if (clearIfMatches(stack, origin, front, width, height, depth)) {
+                player.getInventory().setChanged();
+                player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.complete"), true);
+                return;
+            }
+        }
+    }
+
+    private static boolean clearIfMatches(ItemStack stack, BlockPos origin, Direction front, int width, int height, int depth) {
+        if (!(stack.getItem() instanceof MatterArchitectItem)
+                || !MatterArchitectItem.matchesLockedSelection(stack, origin, front, width, height, depth)) {
+            return false;
+        }
+
+        MatterArchitectItem.clearSelection(stack);
+        return true;
     }
 }

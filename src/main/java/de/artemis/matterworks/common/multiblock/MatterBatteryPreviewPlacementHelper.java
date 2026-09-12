@@ -9,6 +9,7 @@ import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Block;
 import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.SoundType;
@@ -66,6 +67,27 @@ public final class MatterBatteryPreviewPlacementHelper {
 
     public static boolean canPlaceFromInventory(Player player, InteractionHand hand, MultiblockRole role) {
         return selectPlacement(player, hand, role) != null;
+    }
+
+    public static boolean isComplete(Level level, BlockPos origin, Direction front, int width, int height, int depth) {
+        if (!front.getAxis().isHorizontal() || !MatterBatteryMultiblockLayout.isValidSize(width, height, depth)) {
+            return false;
+        }
+
+        for (int y = 0; y < height; y++) {
+            for (int z = 0; z < depth; z++) {
+                for (int x = 0; x < width; x++) {
+                    BlockPos localPos = new BlockPos(x, y, z);
+                    BlockPos worldPos = MultiblockTransforms.localToWorld(origin, front, localPos);
+                    MultiblockRole role = MatterBatteryMultiblockLayout.getRole(localPos, width, height, depth);
+                    if (!matchesRequirement(role, level.getBlockState(worldPos))) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        return true;
     }
 
     public static boolean matchesRequirement(MultiblockRole role, BlockState state) {

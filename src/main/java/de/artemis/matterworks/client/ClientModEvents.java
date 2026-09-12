@@ -15,6 +15,7 @@ import de.artemis.matterworks.client.render.MatterNetworkTrackingHudRenderer;
 import de.artemis.matterworks.client.render.PowerCrystalOreBlockEntityRenderer;
 import de.artemis.matterworks.client.render.SingularityLinkBlockEntityRenderer;
 import de.artemis.matterworks.client.screen.MatterAnalyzerScreen;
+import de.artemis.matterworks.client.screen.MatterArchitectScreen;
 import de.artemis.matterworks.client.screen.MatterBatteryCoreScreen;
 import de.artemis.matterworks.client.screen.MatterBatteryPreviewScreen;
 import de.artemis.matterworks.client.screen.MatterConstructorScreen;
@@ -39,6 +40,7 @@ import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.fluid.AbstractMatterFluidType;
 import de.artemis.matterworks.common.item.MatterArchitectItem;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
+import de.artemis.matterworks.common.network.ClearMatterArchitectSelectionPayload;
 import de.artemis.matterworks.common.network.MoveMatterArchitectSelectionPayload;
 import de.artemis.matterworks.common.network.PlaceMatterBatteryPreviewBlockPayload;
 import de.artemis.matterworks.common.network.ResizeMatterArchitectSelectionPayload;
@@ -98,6 +100,7 @@ public class ClientModEvents {
         event.register(ModMenuTypes.MATTER_ENERGY_CELL.get(), EnergyCellScreen::new);
         event.register(ModMenuTypes.MATTER_BATTERY_CORE.get(), MatterBatteryCoreScreen::new);
         event.register(ModMenuTypes.MATTER_BATTERY_PREVIEW.get(), MatterBatteryPreviewScreen::new);
+        event.register(ModMenuTypes.MATTER_ARCHITECT.get(), MatterArchitectScreen::new);
         event.register(ModMenuTypes.MATTER_FILTER.get(), MatterFilterScreen::new);
         event.register(ModMenuTypes.FLUID_TANK.get(), FluidTankScreen::new);
         event.register(ModMenuTypes.MATTER_STORAGE_BARREL.get(), MatterStorageBarrelScreen::new);
@@ -257,6 +260,16 @@ public class ClientModEvents {
             return;
         }
 
+        HeldArchitect heldArchitect = getHeldArchitect(minecraft);
+        if (minecraft.player.isShiftKeyDown()
+                && heldArchitect != null
+                && MatterArchitectItem.hasCornerA(heldArchitect.stack())) {
+            event.setCanceled(true);
+            event.setSwingHand(false);
+            clearHeldArchitect(heldArchitect, true);
+            return;
+        }
+
         if (handleMatterArchitectAirSecondCorner(event, minecraft)) {
             return;
         }
@@ -396,7 +409,9 @@ public class ClientModEvents {
                 while (ARCHITECT_LAYER_DOWN.consumeClick()) {
                     MatterBatteryPreviewState.cycleLayer(-1);
                 }
-                tickLayerAutoAdvance(minecraft);
+                if (!clearCompletedArchitect(minecraft, heldArchitect)) {
+                    tickLayerAutoAdvance(minecraft);
+                }
                 syncedFromTool = true;
             }
             if (!syncedFromTool && MatterBatteryPreviewState.isToolDriven()) {
@@ -456,6 +471,28 @@ public class ClientModEvents {
     private static void resetObservedPreviewLayer() {
         observedPreviewLayer = -1;
         observedPreviewLayerComplete = false;
+    }
+
+    private static boolean clearCompletedArchitect(Minecraft minecraft, HeldArchitect heldArchitect) {
+        if (!MatterBatteryPreviewState.isActive()
+                || !MatterBatteryPreviewState.isValid()
+                || !MatterBatteryPreviewState.isLocked()
+                || !MatterBatteryPreviewRenderer.isPreviewComplete(minecraft)) {
+            return false;
+        }
+
+        clearHeldArchitect(heldArchitect, false);
+        if (minecraft.player != null) {
+            minecraft.player.displayClientMessage(Component.translatable("message.matterworks.matter_architect.complete"), true);
+        }
+        return true;
+    }
+
+    private static void clearHeldArchitect(HeldArchitect heldArchitect, boolean notifyServer) {
+        MatterArchitectItem.clearSelection(heldArchitect.stack());
+        MatterBatteryPreviewState.clear();
+        resetObservedPreviewLayer();
+        PacketDistributor.sendToServer(new ClearMatterArchitectSelectionPayload(heldArchitect.hand().ordinal(), notifyServer));
     }
 
     private static BlockPos getTargetedAirBlockPos(Minecraft minecraft) {

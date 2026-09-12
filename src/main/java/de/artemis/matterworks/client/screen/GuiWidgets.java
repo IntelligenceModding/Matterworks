@@ -157,26 +157,53 @@ public final class GuiWidgets {
             int lineColor,
             int areaColor
     ) {
+        drawInsetGraph(
+                guiGraphics,
+                frameLeft,
+                frameTop,
+                frameWidth,
+                frameHeight,
+                historySize,
+                historyCapacity,
+                currentValue,
+                hoveredVisibleIndex,
+                new GraphSeries(visibleSampleValueGetter, lineColor, areaColor)
+        );
+    }
+
+    public static void drawInsetGraph(
+            GuiGraphics guiGraphics,
+            int frameLeft,
+            int frameTop,
+            int frameWidth,
+            int frameHeight,
+            int historySize,
+            int historyCapacity,
+            int currentValue,
+            int hoveredVisibleIndex,
+            GraphSeries... series
+    ) {
         int chartLeft = frameLeft + 2;
         int chartTop = frameTop + 2;
         int chartWidth = frameWidth - 4;
         int chartHeight = frameHeight - 4;
-        int bottom = chartTop + chartHeight - 1;
 
         VanillaGuiHelper.drawInsetPanel(guiGraphics, frameLeft, frameTop, frameWidth, frameHeight);
         guiGraphics.fill(chartLeft, chartTop, chartLeft + chartWidth, chartTop + chartHeight, CONTENT_BACKGROUND);
         drawGraphGrid(guiGraphics, chartLeft, chartTop, chartWidth, chartHeight);
 
-        if (historyCapacity <= 0) {
+        if (historyCapacity <= 0 || series.length == 0) {
             return;
         }
 
         int minValue = Math.min(0, currentValue);
         int maxValue = Math.max(0, currentValue);
         for (int visibleIndex = 0; visibleIndex < historyCapacity; visibleIndex++) {
-            int sample = visibleSampleValueGetter.applyAsInt(visibleIndex);
-            minValue = Math.min(minValue, sample);
-            maxValue = Math.max(maxValue, sample);
+            for (GraphSeries graphSeries : series) {
+                int sample = graphSeries.visibleSampleValueGetter().applyAsInt(visibleIndex);
+                minValue = Math.min(minValue, sample);
+                maxValue = Math.max(maxValue, sample);
+            }
         }
         if (minValue == 0 && maxValue == 0) {
             maxValue = 1;
@@ -187,34 +214,36 @@ public final class GuiWidgets {
         }
 
         for (int visibleIndex = 0; visibleIndex < historyCapacity - 1; visibleIndex++) {
-            int current = visibleSampleValueGetter.applyAsInt(visibleIndex);
-            int next = visibleSampleValueGetter.applyAsInt(visibleIndex + 1);
             int x1 = getSampleX(visibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y1 = getSampleY(current, minValue, maxValue, chartTop, chartHeight);
             int x2 = getSampleX(visibleIndex + 1, historyCapacity, chartLeft, chartWidth);
-            int y2 = getSampleY(next, minValue, maxValue, chartTop, chartHeight);
-            drawAreaSegment(guiGraphics, x1, y1, x2, y2, zeroY, areaColor);
-            drawLineSegment(guiGraphics, x1, y1, x2, y2, lineColor);
+            for (GraphSeries graphSeries : series) {
+                int current = graphSeries.visibleSampleValueGetter().applyAsInt(visibleIndex);
+                int next = graphSeries.visibleSampleValueGetter().applyAsInt(visibleIndex + 1);
+                int y1 = getSampleY(current, minValue, maxValue, chartTop, chartHeight);
+                int y2 = getSampleY(next, minValue, maxValue, chartTop, chartHeight);
+                drawAreaSegment(guiGraphics, x1, y1, x2, y2, zeroY, graphSeries.areaColor());
+                drawLineSegment(guiGraphics, x1, y1, x2, y2, graphSeries.lineColor());
+            }
         }
 
-        if (historySize == 1) {
-            int x = getSampleX(historyCapacity - 1, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(visibleSampleValueGetter.applyAsInt(historyCapacity - 1), minValue, maxValue, chartTop, chartHeight);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, lineColor);
-        } else if (historySize > 1) {
+        if (historySize > 0) {
             int latestVisibleIndex = historyCapacity - 1;
             int x = getSampleX(latestVisibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(visibleSampleValueGetter.applyAsInt(latestVisibleIndex), minValue, maxValue, chartTop, chartHeight);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, lineColor);
+            for (GraphSeries graphSeries : series) {
+                int y = getSampleY(graphSeries.visibleSampleValueGetter().applyAsInt(latestVisibleIndex), minValue, maxValue, chartTop, chartHeight);
+                guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, graphSeries.lineColor());
+            }
         }
 
         if (hoveredVisibleIndex >= 0 && hoveredVisibleIndex < historyCapacity) {
-            int sample = visibleSampleValueGetter.applyAsInt(hoveredVisibleIndex);
             int x = getSampleX(hoveredVisibleIndex, historyCapacity, chartLeft, chartWidth);
-            int y = getSampleY(sample, minValue, maxValue, chartTop, chartHeight);
             guiGraphics.fill(x, chartTop, x + 1, chartTop + chartHeight, GRAPH_HOVER_LINE);
-            guiGraphics.fill(x - 2, y - 2, x + 3, y + 3, GRAPH_HOVER_POINT);
-            guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, lineColor);
+            for (GraphSeries graphSeries : series) {
+                int sample = graphSeries.visibleSampleValueGetter().applyAsInt(hoveredVisibleIndex);
+                int y = getSampleY(sample, minValue, maxValue, chartTop, chartHeight);
+                guiGraphics.fill(x - 2, y - 2, x + 3, y + 3, GRAPH_HOVER_POINT);
+                guiGraphics.fill(x - 1, y - 1, x + 2, y + 2, graphSeries.lineColor());
+            }
         }
     }
 
@@ -562,6 +591,9 @@ public final class GuiWidgets {
         }
         int historyIndex = visibleIndex - leadingEmptySlots;
         return historyIndex >= 0 && historyIndex < historySize ? historyIndex : -1;
+    }
+
+    public record GraphSeries(IntUnaryOperator visibleSampleValueGetter, int lineColor, int areaColor) {
     }
 
     private enum TextAlignment {
