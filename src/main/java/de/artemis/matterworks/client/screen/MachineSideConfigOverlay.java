@@ -58,7 +58,8 @@ public final class MachineSideConfigOverlay {
     private static final String VISUAL_GHOST_TOGGLE_TEXT = "Ghost";
     private static final String VISUAL_CLEAR_BUTTON_TEXT = "Clear";
     private static final String VISUAL_ALL_BUTTON_TEXT = "All";
-    private static final String CENTER_VISUAL_MODE_TEXT = "3D";
+    private static final String CENTER_VISUAL_MODE_TEXT = "3d";
+    private static final float CENTER_VISUAL_MODE_TEXT_SCALE = 0.62F;
     private static final double VISUAL_SCALE = 34.0D;
     private static final float VISUAL_FACE_HALF_SIZE = 0.505F;
     private static final float VISUAL_FACE_OFFSET = 0.512F;
@@ -1106,7 +1107,7 @@ public final class MachineSideConfigOverlay {
     }
 
     private static String getDirectionName(Direction direction) {
-        return Component.translatable("direction.minecraft." + direction.getName()).getString();
+        return direction.getName();
     }
 
     private static boolean shouldShowWorldDirection(RelativeSide side) {
@@ -1157,26 +1158,31 @@ public final class MachineSideConfigOverlay {
     }
 
     private static void renderCenterModeBadge(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height, boolean hovered) {
-        int badgeWidth = font.width(CENTER_VISUAL_MODE_TEXT) + 5;
-        int badgeHeight = font.lineHeight + 1;
-        int badgeX = x + width - badgeWidth - 1;
-        int badgeY = y + 1;
+        int textWidth = Math.round(font.width(CENTER_VISUAL_MODE_TEXT) * CENTER_VISUAL_MODE_TEXT_SCALE);
+        int textHeight = Math.round(font.lineHeight * CENTER_VISUAL_MODE_TEXT_SCALE);
+        int badgeWidth = textWidth + 4;
+        int badgeHeight = textHeight + 3;
+        int badgeX = x + width - badgeWidth - 2;
+        int badgeY = y + 2;
         guiGraphics.flush();
+        RenderSystem.depthMask(false);
         RenderSystem.disableDepthTest();
         guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0F, 0.0F, 120.0F);
-        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, hovered ? 0xFF2B5F98 : 0xFF1E3144);
-        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + 1, hovered ? 0xFFA9D8FF : 0xFF6C8DA8);
+        guiGraphics.pose().translate(0.0F, 0.0F, 400.0F);
+        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, hovered ? 0xE52B5F98 : 0xD61E3144);
+        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + 1, hovered ? 0xFFA9D8FF : 0xCC6C8DA8);
+        guiGraphics.pose().scale(CENTER_VISUAL_MODE_TEXT_SCALE, CENTER_VISUAL_MODE_TEXT_SCALE, 1.0F);
         guiGraphics.drawString(
                 font,
                 CENTER_VISUAL_MODE_TEXT,
-                badgeX + 3,
-                badgeY + 1,
-                hovered ? 0xFFFFFFFF : 0xFFE5EDF5,
+                Math.round((badgeX + 2) / CENTER_VISUAL_MODE_TEXT_SCALE),
+                Math.round((badgeY + 1) / CENTER_VISUAL_MODE_TEXT_SCALE),
+                hovered ? 0xFFFFFFFF : 0xFFDDE8F0,
                 false
         );
         guiGraphics.pose().popPose();
         guiGraphics.flush();
+        RenderSystem.depthMask(true);
         RenderSystem.enableDepthTest();
     }
 

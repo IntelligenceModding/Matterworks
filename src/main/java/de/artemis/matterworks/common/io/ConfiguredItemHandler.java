@@ -45,7 +45,9 @@ public final class ConfiguredItemHandler implements IItemHandler {
     public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
         return switch (getMode()) {
             case DISABLED, OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> stack;
-            case INPUT -> getInput().insertItem(slot, stack, simulate);
+            case INPUT -> ItemHandlerRouting.isSlotInRange(getInput(), slot)
+                    ? ItemHandlerRouting.insertIntoAnySlot(getInput(), slot, stack, simulate)
+                    : stack;
             case BOTH -> insertCombined(slot, stack, simulate);
         };
     }
@@ -54,7 +56,9 @@ public final class ConfiguredItemHandler implements IItemHandler {
     public ItemStack extractItem(int slot, int amount, boolean simulate) {
         return switch (getMode()) {
             case DISABLED, INPUT -> ItemStack.EMPTY;
-            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> getOutput(getMode()).extractItem(slot, amount, simulate);
+            case OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> ItemHandlerRouting.isSlotInRange(getOutput(getMode()), slot)
+                    ? ItemHandlerRouting.extractFromAnySlot(getOutput(getMode()), slot, amount, simulate)
+                    : ItemStack.EMPTY;
             case BOTH -> extractCombined(slot, amount, simulate);
         };
     }
@@ -73,7 +77,8 @@ public final class ConfiguredItemHandler implements IItemHandler {
     public boolean isItemValid(int slot, ItemStack stack) {
         return switch (getMode()) {
             case DISABLED, OUTPUT, OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> false;
-            case INPUT -> getInput().isItemValid(slot, stack);
+            case INPUT -> ItemHandlerRouting.isSlotInRange(getInput(), slot)
+                    && ItemHandlerRouting.canInsertIntoAnySlot(getInput(), stack);
             case BOTH -> isCombinedItemValid(slot, stack);
         };
     }
@@ -87,12 +92,18 @@ public final class ConfiguredItemHandler implements IItemHandler {
 
     private ItemStack insertCombined(int slot, ItemStack stack, boolean simulate) {
         IItemHandler input = getInput();
-        return slot < input.getSlots() ? input.insertItem(slot, stack, simulate) : stack;
+        int combinedSlots = input.getSlots() + getOutput().getSlots();
+        return slot >= 0 && slot < combinedSlots
+                ? ItemHandlerRouting.insertIntoAnySlot(input, slot, stack, simulate)
+                : stack;
     }
 
     private ItemStack extractCombined(int slot, int amount, boolean simulate) {
         IItemHandler input = getInput();
-        return slot < input.getSlots() ? ItemStack.EMPTY : getOutput().extractItem(slot - input.getSlots(), amount, simulate);
+        int combinedSlots = input.getSlots() + getOutput().getSlots();
+        return slot >= 0 && slot < combinedSlots
+                ? ItemHandlerRouting.extractFromAnySlot(getOutput(), slot - input.getSlots(), amount, simulate)
+                : ItemStack.EMPTY;
     }
 
     private int getCombinedSlotLimit(int slot) {
@@ -104,7 +115,9 @@ public final class ConfiguredItemHandler implements IItemHandler {
 
     private boolean isCombinedItemValid(int slot, ItemStack stack) {
         IItemHandler input = getInput();
-        return slot < input.getSlots() && input.isItemValid(slot, stack);
+        return slot >= 0
+                && slot < input.getSlots() + getOutput().getSlots()
+                && ItemHandlerRouting.canInsertIntoAnySlot(input, stack);
     }
 
     private SideAccessMode getMode() {

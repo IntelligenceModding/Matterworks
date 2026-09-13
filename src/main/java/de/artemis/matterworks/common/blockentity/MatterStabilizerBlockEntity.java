@@ -154,6 +154,7 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
     };
     private final IFluidHandler refinedFluidOutputHandler = new SingleTankFluidHandler(fluidTank, false, true);
     private final IFluidHandler unstableFluidOutputHandler = new SingleTankFluidHandler(unstableMatterTank, false, true);
+    private final IItemHandler bucketInputHandler = new MappedItemHandler(itemHandler, true, false, ENERGY_ITEM_INPUT_SLOT, RAW_BUCKET_INPUT_SLOT, UNSTABLE_BUCKET_INPUT_SLOT, REFINED_BUCKET_INPUT_SLOT, CRYSTAL_SLOT);
     private final IItemHandler bucketOutputHandler = new MappedItemHandler(itemHandler, false, true, RAW_BUCKET_OUTPUT_SLOT, REFINED_BUCKET_OUTPUT_SLOT, UNSTABLE_BUCKET_OUTPUT_SLOT);
     private final IItemHandler rawBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, RAW_BUCKET_OUTPUT_SLOT);
     private final IItemHandler refinedBucketOutputHandler = new MappedItemHandler(itemHandler, false, true, REFINED_BUCKET_OUTPUT_SLOT);
@@ -205,6 +206,11 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
             case OUTPUT_SECONDARY -> unstableFluidOutputHandler;
             default -> fluidAutomationHandler;
         };
+    }
+
+    @Override
+    protected IItemHandler getInputAutomationHandler() {
+        return bucketInputHandler;
     }
 
     @Override

@@ -2,6 +2,7 @@ package de.artemis.matterworks.common.blockentity;
 
 import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.io.ConfiguredEnergyStorage;
+import de.artemis.matterworks.common.io.ItemHandlerRouting;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
@@ -337,6 +338,10 @@ public class PowerCrystalChargerBlockEntity extends net.minecraft.world.level.bl
         return EnergyItemHelper.canReceiveEnergy(stack);
     }
 
+    private static boolean isValidSlot(int slot) {
+        return slot >= 0 && slot < SLOT_COUNT;
+    }
+
     private void transferEnergyFromPowerSlot() {
         ItemStack sourceStack = itemHandler.getStackInSlot(SLOT_POWER_INPUT);
         IEnergyStorage sourceEnergy = EnergyItemHelper.getEnergyStorage(sourceStack);
@@ -597,12 +602,16 @@ public class PowerCrystalChargerBlockEntity extends net.minecraft.world.level.bl
 
                 @Override
                 public ItemStack insertItem(int slot, ItemStack stack, boolean simulate) {
-                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsInput() ? itemHandler.insertItem(slot, stack, simulate) : stack;
+                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsInput() && isValidSlot(slot)
+                            ? ItemHandlerRouting.insertIntoAnySlot(itemHandler, slot, stack, simulate)
+                            : stack;
                 }
 
                 @Override
                 public ItemStack extractItem(int slot, int amount, boolean simulate) {
-                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsOutput() ? itemHandler.extractItem(slot, amount, simulate) : ItemStack.EMPTY;
+                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsOutput() && isValidSlot(slot)
+                            ? ItemHandlerRouting.extractFromAnySlot(itemHandler, slot, amount, simulate)
+                            : ItemStack.EMPTY;
                 }
 
                 @Override
@@ -612,7 +621,9 @@ public class PowerCrystalChargerBlockEntity extends net.minecraft.world.level.bl
 
                 @Override
                 public boolean isItemValid(int slot, ItemStack stack) {
-                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsInput() && itemHandler.isItemValid(slot, stack);
+                    return getSideAccessMode(SideConfigType.ITEMS, side).allowsInput()
+                            && isValidSlot(slot)
+                            && ItemHandlerRouting.canInsertIntoAnySlot(itemHandler, stack);
                 }
             };
         }
