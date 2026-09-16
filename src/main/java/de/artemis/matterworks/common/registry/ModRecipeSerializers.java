@@ -1,6 +1,7 @@
 package de.artemis.matterworks.common.registry;
 
 import de.artemis.matterworks.Matterworks;
+import de.artemis.matterworks.common.recipe.FluidMachineRecipe;
 import de.artemis.matterworks.common.recipe.MatterFilterCopyRecipe;
 import net.minecraft.core.registries.Registries;
 import net.minecraft.world.item.crafting.RecipeSerializer;
@@ -15,6 +16,12 @@ public final class ModRecipeSerializers {
 
     public static final DeferredHolder<RecipeSerializer<?>, SimpleCraftingRecipeSerializer<MatterFilterCopyRecipe>> MATTER_FILTER_COPY =
             RECIPE_SERIALIZERS.register("matter_filter_copy", () -> new SimpleCraftingRecipeSerializer<>(MatterFilterCopyRecipe::new));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<FluidMachineRecipe>> GRAVITIC_CONDENSING =
+            RECIPE_SERIALIZERS.register("gravitic_condensing", () -> new FluidMachineRecipe.Serializer(ModRecipeTypes.GRAVITIC_CONDENSING));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<FluidMachineRecipe>> MATTER_SEPARATING =
+            RECIPE_SERIALIZERS.register("matter_separating", () -> new FluidMachineRecipe.Serializer(ModRecipeTypes.MATTER_SEPARATING));
+    public static final DeferredHolder<RecipeSerializer<?>, RecipeSerializer<FluidMachineRecipe>> MATTER_STABILIZING =
+            RECIPE_SERIALIZERS.register("matter_stabilizing", () -> new FluidMachineRecipe.Serializer(ModRecipeTypes.MATTER_STABILIZING));
 
     private ModRecipeSerializers() {
     }

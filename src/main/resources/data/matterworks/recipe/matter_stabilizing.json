@@ -1,0 +1,19 @@
+{
+  "type": "matterworks:matter_stabilizing",
+  "ingredient": {
+    "fluid": "matterworks:raw_matter"
+  },
+  "input_amount": 100,
+  "fluid_results": [
+    {
+      "id": "matterworks:refined_matter",
+      "amount": 95
+    },
+    {
+      "id": "matterworks:unstable_matter",
+      "amount": 5
+    }
+  ],
+  "process_time": 120,
+  "energy_per_tick": 30
+}

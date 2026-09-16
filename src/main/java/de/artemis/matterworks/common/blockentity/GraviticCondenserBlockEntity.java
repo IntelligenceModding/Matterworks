@@ -5,10 +5,12 @@ import de.artemis.matterworks.common.io.MappedItemHandler;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.GraviticCondenserMenu;
+import de.artemis.matterworks.common.recipe.FluidMachineRecipe;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
+import de.artemis.matterworks.common.registry.ModRecipeTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalData;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
@@ -380,33 +382,52 @@ public class GraviticCondenserBlockEntity extends AbstractMatterMachineBlockEnti
 
     @Override
     protected boolean canProcess() {
-        return fluidTank.getFluidAmount() >= RAW_MATTER_COST
-                && level != null
-                && unstableTank.getSpace() >= UNSTABLE_MATTER_OUTPUT
-                && canOutputSingularity();
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return false;
+        }
+        FluidStack unstableOutput = recipe.firstFluidResult();
+        return (unstableOutput.isEmpty() || unstableTank.getSpace() >= unstableOutput.getAmount())
+                && canOutputItem(recipe.itemResult());
     }
 
     @Override
     protected void processItem() {
-        fluidTank.drain(RAW_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
-        unstableTank.fill(new FluidStack(ModFluids.UNSTABLE_MATTER.get(), UNSTABLE_MATTER_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return;
+        }
 
+        fluidTank.drain(recipe.inputAmount(), IFluidHandler.FluidAction.EXECUTE);
+        FluidStack unstableOutput = recipe.firstFluidResult();
+        if (!unstableOutput.isEmpty()) {
+            unstableTank.fill(unstableOutput, IFluidHandler.FluidAction.EXECUTE);
+        }
+
+        ItemStack resultStack = recipe.itemResult();
+        if (resultStack.isEmpty()) {
+            return;
+        }
         ItemStack outputStack = itemHandler.getStackInSlot(OUTPUT_SLOT);
         if (outputStack.isEmpty()) {
-            itemHandler.setStackInSlot(OUTPUT_SLOT, ModItems.MATTER_SINGULARITY.get().getDefaultInstance());
+            itemHandler.setStackInSlot(OUTPUT_SLOT, resultStack);
         } else {
-            outputStack.grow(1);
+            outputStack.grow(resultStack.getCount());
         }
     }
 
     @Override
     protected int getMaxProgress() {
-        return PowerCrystalEffects.getModifiedProcessTime(PROCESS_TIME, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int processTime = recipe == null ? PROCESS_TIME : recipe.processTime();
+        return PowerCrystalEffects.getModifiedProcessTime(processTime, getEffectiveCrystalStack());
     }
 
     @Override
     protected int getEnergyPerTick() {
-        return PowerCrystalEffects.getConstructorEnergyPerTick(ENERGY_PER_TICK, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int energyPerTick = recipe == null ? ENERGY_PER_TICK : recipe.energyPerTick();
+        return PowerCrystalEffects.getConstructorEnergyPerTick(energyPerTick, getEffectiveCrystalStack());
     }
 
     @Override
@@ -446,10 +467,24 @@ public class GraviticCondenserBlockEntity extends AbstractMatterMachineBlockEnti
         }
     }
 
-    private boolean canOutputSingularity() {
+    private boolean canOutputItem(ItemStack resultStack) {
+        if (resultStack.isEmpty()) {
+            return true;
+        }
         ItemStack outputStack = itemHandler.getStackInSlot(OUTPUT_SLOT);
         return outputStack.isEmpty()
-                || (outputStack.is(ModItems.MATTER_SINGULARITY.get()) && outputStack.getCount() < outputStack.getMaxStackSize());
+                || (ItemStack.isSameItemSameComponents(outputStack, resultStack)
+                && outputStack.getCount() <= outputStack.getMaxStackSize() - resultStack.getCount());
+    }
+
+    private FluidMachineRecipe getCurrentRecipe() {
+        if (level == null) {
+            return null;
+        }
+        return level.getRecipeManager()
+                .getRecipeFor(ModRecipeTypes.GRAVITIC_CONDENSING.get(), new FluidMachineRecipe.Input(fluidTank.getFluid()), level)
+                .map(holder -> holder.value())
+                .orElse(null);
     }
 
     private void importRawMatterBucket() {

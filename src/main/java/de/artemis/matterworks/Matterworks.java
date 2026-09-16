@@ -15,6 +15,7 @@ import de.artemis.matterworks.common.registry.ModMobEffects;
 import de.artemis.matterworks.common.registry.ModParticles;
 import de.artemis.matterworks.common.registry.ModPotions;
 import de.artemis.matterworks.common.registry.ModRecipeSerializers;
+import de.artemis.matterworks.common.registry.ModRecipeTypes;
 import de.artemis.matterworks.common.world.PylonChunkLoading;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.common.Mod;
@@ -32,6 +33,7 @@ public class Matterworks {
         ModBlocks.register(modEventBus);
         ModBlockEntities.register(modEventBus);
         ModMenuTypes.register(modEventBus);
+        ModRecipeTypes.register(modEventBus);
         ModRecipeSerializers.register(modEventBus);
         ModMobEffects.register(modEventBus);
         ModPotions.register(modEventBus);

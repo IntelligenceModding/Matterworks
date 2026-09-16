@@ -1,0 +1,19 @@
+{
+  "type": "matterworks:matter_separating",
+  "ingredient": {
+    "fluid": "matterworks:refined_matter"
+  },
+  "input_amount": 125,
+  "item_result": {
+    "id": "matterworks:matter_dust",
+    "count": 1
+  },
+  "fluid_results": [
+    {
+      "id": "matterworks:matter_sludge",
+      "amount": 1000
+    }
+  ],
+  "process_time": 100,
+  "energy_per_tick": 24
+}

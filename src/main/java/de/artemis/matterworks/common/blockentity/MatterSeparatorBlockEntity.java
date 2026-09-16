@@ -5,10 +5,12 @@ import de.artemis.matterworks.common.io.MappedItemHandler;
 import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.menu.MatterSeparatorMenu;
+import de.artemis.matterworks.common.recipe.FluidMachineRecipe;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
+import de.artemis.matterworks.common.registry.ModRecipeTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalData;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
@@ -403,38 +405,57 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
 
     @Override
     protected boolean canProcess() {
-        return fluidTank.getFluidAmount() >= REFINED_MATTER_COST
-                && level != null
-                && sludgeTank.getSpace() >= MATTER_SLUDGE_OUTPUT
-                && canOutputDust();
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return false;
+        }
+        FluidStack sludgeOutput = recipe.firstFluidResult();
+        return (sludgeOutput.isEmpty() || sludgeTank.getSpace() >= sludgeOutput.getAmount())
+                && findItemOutputSlot(recipe.itemResult()) >= 0;
     }
 
     @Override
     protected void processItem() {
-        fluidTank.drain(REFINED_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
-        sludgeTank.fill(new FluidStack(ModFluids.MATTER_SLUDGE.get(), MATTER_SLUDGE_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return;
+        }
 
-        int outputSlot = findDustOutputSlot();
+        ItemStack resultStack = recipe.itemResult();
+        int outputSlot = findItemOutputSlot(resultStack);
         if (outputSlot < 0) {
             return;
         }
 
-        ItemStack dustStack = itemHandler.getStackInSlot(outputSlot);
-        if (dustStack.isEmpty()) {
-            itemHandler.setStackInSlot(outputSlot, ModItems.MATTER_DUST.get().getDefaultInstance().copyWithCount(DUST_OUTPUT_COUNT));
+        fluidTank.drain(recipe.inputAmount(), IFluidHandler.FluidAction.EXECUTE);
+        FluidStack sludgeOutput = recipe.firstFluidResult();
+        if (!sludgeOutput.isEmpty()) {
+            sludgeTank.fill(sludgeOutput, IFluidHandler.FluidAction.EXECUTE);
+        }
+
+        if (resultStack.isEmpty()) {
+            return;
+        }
+        ItemStack outputStack = itemHandler.getStackInSlot(outputSlot);
+        if (outputStack.isEmpty()) {
+            itemHandler.setStackInSlot(outputSlot, resultStack);
         } else {
-            dustStack.grow(DUST_OUTPUT_COUNT);
+            outputStack.grow(resultStack.getCount());
         }
     }
 
     @Override
     protected int getMaxProgress() {
-        return PowerCrystalEffects.getModifiedProcessTime(PROCESS_TIME, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int processTime = recipe == null ? PROCESS_TIME : recipe.processTime();
+        return PowerCrystalEffects.getModifiedProcessTime(processTime, getEffectiveCrystalStack());
     }
 
     @Override
     protected int getEnergyPerTick() {
-        return PowerCrystalEffects.getConstructorEnergyPerTick(ENERGY_PER_TICK, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int energyPerTick = recipe == null ? ENERGY_PER_TICK : recipe.energyPerTick();
+        return PowerCrystalEffects.getConstructorEnergyPerTick(energyPerTick, getEffectiveCrystalStack());
     }
 
     @Override
@@ -474,25 +495,35 @@ public class MatterSeparatorBlockEntity extends AbstractMatterMachineBlockEntity
         }
     }
 
-    private boolean canOutputDust() {
-        return findDustOutputSlot() >= 0;
-    }
-
-    private int findDustOutputSlot() {
+    private int findItemOutputSlot(ItemStack resultStack) {
+        if (resultStack.isEmpty()) {
+            return OUTPUT_SLOT_START;
+        }
         int emptySlot = -1;
         for (int slot = OUTPUT_SLOT_START; slot < OUTPUT_SLOT_START + OUTPUT_SLOT_COUNT; slot++) {
-            ItemStack dustStack = itemHandler.getStackInSlot(slot);
-            if (dustStack.isEmpty()) {
+            ItemStack outputStack = itemHandler.getStackInSlot(slot);
+            if (outputStack.isEmpty()) {
                 if (emptySlot < 0) {
                     emptySlot = slot;
                 }
                 continue;
             }
-            if (dustStack.is(ModItems.MATTER_DUST.get()) && dustStack.getCount() <= dustStack.getMaxStackSize() - DUST_OUTPUT_COUNT) {
+            if (ItemStack.isSameItemSameComponents(outputStack, resultStack)
+                    && outputStack.getCount() <= outputStack.getMaxStackSize() - resultStack.getCount()) {
                 return slot;
             }
         }
         return emptySlot;
+    }
+
+    private FluidMachineRecipe getCurrentRecipe() {
+        if (level == null) {
+            return null;
+        }
+        return level.getRecipeManager()
+                .getRecipeFor(ModRecipeTypes.MATTER_SEPARATING.get(), new FluidMachineRecipe.Input(fluidTank.getFluid()), level)
+                .map(holder -> holder.value())
+                .orElse(null);
     }
 
     private void importRefinedMatterBucket() {

@@ -6,10 +6,12 @@ import de.artemis.matterworks.common.io.SideAccessMode;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.io.SingleTankFluidHandler;
 import de.artemis.matterworks.common.menu.MatterStabilizerMenu;
+import de.artemis.matterworks.common.recipe.FluidMachineRecipe;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import de.artemis.matterworks.common.registry.ModFluids;
 import de.artemis.matterworks.common.registry.ModItems;
+import de.artemis.matterworks.common.registry.ModRecipeTypes;
 import de.artemis.matterworks.common.upgrade.PowerCrystalEffects;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -377,26 +379,56 @@ public class MatterStabilizerBlockEntity extends AbstractMatterMachineBlockEntit
 
     @Override
     protected boolean canProcess() {
-        return rawMatterTank.getFluidAmount() >= RAW_MATTER_COST
-                && fluidTank.getSpace() >= REFINED_MATTER_OUTPUT
-                && unstableMatterTank.getSpace() >= UNSTABLE_MATTER_OUTPUT;
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return false;
+        }
+        FluidStack refinedOutput = recipe.fluidResult(0);
+        FluidStack unstableOutput = recipe.fluidResult(1);
+        return (refinedOutput.isEmpty() || fluidTank.getSpace() >= refinedOutput.getAmount())
+                && (unstableOutput.isEmpty() || unstableMatterTank.getSpace() >= unstableOutput.getAmount());
     }
 
     @Override
     protected void processItem() {
-        rawMatterTank.drain(RAW_MATTER_COST, IFluidHandler.FluidAction.EXECUTE);
-        fluidTank.fill(new FluidStack(ModFluids.REFINED_MATTER.get(), REFINED_MATTER_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
-        unstableMatterTank.fill(new FluidStack(ModFluids.UNSTABLE_MATTER.get(), UNSTABLE_MATTER_OUTPUT), IFluidHandler.FluidAction.EXECUTE);
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        if (recipe == null) {
+            return;
+        }
+
+        rawMatterTank.drain(recipe.inputAmount(), IFluidHandler.FluidAction.EXECUTE);
+        FluidStack refinedOutput = recipe.fluidResult(0);
+        if (!refinedOutput.isEmpty()) {
+            fluidTank.fill(refinedOutput, IFluidHandler.FluidAction.EXECUTE);
+        }
+        FluidStack unstableOutput = recipe.fluidResult(1);
+        if (!unstableOutput.isEmpty()) {
+            unstableMatterTank.fill(unstableOutput, IFluidHandler.FluidAction.EXECUTE);
+        }
     }
 
     @Override
     protected int getMaxProgress() {
-        return PowerCrystalEffects.getModifiedProcessTime(PROCESS_TIME, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int processTime = recipe == null ? PROCESS_TIME : recipe.processTime();
+        return PowerCrystalEffects.getModifiedProcessTime(processTime, getEffectiveCrystalStack());
     }
 
     @Override
     protected int getEnergyPerTick() {
-        return PowerCrystalEffects.getConstructorEnergyPerTick(ENERGY_PER_TICK, getEffectiveCrystalStack());
+        FluidMachineRecipe recipe = getCurrentRecipe();
+        int energyPerTick = recipe == null ? ENERGY_PER_TICK : recipe.energyPerTick();
+        return PowerCrystalEffects.getConstructorEnergyPerTick(energyPerTick, getEffectiveCrystalStack());
+    }
+
+    private FluidMachineRecipe getCurrentRecipe() {
+        if (level == null) {
+            return null;
+        }
+        return level.getRecipeManager()
+                .getRecipeFor(ModRecipeTypes.MATTER_STABILIZING.get(), new FluidMachineRecipe.Input(rawMatterTank.getFluid()), level)
+                .map(holder -> holder.value())
+                .orElse(null);
     }
 
     private void transferEnergyFromPowerInputItem() {

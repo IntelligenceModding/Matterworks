@@ -58,8 +58,11 @@ public final class MachineSideConfigOverlay {
     private static final String VISUAL_GHOST_TOGGLE_TEXT = "Ghost";
     private static final String VISUAL_CLEAR_BUTTON_TEXT = "Clear";
     private static final String VISUAL_ALL_BUTTON_TEXT = "All";
-    private static final String CENTER_VISUAL_MODE_TEXT = "3d";
-    private static final float CENTER_VISUAL_MODE_TEXT_SCALE = 0.62F;
+    private static final float SIDE_NODE_SIDE_TEXT_SCALE = 0.55F;
+    private static final int SIDE_NODE_FRAME_COLOR = 0xFF151A20;
+    private static final int SIDE_NODE_INNER_SHADOW = 0x66000000;
+    private static final int SIDE_NODE_LABEL_COLOR = 0xFFC7D0D8;
+    private static final int SIDE_NODE_MODE_TEXT_COLOR = 0xFFFFFFFF;
     private static final double VISUAL_SCALE = 34.0D;
     private static final float VISUAL_FACE_HALF_SIZE = 0.505F;
     private static final float VISUAL_FACE_OFFSET = 0.512F;
@@ -128,7 +131,6 @@ public final class MachineSideConfigOverlay {
         int[] centerBounds = getCenterBounds(leftPos, topPos);
         renderCenterDisplay(
                 guiGraphics,
-                font,
                 menu.getPrimaryTabIcon(),
                 centerBounds[0],
                 centerBounds[1],
@@ -143,7 +145,7 @@ public final class MachineSideConfigOverlay {
 
         Direction frontFacing = menu.getSideConfigFrontFacing();
         for (RelativeSide side : RELATIVE_SIDES) {
-            renderSideNode(guiGraphics, font, menu, type, side, frontFacing, leftPos, topPos);
+            renderSideNode(guiGraphics, font, menu, type, side, frontFacing, leftPos, topPos, mouseX, mouseY);
         }
     }
 
@@ -288,21 +290,16 @@ public final class MachineSideConfigOverlay {
             RelativeSide side,
             Direction frontFacing,
             int leftPos,
-            int topPos
+            int topPos,
+            int mouseX,
+            int mouseY
     ) {
         int[] node = getNodeBounds(leftPos, topPos, side);
         Direction worldSide = resolveWorldDirection(frontFacing, side);
         SideAccessMode mode = menu.getSideAccessMode(type, worldSide);
-        GuiWidgets.tintSlotInterior(guiGraphics, node[0], node[1], node[2], node[3], getModeFillColor(mode), getModeHighlightColor(mode));
-        drawScaledCenteredString(
-                guiGraphics,
-                font,
-                menu.getSideAccessModeShortLabel(type, worldSide, mode),
-                node[0] + node[2] / 2,
-                node[1] + (node[3] - font.lineHeight) / 2,
-                getTextScale(font, menu.getSideAccessModeShortLabel(type, worldSide, mode), node[2] - 2),
-                0xFFE0E0E0
-        );
+        String modeLabel = menu.getSideAccessModeShortLabel(type, worldSide, mode);
+        boolean hovered = isInside(mouseX, mouseY, node[0], node[1], node[2], node[3]);
+        renderSideConfigNode(guiGraphics, font, node, side.shortLabel, modeLabel, mode, hovered);
     }
 
     private <T extends SideConfigMenuAccess> void renderVisualConfig(
@@ -1095,6 +1092,30 @@ public final class MachineSideConfigOverlay {
         };
     }
 
+    private static int getSideNodeFillColor(SideAccessMode mode) {
+        return switch (mode) {
+            case DISABLED -> 0xFF424850;
+            case INPUT -> 0xFF244E8D;
+            case OUTPUT -> 0xFF8A581D;
+            case OUTPUT_PRIMARY -> 0xFF99642A;
+            case OUTPUT_SECONDARY -> 0xFF765094;
+            case OUTPUT_TERTIARY -> 0xFF884347;
+            case BOTH -> 0xFF246E68;
+        };
+    }
+
+    private static int getSideNodeAccentColor(SideAccessMode mode) {
+        return switch (mode) {
+            case DISABLED -> 0xFF8B929A;
+            case INPUT -> 0xFF7DB3FF;
+            case OUTPUT -> 0xFFFFB65F;
+            case OUTPUT_PRIMARY -> 0xFFFFC56D;
+            case OUTPUT_SECONDARY -> 0xFFD59AF4;
+            case OUTPUT_TERTIARY -> 0xFFFF8D8D;
+            case BOTH -> 0xFF66D5C9;
+        };
+    }
+
     private static Direction resolveWorldDirection(Direction frontFacing, RelativeSide side) {
         return switch (side) {
             case UP -> Direction.UP;
@@ -1114,10 +1135,66 @@ public final class MachineSideConfigOverlay {
         return side != RelativeSide.UP && side != RelativeSide.DOWN;
     }
 
+    private static void renderSideConfigNode(
+            GuiGraphics guiGraphics,
+            Font font,
+            int[] bounds,
+            String sideLabel,
+            String modeLabel,
+            SideAccessMode mode,
+            boolean hovered
+    ) {
+        int x = bounds[0];
+        int y = bounds[1];
+        int width = bounds[2];
+        int height = bounds[3];
+        int fillColor = getSideNodeFillColor(mode);
+        int accentColor = getSideNodeAccentColor(mode);
+
+        guiGraphics.fill(x, y, x + width, y + height, SIDE_NODE_FRAME_COLOR);
+        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + height - 1, fillColor);
+        guiGraphics.fill(x + 1, y + 1, x + width - 1, y + 3, accentColor);
+        guiGraphics.fill(x + 1, y + height - 3, x + width - 1, y + height - 1, accentColor);
+        guiGraphics.fill(x + 2, y + 10, x + width - 2, y + height - 4, SIDE_NODE_INNER_SHADOW);
+
+        if (hovered) {
+            guiGraphics.fill(x, y, x + width, y + 1, 0xFFFFFFFF);
+            guiGraphics.fill(x, y + height - 1, x + width, y + height, 0xFFFFFFFF);
+            guiGraphics.fill(x, y, x + 1, y + height, 0xFFFFFFFF);
+            guiGraphics.fill(x + width - 1, y, x + width, y + height, 0xFFFFFFFF);
+        }
+
+        int centerX = x + width / 2;
+        drawScaledCenteredString(
+                guiGraphics,
+                font,
+                sideLabel,
+                centerX,
+                y + 4,
+                SIDE_NODE_SIDE_TEXT_SCALE,
+                SIDE_NODE_LABEL_COLOR,
+                true
+        );
+        drawScaledCenteredString(
+                guiGraphics,
+                font,
+                modeLabel,
+                centerX,
+                y + 11,
+                getTextScale(font, modeLabel, width - 4),
+                SIDE_NODE_MODE_TEXT_COLOR,
+                true
+        );
+    }
+
     private static void drawScaledCenteredString(GuiGraphics guiGraphics, Font font, String text, int centerX, int y, float scale, int color) {
+        drawScaledCenteredString(guiGraphics, font, text, centerX, y, scale, color, false);
+    }
+
+    private static void drawScaledCenteredString(GuiGraphics guiGraphics, Font font, String text, int centerX, int y, float scale, int color, boolean shadow) {
         guiGraphics.pose().pushPose();
         guiGraphics.pose().scale(scale, scale, 1.0F);
-        guiGraphics.drawString(font, text, Math.round((centerX - font.width(text) * scale / 2.0F) / scale), Math.round(y / scale), color, false);
+        guiGraphics.drawString(font, text, Math.round((centerX - font.width(text) * scale / 2.0F) / scale), Math.round(y / scale), color, shadow);
         guiGraphics.pose().popPose();
     }
 
@@ -1129,7 +1206,7 @@ public final class MachineSideConfigOverlay {
         return Math.max(0.45F, maxWidth / (float) width);
     }
 
-    private static void renderCenterDisplay(GuiGraphics guiGraphics, Font font, ItemStack icon, int x, int y, int width, int height, boolean hovered) {
+    private static void renderCenterDisplay(GuiGraphics guiGraphics, ItemStack icon, int x, int y, int width, int height, boolean hovered) {
         renderCenterButtonFrame(guiGraphics, x, y, width, height, hovered);
 
         float scale = Math.min(width / 16.0F, height / 16.0F);
@@ -1141,8 +1218,6 @@ public final class MachineSideConfigOverlay {
         guiGraphics.pose().scale(scale, scale, 1.0F);
         guiGraphics.renderItem(icon, 0, 0);
         guiGraphics.pose().popPose();
-
-        renderCenterModeBadge(guiGraphics, font, x, y, width, height, hovered);
     }
 
     private static void renderCenterButtonFrame(GuiGraphics guiGraphics, int x, int y, int width, int height, boolean hovered) {
@@ -1157,47 +1232,20 @@ public final class MachineSideConfigOverlay {
         guiGraphics.fill(x + width - 1, y, x + width, y + height, highlight);
     }
 
-    private static void renderCenterModeBadge(GuiGraphics guiGraphics, Font font, int x, int y, int width, int height, boolean hovered) {
-        int textWidth = Math.round(font.width(CENTER_VISUAL_MODE_TEXT) * CENTER_VISUAL_MODE_TEXT_SCALE);
-        int textHeight = Math.round(font.lineHeight * CENTER_VISUAL_MODE_TEXT_SCALE);
-        int badgeWidth = textWidth + 4;
-        int badgeHeight = textHeight + 3;
-        int badgeX = x + width - badgeWidth - 2;
-        int badgeY = y + 2;
-        guiGraphics.flush();
-        RenderSystem.depthMask(false);
-        RenderSystem.disableDepthTest();
-        guiGraphics.pose().pushPose();
-        guiGraphics.pose().translate(0.0F, 0.0F, 400.0F);
-        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + badgeHeight, hovered ? 0xE52B5F98 : 0xD61E3144);
-        guiGraphics.fill(badgeX, badgeY, badgeX + badgeWidth, badgeY + 1, hovered ? 0xFFA9D8FF : 0xCC6C8DA8);
-        guiGraphics.pose().scale(CENTER_VISUAL_MODE_TEXT_SCALE, CENTER_VISUAL_MODE_TEXT_SCALE, 1.0F);
-        guiGraphics.drawString(
-                font,
-                CENTER_VISUAL_MODE_TEXT,
-                Math.round((badgeX + 2) / CENTER_VISUAL_MODE_TEXT_SCALE),
-                Math.round((badgeY + 1) / CENTER_VISUAL_MODE_TEXT_SCALE),
-                hovered ? 0xFFFFFFFF : 0xFFDDE8F0,
-                false
-        );
-        guiGraphics.pose().popPose();
-        guiGraphics.flush();
-        RenderSystem.depthMask(true);
-        RenderSystem.enableDepthTest();
-    }
-
     private enum RelativeSide {
-        UP("Up"),
-        FRONT("Front"),
-        LEFT("Left"),
-        RIGHT("Right"),
-        BACK("Back"),
-        DOWN("Down");
+        UP("Up", "U"),
+        FRONT("Front", "F"),
+        LEFT("Left", "L"),
+        RIGHT("Right", "R"),
+        BACK("Back", "B"),
+        DOWN("Down", "D");
 
         private final String label;
+        private final String shortLabel;
 
-        RelativeSide(String label) {
+        RelativeSide(String label, String shortLabel) {
             this.label = label;
+            this.shortLabel = shortLabel;
         }
     }
 

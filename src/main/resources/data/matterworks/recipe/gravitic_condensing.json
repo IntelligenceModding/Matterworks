@@ -1,0 +1,19 @@
+{
+  "type": "matterworks:gravitic_condensing",
+  "ingredient": {
+    "fluid": "matterworks:raw_matter"
+  },
+  "input_amount": 8000,
+  "item_result": {
+    "id": "matterworks:matter_singularity",
+    "count": 1
+  },
+  "fluid_results": [
+    {
+      "id": "matterworks:unstable_matter",
+      "amount": 100
+    }
+  ],
+  "process_time": 200,
+  "energy_per_tick": 96
+}
