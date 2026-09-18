@@ -8,7 +8,6 @@ import de.artemis.matterworks.common.io.SideConfigurableBlockEntity;
 import de.artemis.matterworks.common.menu.SideConfigOrientation;
 import de.artemis.matterworks.common.network.SetPylonDebugOverlayPayload;
 import de.artemis.matterworks.common.network.SetSideConfigDebugOverlayPayload;
-import de.artemis.matterworks.common.template.TemplateAnalysisManager;
 import net.minecraft.commands.Commands;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
@@ -31,6 +30,7 @@ import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.RegisterCommandsEvent;
 import net.neoforged.neoforge.event.server.ServerAboutToStartEvent;
+import net.neoforged.neoforge.event.server.ServerStartedEvent;
 import net.neoforged.neoforge.event.server.ServerStoppingEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import org.slf4j.Logger;
@@ -50,18 +50,21 @@ public final class MatterValueManager {
 
     private static final Map<ResourceLocation, Integer> overrideValues = new LinkedHashMap<>();
     private static final Map<ResourceLocation, Integer> generatedValues = new LinkedHashMap<>();
+    private static final Map<ResourceLocation, MatterValueError> generatedValueErrors = new LinkedHashMap<>();
     private static final Set<UUID> debugSubscribers = new HashSet<>();
     private static final Set<UUID> recyclerDebugSubscribers = new HashSet<>();
     private static MatterRuleConfig ruleConfig = MatterRuleConfig.defaults();
 
     private static Path storageDirectory;
     private static boolean dirty;
+    private static boolean generatedValuesReady;
 
     private MatterValueManager() {
     }
 
     public static void registerGameEvents() {
         NeoForge.EVENT_BUS.addListener(MatterValueManager::onServerAboutToStart);
+        NeoForge.EVENT_BUS.addListener(MatterValueManager::onServerStarted);
         NeoForge.EVENT_BUS.addListener(MatterValueManager::onServerStopping);
         NeoForge.EVENT_BUS.addListener(MatterValueManager::onRegisterCommands);
     }
@@ -177,10 +180,12 @@ public final class MatterValueManager {
                 storageDirectory = configDirectory;
                 overrideValues.clear();
                 generatedValues.clear();
+                generatedValueErrors.clear();
                 debugSubscribers.clear();
                 recyclerDebugSubscribers.clear();
                 ruleConfig = MatterRuleConfig.defaults();
                 dirty = false;
+                generatedValuesReady = false;
             }
             return;
         }
@@ -190,10 +195,15 @@ public final class MatterValueManager {
             overrideValues.clear();
             overrideValues.putAll(loadedValues.overrides());
             generatedValues.clear();
-            generatedValues.putAll(loadedValues.generated());
+            generatedValueErrors.clear();
             ruleConfig = loadedValues.rules();
             dirty = false;
+            generatedValuesReady = false;
         }
+    }
+
+    private static void onServerStarted(ServerStartedEvent event) {
+        ensureGeneratedValues(event.getServer().overworld());
     }
 
     private static void onServerStopping(ServerStoppingEvent event) {
@@ -293,45 +303,59 @@ public final class MatterValueManager {
     }
 
     private static int resolveBaseValue(Item item, Level level) {
+        ensureGeneratedValues(level);
         ResourceLocation itemId = BuiltInRegistries.ITEM.getKey(item);
         synchronized (LOCK) {
-            Integer overrideValue = overrideValues.get(itemId);
-            if (overrideValue != null) {
-                return overrideValue;
-            }
-
             Integer generatedValue = generatedValues.get(itemId);
             if (generatedValue != null) {
                 return generatedValue;
             }
         }
-
-        int computedValue = Math.max(MATTER_PER_DUST, TemplateAnalysisManager.getRequiredItemCount(new ItemStack(item), level) * MATTER_PER_DUST);
-        cacheGeneratedValue(itemId, computedValue, level);
-        return computedValue;
+        return 0;
     }
 
-    private static void cacheGeneratedValue(ResourceLocation itemId, int value) {
-        cacheGeneratedValue(itemId, value, null);
+    public static int getRequiredItemCount(ItemStack stack, Level level) {
+        int matterValue = getMatterValue(stack, level);
+        if (matterValue <= 0) {
+            return 1;
+        }
+        return Math.max(1, Math.min(64, (int) Math.ceil(matterValue / (double) MATTER_PER_DUST)));
     }
 
-    private static void cacheGeneratedValue(ResourceLocation itemId, int value, Level level) {
-        Path saveDirectory;
-        boolean added = false;
+    private static void ensureGeneratedValues(Level level) {
+        if (level == null) {
+            return;
+        }
         synchronized (LOCK) {
-            if (overrideValues.containsKey(itemId) || generatedValues.containsKey(itemId)) {
+            if (generatedValuesReady) {
                 return;
             }
+        }
 
-            generatedValues.put(itemId, value);
+        MatterValueCalculator.CalculationResult calculationResult;
+        Map<ResourceLocation, Integer> overrideSnapshot;
+        MatterRuleConfig rulesSnapshot;
+        synchronized (LOCK) {
+            overrideSnapshot = new LinkedHashMap<>(overrideValues);
+            rulesSnapshot = ruleConfig;
+        }
+        calculationResult = MatterValueCalculator.calculate(level, overrideSnapshot, rulesSnapshot);
+
+        Path saveDirectory;
+        synchronized (LOCK) {
+            if (generatedValuesReady) {
+                return;
+            }
+            generatedValues.clear();
+            generatedValues.putAll(calculationResult.values());
+            generatedValueErrors.clear();
+            generatedValueErrors.putAll(calculationResult.errors());
+            generatedValuesReady = true;
             dirty = true;
             saveDirectory = storageDirectory;
-            added = true;
         }
 
-        if (added) {
-            debugValueChange(level, "added", itemId, value);
-        }
+        debugValueGeneration(level, calculationResult.values().size());
 
         if (saveDirectory != null) {
             saveGeneratedValues();
@@ -341,6 +365,7 @@ public final class MatterValueManager {
     private static void saveGeneratedValues() {
         Path saveDirectory;
         Map<ResourceLocation, Integer> snapshot;
+        Map<ResourceLocation, MatterValueError> errorSnapshot;
         synchronized (LOCK) {
             if (!dirty || storageDirectory == null) {
                 return;
@@ -348,16 +373,18 @@ public final class MatterValueManager {
 
             saveDirectory = storageDirectory;
             snapshot = new LinkedHashMap<>(generatedValues);
+            errorSnapshot = new LinkedHashMap<>(generatedValueErrors);
             dirty = false;
         }
 
         try {
             MatterValueStorage.saveGenerated(saveDirectory, snapshot);
+            MatterValueStorage.saveErrors(saveDirectory, errorSnapshot);
         } catch (IOException exception) {
             synchronized (LOCK) {
                 dirty = true;
             }
-            LOGGER.error("Failed to save generated matter values to {}", saveDirectory, exception);
+            LOGGER.error("Failed to save generated matter value files to {}", saveDirectory, exception);
         }
     }
 
@@ -378,11 +405,11 @@ public final class MatterValueManager {
     public static void debugConstructorCost(Level level, ItemStack resultStack, int matterDustCost, int matterMillibuckets) {
     }
 
-    private static void debugValueChange(Level level, String changeType, ResourceLocation itemId, int matterValue) {
+    private static void debugValueGeneration(Level level, int valueCount) {
         if (level == null || level.isClientSide()) {
             return;
         }
-        debugEvent(level, Component.literal("[Matter Values] " + changeType + " " + itemId + " = " + matterValue + " mB"));
+        debugEvent(level, Component.literal("[Matter Values] generated " + valueCount + " recipe-safe item values."));
     }
 
     private static void debugEvent(Level level, Component message) {
@@ -429,7 +456,7 @@ public final class MatterValueManager {
         Map<ResourceLocation, Integer> mergedValues = new LinkedHashMap<>();
         synchronized (LOCK) {
             mergedValues.putAll(generatedValues);
-            mergedValues.putAll(overrideValues);
+            overrideValues.forEach(mergedValues::putIfAbsent);
         }
 
         if (mergedValues.isEmpty()) {

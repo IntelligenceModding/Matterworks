@@ -14,6 +14,7 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
     protected void addTranslations() {
         add("itemGroup.matterworks", "Matterworks");
         add("tooltip.matterworks.stored_matter", "Stored Matter: %s");
+        add("tooltip.matterworks.matter_value", "Matter Value: %s mB");
         add("tooltip.matterworks.energy", "Energy: %s / %s FE");
         add("tooltip.matterworks.fluid", "Fluid: %s / %s mB");
         add("tooltip.matterworks.progress", "Progress: %s / %s");

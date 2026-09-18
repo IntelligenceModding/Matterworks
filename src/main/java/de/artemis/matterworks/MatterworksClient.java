@@ -13,6 +13,7 @@ public class MatterworksClient {
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onInteractionKeyMappingTriggered);
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onMouseScrolling);
         NeoForge.EVENT_BUS.addListener(ClientModEvents::onClientTick);
+        NeoForge.EVENT_BUS.addListener(ClientModEvents::addMatterValueTooltip);
         modEventBus.addListener(ClientModEvents::addGuiOverlayLayers);
         modEventBus.addListener(ClientModEvents::registerParticleProviders);
         modEventBus.addListener(ClientModEvents::registerKeyMappings);

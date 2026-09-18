@@ -23,6 +23,9 @@ import java.util.TreeMap;
 final class MatterValueStorage {
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
     private static final String VALUES_KEY = "values";
+    private static final String ERRORS_KEY = "errors";
+    private static final String VALUE_KEY = "value";
+    private static final String REASON_KEY = "reason";
     private static final String VALUE_BLACKLIST_KEY = "value_blacklist";
     private static final String RECYCLER_BLACKLIST_KEY = "recycler_blacklist";
     private static final String PATTERN_BLACKLIST_KEY = "pattern_blacklist";
@@ -41,10 +44,12 @@ final class MatterValueStorage {
 
         Path overridesPath = baseDirectory.resolve("matter_values.json");
         Path generatedPath = baseDirectory.resolve("generated_matter_values.json");
+        Path errorsPath = baseDirectory.resolve("matter_values_errors.json");
         Path rulesPath = baseDirectory.resolve("matter_rules.json");
 
         ensureFileExists(overridesPath);
         ensureFileExists(generatedPath);
+        ensureErrorsFileExists(errorsPath);
         ensureRulesFileExists(rulesPath);
 
         MatterRuleConfig rules = readRules(rulesPath);
@@ -63,6 +68,11 @@ final class MatterValueStorage {
     static void saveGenerated(Path baseDirectory, Map<ResourceLocation, Integer> values) throws IOException {
         Files.createDirectories(baseDirectory);
         writeValues(baseDirectory.resolve("generated_matter_values.json"), values);
+    }
+
+    static void saveErrors(Path baseDirectory, Map<ResourceLocation, MatterValueError> errors) throws IOException {
+        Files.createDirectories(baseDirectory);
+        writeErrors(baseDirectory.resolve("matter_values_errors.json"), errors);
     }
 
     private static Map<ResourceLocation, Integer> readValues(Path path) throws IOException {
@@ -120,6 +130,31 @@ final class MatterValueStorage {
         return flattened;
     }
 
+    private static void writeErrors(Path path, Map<ResourceLocation, MatterValueError> errors) throws IOException {
+        JsonObject rootObject = new JsonObject();
+        JsonObject errorsObject = new JsonObject();
+        for (Map.Entry<String, MatterValueError> entry : new TreeMap<>(flattenErrors(errors)).entrySet()) {
+            MatterValueError error = entry.getValue();
+            JsonObject errorObject = new JsonObject();
+            errorObject.addProperty(VALUE_KEY, error.value());
+            errorObject.addProperty(REASON_KEY, error.reason());
+            errorsObject.add(entry.getKey(), errorObject);
+        }
+        rootObject.add(ERRORS_KEY, errorsObject);
+
+        try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            GSON.toJson(rootObject, writer);
+        }
+    }
+
+    private static Map<String, MatterValueError> flattenErrors(Map<ResourceLocation, MatterValueError> errors) {
+        Map<String, MatterValueError> flattened = new LinkedHashMap<>();
+        for (Map.Entry<ResourceLocation, MatterValueError> entry : errors.entrySet()) {
+            flattened.put(entry.getKey().toString(), entry.getValue());
+        }
+        return flattened;
+    }
+
     private static void ensureFileExists(Path path) throws IOException {
         if (Files.exists(path)) {
             return;
@@ -127,6 +162,18 @@ final class MatterValueStorage {
 
         JsonObject rootObject = new JsonObject();
         rootObject.add(VALUES_KEY, new JsonObject());
+        try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
+            GSON.toJson(rootObject, writer);
+        }
+    }
+
+    private static void ensureErrorsFileExists(Path path) throws IOException {
+        if (Files.exists(path)) {
+            return;
+        }
+
+        JsonObject rootObject = new JsonObject();
+        rootObject.add(ERRORS_KEY, new JsonObject());
         try (Writer writer = Files.newBufferedWriter(path, StandardCharsets.UTF_8)) {
             GSON.toJson(rootObject, writer);
         }

@@ -18,36 +18,17 @@ public record MatterRuleConfig(
 ) {
     public static MatterRuleConfig defaults() {
         return new MatterRuleConfig(
-                ids(
-                        "matterworks:raw_matter_bucket",
-                        "matterworks:refined_matter_bucket",
-                        "matterworks:unstable_matter_bucket",
-                        "matterworks:matter_sludge_bucket",
-                        "matterworks:matter_dust",
-                        "matterworks:empty_template",
-                        "matterworks:encoded_template",
-                        "matterworks:matter_recycler",
-                        "matterworks:matter_stabilizer",
-                        "matterworks:matter_analyzer",
-                        "matterworks:matter_constructor",
-                        "matterworks:combustion_generator",
-                        "matterworks:power_crystal_ore",
-                        "matterworks:crimson_power_crystal",
-                        "matterworks:azure_power_crystal",
-                        "matterworks:verdant_power_crystal"
-                ),
+                new LinkedHashSet<>(),
                 new LinkedHashSet<>(),
                 ids(
                         "matterworks:raw_matter_bucket",
                         "matterworks:refined_matter_bucket",
                         "matterworks:unstable_matter_bucket",
                         "matterworks:matter_sludge_bucket",
-                        "matterworks:matter_dust",
                         "matterworks:empty_template",
                         "matterworks:encoded_template",
-                        "matterworks:crimson_power_crystal",
-                        "matterworks:azure_power_crystal",
-                        "matterworks:verdant_power_crystal"
+                        "matterworks:network_data_card",
+                        "matterworks:network_remote_terminal"
                 ),
                 true,
                 true,

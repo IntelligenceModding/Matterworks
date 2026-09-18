@@ -39,6 +39,7 @@ import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.debug.SideConfigDebugTracker;
 import de.artemis.matterworks.common.fluid.AbstractMatterFluidType;
 import de.artemis.matterworks.common.item.MatterArchitectItem;
+import de.artemis.matterworks.common.matter.MatterValueManager;
 import de.artemis.matterworks.common.multiblock.MatterBatteryPreviewPlacementHelper;
 import de.artemis.matterworks.common.network.ClearMatterArchitectSelectionPayload;
 import de.artemis.matterworks.common.network.MoveMatterArchitectSelectionPayload;
@@ -57,6 +58,7 @@ import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Camera;
 import net.minecraft.client.multiplayer.ClientLevel;
 import net.minecraft.client.renderer.FogRenderer;
+import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.network.chat.Component;
@@ -74,6 +76,7 @@ import net.neoforged.neoforge.client.event.RenderLevelStageEvent;
 import net.neoforged.neoforge.client.extensions.common.IClientFluidTypeExtensions;
 import net.neoforged.neoforge.client.extensions.common.RegisterClientExtensionsEvent;
 import net.neoforged.neoforge.client.gui.VanillaGuiLayers;
+import net.neoforged.neoforge.event.entity.player.ItemTooltipEvent;
 import net.neoforged.neoforge.network.PacketDistributor;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.HitResult;
@@ -138,6 +141,16 @@ public class ClientModEvents {
 
     public static void registerTooltipComponents(RegisterClientTooltipComponentFactoriesEvent event) {
         event.register(MatterFilterTooltip.class, MatterFilterClientTooltipComponent::new);
+    }
+
+    public static void addMatterValueTooltip(ItemTooltipEvent event) {
+        ItemStack stack = event.getItemStack();
+        if (stack.isEmpty() || event.getEntity() == null || event.getEntity().level() == null) {
+            return;
+        }
+
+        int matterValue = MatterValueManager.getMatterValue(stack, event.getEntity().level());
+        event.getToolTip().add(Component.translatable("tooltip.matterworks.matter_value", matterValue).withStyle(ChatFormatting.DARK_AQUA));
     }
 
     public static void registerItemDecorations(RegisterItemDecorationsEvent event) {

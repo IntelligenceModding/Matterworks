@@ -200,6 +200,7 @@
   "tooltip.matterworks.matter_power_bank.auto_charge_enabled": "Auto-Charge: Enabled",
   "tooltip.matterworks.matter_power_bank.toggle": "Right-click to toggle auto-charge.",
   "tooltip.matterworks.matter_sludge_tank": "Matter Sludge: %s / %s mB",
+  "tooltip.matterworks.matter_value": "Matter Value: %s mB",
   "tooltip.matterworks.network_data_card.apply_hint": "Right-click the same block type to apply.",
   "tooltip.matterworks.network_data_card.empty": "Right-click a compatible block to copy its settings.",
   "tooltip.matterworks.network_data_card.overwrite_hint": "Sneak-right-click to overwrite the stored settings.",
