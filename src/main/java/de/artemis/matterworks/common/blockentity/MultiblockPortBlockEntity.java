@@ -1,15 +1,16 @@
 package de.artemis.matterworks.common.blockentity;
 
-import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.block.MultiblockPortBlock;
 import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
 import de.artemis.matterworks.common.multiblock.MultiblockPartEntity;
 import de.artemis.matterworks.common.multiblock.MultiblockPartState;
 import de.artemis.matterworks.common.multiblock.MultiblockRole;
 import de.artemis.matterworks.common.multiblock.MultiblockStructure;
+import de.artemis.matterworks.common.network.SetMultiblockPortColorPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
-import de.artemis.matterworks.common.transport.PylonMode;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.core.HolderLookup;
@@ -19,36 +20,35 @@ import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
-import net.minecraft.world.inventory.ContainerData;
+import net.minecraft.world.item.BlockItem;
+import net.minecraft.world.item.DyeColor;
+import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.item.component.CustomModelData;
+import net.minecraft.world.item.component.CustomData;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.neoforged.neoforge.network.PacketDistributor;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
+import java.util.Set;
 
-public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity implements MultiblockPartEntity {
-    public static final int BASE_TRANSFER_RATE = MatterBatteryCoreBlockEntity.BASE_TRANSFER_RATE;
-    public static final int DATA_FORMED = 0;
-    public static final int DATA_ENERGY = 1;
-    public static final int DATA_CAPACITY = 2;
-    public static final int DATA_TRANSFER = 3;
-    public static final int DATA_CELLS = 4;
-    public static final int DATA_COUNT = 5;
+public class MultiblockPortBlockEntity extends MatterPylonBlockEntity implements MultiblockPartEntity {
+    private static final String TAG_PORT_COLOR_ID = "port_color_id";
 
     private final MultiblockPartState multiblockPartState = new MultiblockPartState();
     private final IEnergyStorage networkEnergyStorage = new IEnergyStorage() {
         @Override
         public int receiveEnergy(int maxReceive, boolean simulate) {
             MatterBatteryCoreBlockEntity controller = getController();
-            if (controller == null || !getMode().allowsInput()) {
+            if (controller == null) {
                 return 0;
             }
             advanceTelemetryWindows();
-            int accepted = controller.getEnergyStorage().receiveEnergy(Math.min(maxReceive, getRemainingInputBudget()), simulate);
+            int accepted = controller.getEnergyStorage().receiveEnergy(maxReceive, simulate);
             if (accepted > 0 && !simulate) {
-                inputUsedThisTick += accepted;
                 sampleInputAccum += accepted;
             }
             return accepted;
@@ -57,13 +57,12 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         @Override
         public int extractEnergy(int maxExtract, boolean simulate) {
             MatterBatteryCoreBlockEntity controller = getController();
-            if (controller == null || !getMode().allowsOutput()) {
+            if (controller == null) {
                 return 0;
             }
             advanceTelemetryWindows();
-            int extracted = controller.getEnergyStorage().extractEnergy(Math.min(maxExtract, getRemainingOutputBudget()), simulate);
+            int extracted = controller.getEnergyStorage().extractEnergy(maxExtract, simulate);
             if (extracted > 0 && !simulate) {
-                outputUsedThisTick += extracted;
                 sampleOutputAccum += extracted;
             }
             return extracted;
@@ -84,58 +83,29 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         @Override
         public boolean canExtract() {
             MatterBatteryCoreBlockEntity controller = getController();
-            return controller != null && getMode().allowsOutput() && controller.getEnergyStorage().canExtract();
+            return controller != null && controller.getEnergyStorage().canExtract();
         }
 
         @Override
         public boolean canReceive() {
             MatterBatteryCoreBlockEntity controller = getController();
-            return controller != null && getMode().allowsInput() && controller.getEnergyStorage().canReceive();
-        }
-    };
-    private final ContainerData batteryData = new ContainerData() {
-        @Override
-        public int get(int index) {
-            MatterBatteryCoreBlockEntity controller = getController();
-            if (controller == null) {
-                return 0;
-            }
-            return switch (index) {
-                case DATA_FORMED -> controller.isFormed() ? 1 : 0;
-                case DATA_ENERGY -> controller.getDisplayedEnergyStored();
-                case DATA_CAPACITY -> controller.getDisplayedEnergyCapacity();
-                case DATA_TRANSFER -> controller.getTransferRate();
-                case DATA_CELLS -> controller.getCellCount();
-                default -> 0;
-            };
-        }
-
-        @Override
-        public void set(int index, int value) {
-        }
-
-        @Override
-        public int getCount() {
-            return DATA_COUNT;
+            return controller != null && controller.getEnergyStorage().canReceive();
         }
     };
 
-    private int maxTransfer = BASE_TRANSFER_RATE;
     private long transferWindowTick = Long.MIN_VALUE;
     private long telemetrySampleTick = Long.MIN_VALUE;
-    private int inputUsedThisTick;
-    private int outputUsedThisTick;
     private int sampleInputAccum;
     private int sampleOutputAccum;
     private int lastInputRate;
     private int lastOutputRate;
+    private DyeColor portColor = DyeColor.WHITE;
 
-    public MatterBatteryPortBlockEntity(BlockPos pos, BlockState blockState) {
+    public MultiblockPortBlockEntity(BlockPos pos, BlockState blockState) {
         super(ModBlockEntities.MULTIBLOCK_PORT.get(), pos, blockState);
-        setMode(CHANNEL_ENERGY, PylonMode.IMPORT_EXPORT);
     }
 
-    public static void tick(Level level, BlockPos pos, BlockState state, MatterBatteryPortBlockEntity blockEntity) {
+    public static void tick(Level level, BlockPos pos, BlockState state, MultiblockPortBlockEntity blockEntity) {
         blockEntity.serverTick();
     }
 
@@ -153,11 +123,14 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
     }
 
     public void handleNetworkLinkUse(Player player) {
-        handleLinkUse(player);
+        if (isFunctionalPort()) {
+            handleLinkUse(player);
+        }
     }
 
-    public ContainerData getData() {
-        return batteryData;
+    public boolean isFunctionalPort() {
+        MatterBatteryCoreBlockEntity controller = getController();
+        return controller != null && controller.isFormed();
     }
 
     public int getDisplayedEnergyStored() {
@@ -203,37 +176,91 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         return controller == null ? List.of() : controller.getPortOverview();
     }
 
+    public DyeColor getPortColor() {
+        return portColor;
+    }
+
+    public int getPortColorId() {
+        return portColor.getId();
+    }
+
+    public boolean setPortColor(DyeColor color) {
+        DyeColor sanitized = color == null ? DyeColor.WHITE : color;
+        if (portColor == sanitized) {
+            return false;
+        }
+
+        portColor = sanitized;
+        setChanged();
+        syncBlockStateColor();
+        if (level instanceof ServerLevel serverLevel) {
+            PacketDistributor.sendToPlayersTrackingChunk(
+                    serverLevel,
+                    new net.minecraft.world.level.ChunkPos(worldPosition),
+                    new SetMultiblockPortColorPayload(worldPosition, portColor.getId())
+            );
+        }
+        refreshControllerPortOverview();
+        return true;
+    }
+
+    public static ItemStack createColoredPortStack(DyeColor color) {
+        ItemStack stack = new ItemStack(ModBlocks.MULTIBLOCK_PORT.get());
+        applyColorToStack(stack, color);
+        return stack;
+    }
+
+    public static void applyColorToStack(ItemStack stack, DyeColor color) {
+        if (stack.isEmpty() || !stack.is(ModBlocks.MULTIBLOCK_PORT.get().asItem())) {
+            return;
+        }
+        DyeColor sanitized = color == null ? DyeColor.WHITE : color;
+        CompoundTag tag = new CompoundTag();
+        tag.putInt(TAG_PORT_COLOR_ID, sanitized.getId());
+        BlockItem.setBlockEntityData(stack, ModBlockEntities.MULTIBLOCK_PORT.get(), tag);
+        stack.set(DataComponents.ITEM_NAME, getPortDisplayName(sanitized));
+        stack.set(DataComponents.CUSTOM_MODEL_DATA, new CustomModelData(sanitized.getId()));
+    }
+
+    public static boolean hasPortColor(ItemStack stack) {
+        if (stack.isEmpty() || !stack.is(ModBlocks.MULTIBLOCK_PORT.get().asItem())) {
+            return false;
+        }
+        CustomData customData = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY);
+        return !customData.isEmpty() && customData.copyTag().contains(TAG_PORT_COLOR_ID);
+    }
+
+    public static DyeColor getPortColor(ItemStack stack) {
+        if (stack.isEmpty() || !stack.is(ModBlocks.MULTIBLOCK_PORT.get().asItem())) {
+            return DyeColor.WHITE;
+        }
+        CustomData customData = stack.getOrDefault(DataComponents.BLOCK_ENTITY_DATA, CustomData.EMPTY);
+        if (customData.isEmpty()) {
+            return DyeColor.WHITE;
+        }
+        CompoundTag tag = customData.copyTag();
+        return tag.contains(TAG_PORT_COLOR_ID) ? DyeColor.byId(tag.getInt(TAG_PORT_COLOR_ID)) : DyeColor.WHITE;
+    }
+
+    public void applySyncedPortColor(DyeColor color) {
+        DyeColor sanitized = color == null ? DyeColor.WHITE : color;
+        if (portColor == sanitized) {
+            refreshClientRender();
+            return;
+        }
+        portColor = sanitized;
+        refreshClientRender();
+    }
+
     public boolean isMenuStillValid(Player player) {
         return level != null
                 && level.getBlockEntity(worldPosition) == this
+                && isFunctionalPort()
                 && player.distanceToSqr(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D) <= 64.0D;
-    }
-
-    public void configure(SideAccessMode newMode, int newMaxTransfer) {
-        setMode(CHANNEL_ENERGY, toPylonMode(newMode));
-        maxTransfer = Math.max(0, Math.min(newMaxTransfer, BASE_TRANSFER_RATE));
-        setChanged();
-        syncVisualState();
-    }
-
-    public void configurePort(BlockPos portPos, SideAccessMode mode, int newMaxTransfer) {
-        MatterBatteryCoreBlockEntity controller = getController();
-        if (!(level instanceof ServerLevel serverLevel) || controller == null || !controller.isFormed()) {
-            return;
-        }
-        controller.configurePort(portPos, mode, newMaxTransfer);
-    }
-
-    public SideAccessMode getMode() {
-        return fromPylonMode(getMode(CHANNEL_ENERGY));
     }
 
     public int getNetworkId() {
         return getPylonId(CHANNEL_ENERGY);
-    }
-
-    public int getMaxTransfer() {
-        return maxTransfer;
     }
 
     public int getLastInputRate() {
@@ -245,8 +272,16 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
     }
 
     @Override
+    public void openMatterNetworkMenu(Player player, boolean remoteAccess) {
+        if (isFunctionalPort()) {
+            super.openMatterNetworkMenu(player, remoteAccess);
+        }
+    }
+
+    @Override
     public boolean openPrimaryMenu(Player player, boolean remoteAccess) {
-        return level instanceof ServerLevel serverLevel
+        return isFunctionalPort()
+                && level instanceof ServerLevel serverLevel
                 && MatterBatteryMultiblockHelper.tryOpenBatteryMenu(serverLevel, worldPosition, player);
     }
 
@@ -254,9 +289,9 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
         MatterBatteryCoreBlockEntity controller = getController();
         if (controller == null) {
-            throw new IllegalStateException("Battery port menu requested without a battery core controller");
+            throw new IllegalStateException("Multiblock port menu requested without a battery core controller");
         }
-        return new MatterBatteryCoreMenu(containerId, playerInventory, controller, controller.getData());
+        return new MatterBatteryCoreMenu(containerId, playerInventory, controller, controller.getData(), worldPosition);
     }
 
     @Override
@@ -273,10 +308,14 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
 
     @Override
     public void onMultiblockAssembled(MultiblockStructure structure, MultiblockRole role) {
+        markNetworkDirty();
+        syncVisualState();
     }
 
     @Override
     public void onMultiblockDisassembled(MultiblockStructure structure) {
+        markNetworkDirty();
+        syncVisualState();
     }
 
     @Override
@@ -298,11 +337,17 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
 
     @Override
     protected boolean canLinkTo(MatterPylonBlockEntity other) {
-        return other.getType() == ModBlockEntities.MATTER_PYLON.get()
-                || other.getType() == ModBlockEntities.MATTER_NETWORK_CONTROLLER.get()
-                || other.getType() == ModBlockEntities.MATTER_NETWORK_MONITOR.get()
-                || other.getType() == ModBlockEntities.MATTER_ENERGY_CELL.get()
-                || other.getType() == ModBlockEntities.MULTIBLOCK_PORT.get();
+        return isFunctionalPort() && other.supportsChannel(CHANNEL_ENERGY);
+    }
+
+    @Override
+    protected Set<BlockPos> getTraversalLinkedPositions() {
+        return isFunctionalPort() ? super.getTraversalLinkedPositions() : Set.of();
+    }
+
+    @Override
+    protected boolean hasTraversalLinkTo(BlockPos pos) {
+        return isFunctionalPort() && super.hasTraversalLinkTo(pos);
     }
 
     @Override
@@ -323,37 +368,42 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
 
     @Override
     protected Component getMatterNetworkMenuTitle() {
-        return Component.literal("Battery Port Network");
+        return Component.literal("Multiblock Port Network");
     }
 
     @Override
     protected void saveAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.saveAdditional(tag, registries);
         multiblockPartState.writeToTag(tag);
-        tag.putInt("max_transfer", maxTransfer);
         tag.putInt("last_input_rate", lastInputRate);
         tag.putInt("last_output_rate", lastOutputRate);
+        tag.putInt(TAG_PORT_COLOR_ID, portColor.getId());
     }
 
     @Override
     protected void loadAdditional(CompoundTag tag, HolderLookup.Provider registries) {
         super.loadAdditional(tag, registries);
         multiblockPartState.readFromTag(tag);
-        maxTransfer = Math.max(0, tag.getInt("max_transfer"));
-        if (maxTransfer == 0 && !tag.contains("max_transfer")) {
-            maxTransfer = BASE_TRANSFER_RATE;
-        }
         lastInputRate = Math.max(0, tag.getInt("last_input_rate"));
         lastOutputRate = Math.max(0, tag.getInt("last_output_rate"));
+        DyeColor previousColor = portColor;
+        portColor = tag.contains(TAG_PORT_COLOR_ID) ? DyeColor.byId(tag.getInt(TAG_PORT_COLOR_ID)) : DyeColor.WHITE;
+        if (previousColor != portColor) {
+            if (level instanceof ServerLevel) {
+                syncBlockStateColor();
+            } else {
+                refreshClientRender();
+            }
+        }
     }
 
     @Override
     public CompoundTag getUpdateTag(HolderLookup.Provider registries) {
         CompoundTag tag = super.getUpdateTag(registries);
         multiblockPartState.writeToTag(tag);
-        tag.putInt("max_transfer", maxTransfer);
         tag.putInt("last_input_rate", lastInputRate);
         tag.putInt("last_output_rate", lastOutputRate);
+        tag.putInt(TAG_PORT_COLOR_ID, portColor.getId());
         return tag;
     }
 
@@ -365,8 +415,6 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         long currentTick = level.getGameTime();
         if (currentTick != transferWindowTick) {
             transferWindowTick = currentTick;
-            inputUsedThisTick = 0;
-            outputUsedThisTick = 0;
         }
 
         if (telemetrySampleTick == Long.MIN_VALUE) {
@@ -386,20 +434,61 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         }
     }
 
-    private int getRemainingInputBudget() {
-        return Math.max(0, maxTransfer - inputUsedThisTick);
-    }
-
-    private int getRemainingOutputBudget() {
-        return Math.max(0, maxTransfer - outputUsedThisTick);
-    }
-
     private @Nullable MatterBatteryCoreBlockEntity getController() {
         if (!multiblockPartState.isFormed() || level == null) {
             return null;
         }
         BlockEntity blockEntity = level.getBlockEntity(multiblockPartState.getControllerPos());
         return blockEntity instanceof MatterBatteryCoreBlockEntity controller ? controller : null;
+    }
+
+    private void refreshControllerPortOverview() {
+        if (!(level instanceof ServerLevel serverLevel)) {
+            return;
+        }
+        MatterBatteryCoreBlockEntity controller = getController();
+        if (controller == null) {
+            return;
+        }
+        MatterBatteryMultiblockHelper.getOrRecoverBatteryStructure(serverLevel, worldPosition)
+                .ifPresent(structure -> controller.refreshStructureStats(serverLevel, structure));
+    }
+
+    private void refreshClientRender() {
+        if (level != null && level.isClientSide()) {
+            level.sendBlockUpdated(worldPosition, getBlockState(), getBlockState(), 3);
+        }
+    }
+
+    private void syncBlockStateColor() {
+        if (!(level instanceof ServerLevel)) {
+            return;
+        }
+        BlockState state = getBlockState();
+        if (state.hasProperty(MultiblockPortBlock.COLOR) && state.getValue(MultiblockPortBlock.COLOR) != portColor) {
+            level.setBlock(worldPosition, state.setValue(MultiblockPortBlock.COLOR, portColor), 3);
+            return;
+        }
+        syncVisualState();
+    }
+
+    public static Component getPortDisplayName(DyeColor color) {
+        DyeColor sanitized = color == null ? DyeColor.WHITE : color;
+        return Component.literal(formatColorName(sanitized) + " Multiblock Port");
+    }
+
+    private static String formatColorName(DyeColor color) {
+        StringBuilder builder = new StringBuilder();
+        for (String part : color.getName().split("_")) {
+            if (part.isEmpty()) {
+                continue;
+            }
+            if (!builder.isEmpty()) {
+                builder.append(' ');
+            }
+            builder.append(Character.toUpperCase(part.charAt(0))).append(part.substring(1));
+        }
+        return builder.toString();
     }
 
     private @Nullable Direction getOutwardSide() {
@@ -409,25 +498,4 @@ public class MatterBatteryPortBlockEntity extends MatterPylonBlockEntity impleme
         return MatterBatteryMultiblockHelper.getOutwardSide(multiblockPartState.getLocalPos(), multiblockPartState.getFront(), multiblockPartState.getWidth(), multiblockPartState.getHeight(), multiblockPartState.getDepth());
     }
 
-    private static SideAccessMode fromPylonMode(PylonMode mode) {
-        return switch (mode) {
-            case DISABLED -> SideAccessMode.DISABLED;
-            case EXPORT -> SideAccessMode.OUTPUT;
-            case IMPORT -> SideAccessMode.INPUT;
-            case IMPORT_EXPORT -> SideAccessMode.BOTH;
-        };
-    }
-
-    private static PylonMode toPylonMode(SideAccessMode mode) {
-        if (mode == null) {
-            return PylonMode.IMPORT_EXPORT;
-        }
-        return switch (mode) {
-            case DISABLED -> PylonMode.DISABLED;
-            case INPUT -> PylonMode.IMPORT;
-            case OUTPUT -> PylonMode.EXPORT;
-            case OUTPUT_PRIMARY, OUTPUT_SECONDARY, OUTPUT_TERTIARY -> PylonMode.EXPORT;
-            case BOTH -> PylonMode.IMPORT_EXPORT;
-        };
-    }
 }

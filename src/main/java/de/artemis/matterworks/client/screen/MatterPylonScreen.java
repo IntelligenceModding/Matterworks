@@ -2,12 +2,13 @@ package de.artemis.matterworks.client.screen;
 
 import de.artemis.matterworks.Matterworks;
 import de.artemis.matterworks.common.blockentity.EnergyCellBlockEntity;
-import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
+import de.artemis.matterworks.common.blockentity.MultiblockPortBlockEntity;
 import de.artemis.matterworks.common.blockentity.FluidTankBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
 import de.artemis.matterworks.common.io.SideConfigType;
 import de.artemis.matterworks.common.blockentity.MatterPylonBlockEntity;
 import de.artemis.matterworks.common.menu.MatterPylonMenu;
+import de.artemis.matterworks.common.network.OpenMatterNetworkMenuPayload;
 import de.artemis.matterworks.common.network.OpenMatterPrimaryMenuPayload;
 import de.artemis.matterworks.common.network.SetPylonColorCodePayload;
 import de.artemis.matterworks.common.network.SetPylonIdPayload;
@@ -15,6 +16,7 @@ import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
+import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
@@ -176,7 +178,6 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         renderInactiveFilterCover(guiGraphics);
         colorPicker.render(guiGraphics, leftPos, topPos, imageWidth, imageHeight, index -> menu.getNetworkColor(selectedChannel, index));
         VanillaGuiHelper.drawGhostSlotItems(guiGraphics, menu, leftPos, topPos);
-        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
     }
 
     @Override
@@ -198,6 +199,7 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     public void render(GuiGraphics guiGraphics, int mouseX, int mouseY, float partialTick) {
         this.renderBackground(guiGraphics, mouseX, mouseY, partialTick);
         super.render(guiGraphics, mouseX, mouseY, partialTick);
+        TopCategoryTabs.render(guiGraphics, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         colorPicker.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, imageHeight, mouseX, mouseY, index -> menu.getNetworkColor(selectedChannel, index));
         TopCategoryTabs.renderTooltip(guiGraphics, this.font, leftPos, topPos, imageWidth, mouseX, mouseY, buildTabs());
         if (renderFilterSlotTooltip(guiGraphics, mouseX, mouseY)) {
@@ -358,6 +360,9 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
     }
 
     private List<TopCategoryTabs.Tab> buildTabs() {
+        if (menu.getBlockEntity() instanceof MultiblockPortBlockEntity multiblockPort) {
+            return buildMultiblockPortTabs(multiblockPort);
+        }
         if (!hasPrimaryTab()) {
             return List.of();
         }
@@ -375,9 +380,40 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
 
     private boolean hasPrimaryTab() {
         return menu.getBlockEntity() instanceof EnergyCellBlockEntity
-                || menu.getBlockEntity() instanceof MatterBatteryPortBlockEntity
                 || menu.getBlockEntity() instanceof FluidTankBlockEntity
                 || menu.getBlockEntity() instanceof MatterStorageBarrelBlockEntity;
+    }
+
+    private List<TopCategoryTabs.Tab> buildMultiblockPortTabs(MultiblockPortBlockEntity multiblockPort) {
+        List<TopCategoryTabs.Tab> tabs = new ArrayList<>();
+        ItemStack coreIcon = ModBlocks.MATTER_BATTERY_CORE.get().asItem().getDefaultInstance();
+        ItemStack portIcon = ModBlocks.MULTIBLOCK_PORT.get().asItem().getDefaultInstance();
+        tabs.add(new TopCategoryTabs.Tab(coreIcon, Component.literal("Main"), false, this::openBatteryMainTab));
+
+        List<de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity.PortOverview> ports = multiblockPort.getPortOverview();
+        if (ports.isEmpty()) {
+            ports = BatteryTopTabCache.get(menu.getBlockPos());
+        } else {
+            BatteryTopTabCache.remember(multiblockPort.getControllerTrackedPos(), ports);
+        }
+        if (ports.isEmpty()) {
+            tabs.add(new TopCategoryTabs.Tab(portIcon, Component.literal("Port"), true, () -> {
+            }));
+            return tabs;
+        }
+
+        BlockPos currentPos = menu.getBlockPos();
+        for (var overview : ports) {
+            BlockPos portPos = overview.pos();
+            boolean active = portPos.equals(currentPos);
+            tabs.add(new TopCategoryTabs.Tab(
+                    createMultiblockPortIcon(overview),
+                    Component.literal("Port"),
+                    active,
+                    () -> openMultiblockPortNetwork(portPos)
+            ));
+        }
+        return tabs;
     }
 
     private List<SideConfigType> getPrimarySideConfigTypes() {
@@ -407,6 +443,18 @@ public class MatterPylonScreen extends AbstractRenamableContainerScreen<MatterPy
         } else {
             PendingMachineTabSelection.set(menu.getBlockPos(), type);
         }
+        PacketDistributor.sendToServer(new OpenMatterPrimaryMenuPayload(menu.getBlockPos(), menu.isRemoteAccess()));
+    }
+
+    private void openMultiblockPortNetwork(BlockPos portPos) {
+        PacketDistributor.sendToServer(new OpenMatterNetworkMenuPayload(portPos, false));
+    }
+
+    private static ItemStack createMultiblockPortIcon(de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity.PortOverview overview) {
+        return MultiblockPortBlockEntity.createColoredPortStack(DyeColor.byId(overview.colorId()));
+    }
+
+    private void openBatteryMainTab() {
         PacketDistributor.sendToServer(new OpenMatterPrimaryMenuPayload(menu.getBlockPos(), menu.isRemoteAccess()));
     }
 

@@ -310,11 +310,11 @@ public class MatterNetworkControllerBlockEntity extends MatterPylonBlockEntity {
                 }
             };
         }
-        if (target instanceof MatterBatteryPortBlockEntity batteryPort) {
-            return new RemoteMenuProvider(batteryPort.getDisplayName()) {
+        if (target instanceof MultiblockPortBlockEntity multiblockPort) {
+            return new RemoteMenuProvider(multiblockPort.getDisplayName()) {
                 @Override
                 public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
-                    return new MatterPylonMenu(containerId, inventory, batteryPort, batteryPort.getData(), true);
+                    return new MatterPylonMenu(containerId, inventory, multiblockPort, multiblockPort.getData(), true);
                 }
             };
         }

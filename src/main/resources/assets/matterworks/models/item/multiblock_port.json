@@ -1,3 +1,95 @@
 {
-  "parent": "matterworks:block/multiblock_port"
+  "parent": "matterworks:block/multiblock_port_white",
+  "overrides": [
+    {
+      "predicate": {
+        "custom_model_data": 1
+      },
+      "model": "matterworks:item/multiblock_port_orange"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 2
+      },
+      "model": "matterworks:item/multiblock_port_magenta"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 3
+      },
+      "model": "matterworks:item/multiblock_port_light_blue"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 4
+      },
+      "model": "matterworks:item/multiblock_port_yellow"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 5
+      },
+      "model": "matterworks:item/multiblock_port_lime"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 6
+      },
+      "model": "matterworks:item/multiblock_port_pink"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 7
+      },
+      "model": "matterworks:item/multiblock_port_gray"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 8
+      },
+      "model": "matterworks:item/multiblock_port_light_gray"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 9
+      },
+      "model": "matterworks:item/multiblock_port_cyan"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 10
+      },
+      "model": "matterworks:item/multiblock_port_purple"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 11
+      },
+      "model": "matterworks:item/multiblock_port_blue"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 12
+      },
+      "model": "matterworks:item/multiblock_port_brown"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 13
+      },
+      "model": "matterworks:item/multiblock_port_green"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 14
+      },
+      "model": "matterworks:item/multiblock_port_red"
+    },
+    {
+      "predicate": {
+        "custom_model_data": 15
+      },
+      "model": "matterworks:item/multiblock_port_black"
+    }
+  ]
 }

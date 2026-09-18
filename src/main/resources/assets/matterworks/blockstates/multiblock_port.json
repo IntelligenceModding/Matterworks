@@ -1,7 +1,20 @@
 {
   "variants": {
-    "": {
-      "model": "matterworks:block/multiblock_port"
-    }
+    "color=white": { "model": "matterworks:block/multiblock_port_white" },
+    "color=orange": { "model": "matterworks:block/multiblock_port_orange" },
+    "color=magenta": { "model": "matterworks:block/multiblock_port_magenta" },
+    "color=light_blue": { "model": "matterworks:block/multiblock_port_light_blue" },
+    "color=yellow": { "model": "matterworks:block/multiblock_port_yellow" },
+    "color=lime": { "model": "matterworks:block/multiblock_port_lime" },
+    "color=pink": { "model": "matterworks:block/multiblock_port_pink" },
+    "color=gray": { "model": "matterworks:block/multiblock_port_gray" },
+    "color=light_gray": { "model": "matterworks:block/multiblock_port_light_gray" },
+    "color=cyan": { "model": "matterworks:block/multiblock_port_cyan" },
+    "color=purple": { "model": "matterworks:block/multiblock_port_purple" },
+    "color=blue": { "model": "matterworks:block/multiblock_port_blue" },
+    "color=brown": { "model": "matterworks:block/multiblock_port_brown" },
+    "color=green": { "model": "matterworks:block/multiblock_port_green" },
+    "color=red": { "model": "matterworks:block/multiblock_port_red" },
+    "color=black": { "model": "matterworks:block/multiblock_port_black" }
   }
 }

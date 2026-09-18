@@ -22,12 +22,13 @@ import de.artemis.matterworks.common.block.CrystalViewportBlock;
 import de.artemis.matterworks.common.block.MatterBatteryCasingBlock;
 import de.artemis.matterworks.common.block.MatterBatteryCoreBlock;
 import de.artemis.matterworks.common.block.MatterBatteryFrameBlock;
-import de.artemis.matterworks.common.block.MatterBatteryPortBlock;
+import de.artemis.matterworks.common.block.MultiblockPortBlock;
 import de.artemis.matterworks.common.block.PowerCrystalChargerBlock;
 import de.artemis.matterworks.common.block.PowerCrystalOreBlock;
 import de.artemis.matterworks.common.block.PowerCrystalRevealBlock;
 import de.artemis.matterworks.common.block.MatterCapacitorCellBlock;
 import de.artemis.matterworks.common.block.MatterInductionRelayBlock;
+import de.artemis.matterworks.common.item.MultiblockPortBlockItem;
 import de.artemis.matterworks.common.block.RawMatterBlock;
 import de.artemis.matterworks.common.block.RefinedMatterBlock;
 import de.artemis.matterworks.common.block.UnstableMatterBlock;
@@ -69,6 +70,20 @@ public class ModBlocks {
     ) {
         DeferredBlock<T> block = BLOCKS.registerBlock(name, blockFactory, properties.apply(BlockBehaviour.Properties.of()));
         ModItems.ITEMS.registerSimpleBlockItem(block, itemProperties.apply(new Item.Properties()));
+        return block;
+    }
+
+    private static DeferredBlock<MultiblockPortBlock> registerMultiblockPort() {
+        DeferredBlock<MultiblockPortBlock> block = BLOCKS.registerBlock(
+                "multiblock_port",
+                MultiblockPortBlock::new,
+                BlockBehaviour.Properties.of().strength(4.0F).sound(SoundType.COPPER)
+        );
+        ModItems.ITEMS.registerItem(
+                "multiblock_port",
+                properties -> new MultiblockPortBlockItem(block.get(), properties),
+                new Item.Properties()
+        );
         return block;
     }
 
@@ -182,11 +197,7 @@ public class ModBlocks {
             properties -> properties.strength(4.0F).sound(SoundType.METAL)
     );
 
-    public static final DeferredBlock<MatterBatteryPortBlock> MULTIBLOCK_PORT = register(
-            "multiblock_port",
-            MatterBatteryPortBlock::new,
-            properties -> properties.strength(4.0F).sound(SoundType.COPPER)
-    );
+    public static final DeferredBlock<MultiblockPortBlock> MULTIBLOCK_PORT = registerMultiblockPort();
 
     public static final DeferredBlock<CrystalViewportBlock> MULTIBLOCK_GLASS = register(
             "multiblock_glass",

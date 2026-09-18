@@ -287,10 +287,6 @@ public class ClientModEvents {
             return;
         }
 
-        if (!previewHit.actualState().isAir() && !previewHit.actualState().canBeReplaced()) {
-            return;
-        }
-
         event.setCanceled(true);
         if (!MatterBatteryPreviewPlacementHelper.canPlaceFromInventory(minecraft.player, event.getHand(), previewHit.role())) {
             event.setSwingHand(false);

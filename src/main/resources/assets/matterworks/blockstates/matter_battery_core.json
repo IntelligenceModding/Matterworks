@@ -13,16 +13,16 @@
       "model": "matterworks:block/matter_battery_core"
     },
     "facing=north,formed=true": {
-      "model": "matterworks:block/invisible"
+      "model": "matterworks:block/matter_battery_core"
     },
     "facing=east,formed=true": {
-      "model": "matterworks:block/invisible"
+      "model": "matterworks:block/matter_battery_core"
     },
     "facing=south,formed=true": {
-      "model": "matterworks:block/invisible"
+      "model": "matterworks:block/matter_battery_core"
     },
     "facing=west,formed=true": {
-      "model": "matterworks:block/invisible"
+      "model": "matterworks:block/matter_battery_core"
     }
   }
 }

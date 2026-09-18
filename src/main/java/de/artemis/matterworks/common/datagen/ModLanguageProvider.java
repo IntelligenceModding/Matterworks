@@ -137,7 +137,6 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("message.matterworks.matter_battery.assembled", "Matter Battery assembled.");
         add("message.matterworks.matter_battery.disassembled", "Matter Battery disassembled.");
         add("message.matterworks.matter_battery.invalid", "Matter Battery invalid: %s");
-        add("message.matterworks.matter_battery.port_mode", "Battery Port mode: %s");
         add("message.matterworks.matter_architect.selected", "Matter Architect blueprint: %s");
         add("message.matterworks.matter_architect.corner_a", "%s corner A set.");
         add("message.matterworks.matter_architect.ready", "%s blueprint ready: %sx%sx%s");
@@ -223,15 +222,10 @@ public class ModLanguageProvider extends net.neoforged.neoforge.common.data.Lang
         add("screen.matterworks.matter_battery.transfer", "Transfer: %s FE/t");
         add("screen.matterworks.matter_battery.layer", "Layer: %s / %s");
         add("screen.matterworks.matter_battery.tab_stats", "Stats");
-        add("screen.matterworks.matter_battery.tab_ports", "Ports");
         add("screen.matterworks.matter_battery.graph_charge", "Charge History");
         add("screen.matterworks.matter_battery.graph_rates", "Rate History");
         add("screen.matterworks.matter_battery.input_rate", "Input: %s FE/t");
         add("screen.matterworks.matter_battery.output_rate", "Output: %s FE/t");
-        add("screen.matterworks.matter_battery.port_tab", "Port List");
-        add("screen.matterworks.matter_battery.port_details", "Port Details");
-        add("screen.matterworks.matter_battery.port_none", "Select a port.");
-        add("screen.matterworks.matter_battery.port_limit", "Max Speed: %s FE/t");
         add("screen.matterworks.matter_battery.preview_title", "Preview");
         add("screen.matterworks.matter_battery.preview_hint", "Controller handles hologram build");
         add("screen.matterworks.matter_battery.port_hint", "Ports replace frame or casing");

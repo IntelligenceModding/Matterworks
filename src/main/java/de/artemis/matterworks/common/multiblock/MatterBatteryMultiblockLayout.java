@@ -6,6 +6,7 @@ import net.minecraft.core.Direction;
 public final class MatterBatteryMultiblockLayout {
     public static final int MIN_SIZE = 3;
     public static final int MAX_SIZE = 16;
+    public static final int MAX_PORTS = 4;
 
     private MatterBatteryMultiblockLayout() {
     }

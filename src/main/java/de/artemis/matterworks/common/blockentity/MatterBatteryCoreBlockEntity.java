@@ -3,7 +3,7 @@ package de.artemis.matterworks.common.blockentity;
 import de.artemis.matterworks.client.render.MatterBatteryFormationOverlayState;
 import de.artemis.matterworks.common.block.MatterBatteryCoreBlock;
 import de.artemis.matterworks.common.block.MatterCapacitorCellBlock;
-import de.artemis.matterworks.common.io.SideAccessMode;
+import de.artemis.matterworks.common.energy.EnergyItemHelper;
 import de.artemis.matterworks.common.menu.MatterBatteryCoreMenu;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockDefinition;
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
@@ -13,6 +13,7 @@ import de.artemis.matterworks.common.multiblock.MultiblockPartState;
 import de.artemis.matterworks.common.multiblock.MultiblockRole;
 import de.artemis.matterworks.common.multiblock.MultiblockStructure;
 import de.artemis.matterworks.common.multiblock.MultiblockStructureRegistry;
+import de.artemis.matterworks.common.multiblock.MultiblockTransforms;
 import de.artemis.matterworks.common.network.ShowMatterBatteryFormationPayload;
 import de.artemis.matterworks.common.registry.ModBlockEntities;
 import de.artemis.matterworks.common.registry.ModBlocks;
@@ -27,7 +28,9 @@ import net.minecraft.network.protocol.Packet;
 import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
 import net.minecraft.server.level.ServerLevel;
+import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.MenuProvider;
+import net.minecraft.world.SimpleContainer;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -38,6 +41,8 @@ import net.minecraft.world.level.block.HorizontalDirectionalBlock;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.neoforged.neoforge.network.PacketDistributor;
+import net.neoforged.neoforge.energy.IEnergyStorage;
+import net.neoforged.neoforge.items.ItemStackHandler;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
@@ -46,8 +51,14 @@ import java.util.List;
 import java.util.Objects;
 
 public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuProvider, CustomNamedBlockEntity, MultiblockPartEntity {
+    public static final int SLOT_CAPACITOR_CELLS = 0;
+    public static final int CHARGE_SLOT_START = 1;
+    public static final int CHARGE_SLOT_COUNT = 6;
+    public static final int SLOT_POWER_BANK = CHARGE_SLOT_START + CHARGE_SLOT_COUNT;
+    public static final int SLOT_COUNT = SLOT_POWER_BANK + 1;
     public static final int CAPACITY_PER_CELL = 500_000;
     public static final int BASE_TRANSFER_RATE = 1_000_000;
+    public static final int MAX_SLOT_TRANSFER_PER_TICK = 2_000;
     public static final int HISTORY_SIZE = 48;
     public static final int HISTORY_SAMPLE_TICKS = 10;
     public static final int DATA_FORMED = 0;
@@ -55,10 +66,34 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     public static final int DATA_CAPACITY = 2;
     public static final int DATA_TRANSFER = 3;
     public static final int DATA_CELLS = 4;
-    public static final int DATA_COUNT = 5;
+    public static final int DATA_CAPACITOR_CELLS = 5;
+    public static final int DATA_MAX_CAPACITOR_CELLS = 6;
+    public static final int DATA_COUNT = 7;
     private static final long RECOVERY_RETRY_TICKS = 5L;
 
     private final MultiblockPartState multiblockPartState = new MultiblockPartState();
+    private final ItemStackHandler itemHandler = new ItemStackHandler(SLOT_COUNT) {
+        @Override
+        protected void onContentsChanged(int slot) {
+            setChanged();
+        }
+
+        @Override
+        public boolean isItemValid(int slot, net.minecraft.world.item.ItemStack stack) {
+            if (slot >= CHARGE_SLOT_START && slot < CHARGE_SLOT_START + CHARGE_SLOT_COUNT) {
+                return isChargeItem(stack);
+            }
+            if (slot == SLOT_POWER_BANK) {
+                return isPowerBankInputItem(stack);
+            }
+            return false;
+        }
+
+        @Override
+        public int getSlotLimit(int slot) {
+            return 1;
+        }
+    };
     private final BatteryEnergyStorage energyStorage = new BatteryEnergyStorage();
     private final ContainerData data = new ContainerData() {
         @Override
@@ -69,6 +104,8 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
                 case DATA_CAPACITY -> getDisplayedEnergyCapacity();
                 case DATA_TRANSFER -> getTransferRate();
                 case DATA_CELLS -> cellCount;
+                case DATA_CAPACITOR_CELLS -> getCapacitorCellCount();
+                case DATA_MAX_CAPACITOR_CELLS -> getMaxCapacitorCellCount();
                 default -> 0;
             };
         }
@@ -148,8 +185,23 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         return cellCount;
     }
 
+    public int getCapacitorCellCount() {
+        return Math.max(0, cellCount - 1);
+    }
+
+    public int getMaxCapacitorCellCount() {
+        if (!MatterBatteryMultiblockLayout.isValidSize(storedWidth, storedHeight, storedDepth)) {
+            return 0;
+        }
+        return getInternalCellPositions(storedOriginPos, storedFront, storedWidth, storedHeight, storedDepth).size();
+    }
+
     public BatteryEnergyStorage getEnergyStorage() {
         return energyStorage;
+    }
+
+    public ItemStackHandler getItemHandler() {
+        return itemHandler;
     }
 
     public ContainerData getData() {
@@ -230,6 +282,7 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         tag.putIntArray("energy_history", energyHistory);
         tag.putIntArray("input_history", inputHistory);
         tag.putIntArray("output_history", outputHistory);
+        tag.put("inventory", itemHandler.serializeNBT(registries));
         writePortOverview(tag);
     }
 
@@ -256,6 +309,9 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         copyIntoHistory(tag.getIntArray("energy_history"), energyHistory);
         copyIntoHistory(tag.getIntArray("input_history"), inputHistory);
         copyIntoHistory(tag.getIntArray("output_history"), outputHistory);
+        if (tag.contains("inventory")) {
+            loadInventory(tag.getCompound("inventory"), registries);
+        }
         readPortOverview(tag);
     }
 
@@ -295,6 +351,17 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory playerInventory, Player player) {
         return new MatterBatteryCoreMenu(containerId, playerInventory, this, data);
+    }
+
+    public SimpleContainer createDropInventory() {
+        SimpleContainer inventory = new SimpleContainer(itemHandler.getSlots());
+        for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+            if (slot == SLOT_CAPACITOR_CELLS) {
+                continue;
+            }
+            inventory.setItem(slot, itemHandler.getStackInSlot(slot).copy());
+        }
+        return inventory;
     }
 
     @Override
@@ -365,20 +432,27 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
                 && player.distanceToSqr(worldPosition.getX() + 0.5D, worldPosition.getY() + 0.5D, worldPosition.getZ() + 0.5D) <= 64.0D;
     }
 
-    public void configurePort(BlockPos portPos, SideAccessMode mode, int newMaxTransfer) {
+    public void setCapacitorCellCount(int requestedCount) {
         if (!(level instanceof ServerLevel serverLevel) || !isFormed()) {
             return;
         }
         var structureOptional = MultiblockStructureRegistry.getByMember(serverLevel, worldPosition);
-        if (structureOptional.isEmpty() || !structureOptional.get().contains(portPos)) {
+        if (structureOptional.isEmpty()) {
             return;
         }
-        BlockEntity blockEntity = serverLevel.getBlockEntity(portPos);
-        if (blockEntity instanceof MatterBatteryPortBlockEntity portBlockEntity) {
-            portBlockEntity.configure(mode, newMaxTransfer);
-            rebuildPortOverview(serverLevel, structureOptional.get());
-            sync();
+        MultiblockStructure structure = structureOptional.get();
+        int maxCells = getInternalCellPositions(structure.originPos(), structure.front(), structure.width(), structure.height(), structure.depth()).size();
+        int targetCount = net.minecraft.util.Mth.clamp(requestedCount, 0, maxCells);
+        if (targetCount == getCapacitorCellCount()) {
+            return;
         }
+
+        applyCapacitorCellCount(serverLevel, structure, targetCount);
+        recalculateStats(serverLevel, structure);
+        updateInternalVisualStates(serverLevel, structure, true);
+        rebuildPortOverview(serverLevel, structure);
+        setChanged();
+        sync();
     }
 
     private void serverTick() {
@@ -394,6 +468,9 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         if (!multiblockPartState.isFormed()) {
             return;
         }
+
+        transferEnergyFromInputItems();
+        transferEnergyToOutputItems();
 
         var structureOptional = MultiblockStructureRegistry.getByMember(serverLevel, worldPosition);
         if (structureOptional.isPresent() && serverLevel.getGameTime() - lastHistorySampleTick >= HISTORY_SAMPLE_TICKS) {
@@ -417,6 +494,25 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             storedEnergy = capacity;
         }
         setChanged();
+    }
+
+    private void applyCapacitorCellCount(ServerLevel serverLevel, MultiblockStructure structure, int targetCount) {
+        List<BlockPos> cellPositions = getInternalCellPositions(structure.originPos(), structure.front(), structure.width(), structure.height(), structure.depth());
+        BlockState formedCellState = ModBlocks.MATTER_CAPACITOR_CELL.get().defaultBlockState().setValue(MatterCapacitorCellBlock.FORMED, true);
+        MatterBatteryMultiblockHelper.runWithoutStructureRefresh(() -> {
+            for (int index = 0; index < cellPositions.size(); index++) {
+                BlockPos cellPos = cellPositions.get(index);
+                BlockState desiredState = index < targetCount ? formedCellState : Blocks.AIR.defaultBlockState();
+                BlockState currentState = serverLevel.getBlockState(cellPos);
+                if (!currentState.is(desiredState.getBlock())) {
+                    serverLevel.setBlock(cellPos, desiredState, 3);
+                } else if (desiredState.hasProperty(MatterCapacitorCellBlock.FORMED)
+                        && currentState.hasProperty(MatterCapacitorCellBlock.FORMED)
+                        && currentState.getValue(MatterCapacitorCellBlock.FORMED) != desiredState.getValue(MatterCapacitorCellBlock.FORMED)) {
+                    serverLevel.setBlock(cellPos, desiredState, 3);
+                }
+            }
+        });
     }
 
     private void clearTransientStructureState() {
@@ -533,6 +629,46 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         return accepted;
     }
 
+    private int transferEnergyFromInputItems() {
+        net.minecraft.world.item.ItemStack stack = itemHandler.getStackInSlot(SLOT_POWER_BANK);
+        if (!isPowerBankInputItem(stack)) {
+            return 0;
+        }
+
+        IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(stack);
+        if (itemEnergy == null) {
+            return 0;
+        }
+
+        int moved = EnergyItemHelper.transferEnergy(itemEnergy, energyStorage, MAX_SLOT_TRANSFER_PER_TICK);
+        if (moved > 0) {
+            setChanged();
+        }
+        return moved;
+    }
+
+    private int transferEnergyToOutputItems() {
+        int movedTotal = 0;
+        for (int slot = CHARGE_SLOT_START; slot < CHARGE_SLOT_START + CHARGE_SLOT_COUNT; slot++) {
+            net.minecraft.world.item.ItemStack stack = itemHandler.getStackInSlot(slot);
+            if (!isChargeItem(stack)) {
+                continue;
+            }
+
+            IEnergyStorage itemEnergy = EnergyItemHelper.getEnergyStorage(stack);
+            if (itemEnergy == null) {
+                continue;
+            }
+
+            int moved = EnergyItemHelper.transferEnergy(energyStorage, itemEnergy, MAX_SLOT_TRANSFER_PER_TICK);
+            if (moved > 0) {
+                movedTotal += moved;
+                setChanged();
+            }
+        }
+        return movedTotal;
+    }
+
     private int extractEnergy(int maxExtract, boolean simulate) {
         if (!isFormed() || maxTransfer <= 0 || maxExtract <= 0 || storedEnergy <= 0) {
             return 0;
@@ -602,25 +738,13 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
                 continue;
             }
             BlockEntity blockEntity = serverLevel.getBlockEntity(memberPos);
-            if (!(blockEntity instanceof MatterBatteryPortBlockEntity portBlockEntity)) {
+            if (!(blockEntity instanceof MultiblockPortBlockEntity portBlockEntity)) {
                 continue;
             }
-            Direction outwardSide = MatterBatteryMultiblockHelper.getOutwardSide(
-                    portBlockEntity.getMultiblockPartState().getLocalPos(),
-                    portBlockEntity.getMultiblockPartState().getFront(),
-                    portBlockEntity.getMultiblockPartState().getWidth(),
-                    portBlockEntity.getMultiblockPartState().getHeight(),
-                    portBlockEntity.getMultiblockPartState().getDepth()
-            );
             entries.add(new PortOverview(
                     memberPos.immutable(),
                     portBlockEntity.getDisplayName().getString(),
-                    portBlockEntity.getNetworkId(),
-                    portBlockEntity.getMode(),
-                    portBlockEntity.getMaxTransfer(),
-                    portBlockEntity.getLastInputRate(),
-                    portBlockEntity.getLastOutputRate(),
-                    outwardSide
+                    portBlockEntity.getPortColorId()
             ));
         }
         entries.sort(Comparator.comparingLong(entry -> entry.pos().asLong()));
@@ -635,12 +759,7 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
             entryTag.putInt("y", overview.pos().getY());
             entryTag.putInt("z", overview.pos().getZ());
             entryTag.putString("display_name", overview.displayName());
-            entryTag.putInt("network_id", overview.networkId());
-            entryTag.putString("mode", overview.mode().name());
-            entryTag.putInt("max_transfer", overview.maxTransfer());
-            entryTag.putInt("input_rate", overview.inputRate());
-            entryTag.putInt("output_rate", overview.outputRate());
-            entryTag.putString("outward_side", overview.outwardSide().getName());
+            entryTag.putInt("color_id", overview.colorId());
             portsTag.add(entryTag);
         }
         tag.put("ports", portsTag);
@@ -656,25 +775,10 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         ListTag portsTag = tag.getList("ports", Tag.TAG_COMPOUND);
         for (int index = 0; index < portsTag.size(); index++) {
             CompoundTag entryTag = portsTag.getCompound(index);
-            SideAccessMode mode;
-            try {
-                mode = SideAccessMode.valueOf(entryTag.getString("mode"));
-            } catch (IllegalArgumentException ignored) {
-                mode = SideAccessMode.BOTH;
-            }
-            Direction outwardSide = Direction.byName(entryTag.getString("outward_side"));
-            if (outwardSide == null) {
-                outwardSide = Direction.NORTH;
-            }
             entries.add(new PortOverview(
                     new BlockPos(entryTag.getInt("x"), entryTag.getInt("y"), entryTag.getInt("z")),
                     entryTag.getString("display_name"),
-                    Math.max(1, entryTag.getInt("network_id")),
-                    mode,
-                    Math.max(0, entryTag.getInt("max_transfer")),
-                    Math.max(0, entryTag.getInt("input_rate")),
-                    Math.max(0, entryTag.getInt("output_rate")),
-                    outwardSide
+                    entryTag.contains("color_id") ? entryTag.getInt("color_id") : net.minecraft.world.item.DyeColor.WHITE.getId()
             ));
         }
         portOverview = List.copyOf(entries);
@@ -683,6 +787,35 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
     private void copyIntoHistory(int[] source, int[] target) {
         java.util.Arrays.fill(target, 0);
         System.arraycopy(source, 0, target, 0, Math.min(source.length, target.length));
+    }
+
+    private static List<BlockPos> getInternalCellPositions(BlockPos originPos, Direction front, int width, int height, int depth) {
+        List<BlockPos> positions = new ArrayList<>();
+        for (int y = 1; y < height - 1; y++) {
+            for (int z = 1; z < depth - 1; z++) {
+                for (int x = 1; x < width - 1; x++) {
+                    BlockPos localPos = new BlockPos(x, y, z);
+                    if (MatterBatteryMultiblockLayout.getRole(localPos, width, height, depth) == MultiblockRole.INTERNAL) {
+                        positions.add(MultiblockTransforms.localToWorld(originPos, front, localPos));
+                    }
+                }
+            }
+        }
+        return positions;
+    }
+
+    private void loadInventory(CompoundTag inventoryTag, HolderLookup.Provider registries) {
+        ItemStackHandler serializedHandler = new ItemStackHandler(Math.max(1, inventoryTag.contains("Size", Tag.TAG_INT) ? inventoryTag.getInt("Size") : SLOT_COUNT));
+        serializedHandler.deserializeNBT(registries, inventoryTag);
+
+        for (int slot = 0; slot < itemHandler.getSlots(); slot++) {
+            itemHandler.setStackInSlot(slot, net.minecraft.world.item.ItemStack.EMPTY);
+        }
+
+        int slotsToCopy = Math.min(serializedHandler.getSlots(), itemHandler.getSlots());
+        for (int slot = 0; slot < slotsToCopy; slot++) {
+            itemHandler.setStackInSlot(slot, serializedHandler.getStackInSlot(slot));
+        }
     }
 
     private int[] copyOrderedHistory(int[] source) {
@@ -729,12 +862,26 @@ public class MatterBatteryCoreBlockEntity extends BlockEntity implements MenuPro
         return Component.translatable(ModBlocks.MATTER_BATTERY_CORE.get().getDescriptionId());
     }
 
+    private static boolean isChargeItem(net.minecraft.world.item.ItemStack stack) {
+        return isUsableEnergyItem(stack) && EnergyItemHelper.canReceiveEnergy(stack);
+    }
+
+    private static boolean isPowerBankInputItem(net.minecraft.world.item.ItemStack stack) {
+        return isUsableEnergyItem(stack) && EnergyItemHelper.canProvideEnergy(stack);
+    }
+
+    private static boolean isUsableEnergyItem(net.minecraft.world.item.ItemStack stack) {
+        return !stack.isEmpty()
+                && EnergyItemHelper.getEnergyStorage(stack) != null
+                && !(stack.getItem() instanceof de.artemis.matterworks.common.item.PowerCrystalItem);
+    }
+
     private static String normalizeCustomName(String customName) {
         String normalized = customName.strip();
         return normalized.length() > 64 ? normalized.substring(0, 64) : normalized;
     }
 
-    public record PortOverview(BlockPos pos, String displayName, int networkId, SideAccessMode mode, int maxTransfer, int inputRate, int outputRate, Direction outwardSide) {
+    public record PortOverview(BlockPos pos, String displayName, int colorId) {
     }
 
     public final class BatteryEnergyStorage implements net.neoforged.neoforge.energy.IEnergyStorage {

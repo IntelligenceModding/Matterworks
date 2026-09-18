@@ -100,6 +100,6 @@ public final class MatterBatteryMultiblockDefinition implements MultiblockDefini
     }
 
     public static boolean matchesInternalState(BlockState state) {
-        return state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
+        return state.isAir() || state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
     }
 }

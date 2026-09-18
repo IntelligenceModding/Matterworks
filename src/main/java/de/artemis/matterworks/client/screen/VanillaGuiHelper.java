@@ -18,6 +18,7 @@ public final class VanillaGuiHelper {
     private static final int SLOT_SHADOW = 0xFF373737;
     private static final int SLOT_HIGHLIGHT = 0xFFFFFFFF;
     private static final int SLOT_FILL = 0xFF8B8B8B;
+    private static final int GHOST_ITEM_WASH = 0x88C6C6C6;
 
     private VanillaGuiHelper() {
     }
@@ -69,9 +70,11 @@ public final class VanillaGuiHelper {
     private static void drawGhostItem(GuiGraphics guiGraphics, ItemStack stack, int x, int y) {
         guiGraphics.pose().pushPose();
         RenderSystem.enableBlend();
+        RenderSystem.defaultBlendFunc();
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 0.35F);
         guiGraphics.renderItem(stack, x, y);
         RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        guiGraphics.fill(x, y, x + 16, y + 16, GHOST_ITEM_WASH);
         RenderSystem.disableBlend();
         guiGraphics.pose().popPose();
     }

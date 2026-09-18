@@ -78,11 +78,14 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
         });
     }
 
-    private static boolean canPlacePreviewBlock(net.minecraft.world.entity.player.Player player, PlaceMatterBatteryPreviewBlockPayload payload, Direction front) {
+    private static boolean canPlacePreviewBlock(Player player, PlaceMatterBatteryPreviewBlockPayload payload, Direction front) {
         if (!player.level().isLoaded(payload.targetPos())) {
             return false;
         }
         if (player.distanceToSqr(payload.targetPos().getX() + 0.5D, payload.targetPos().getY() + 0.5D, payload.targetPos().getZ() + 0.5D) > 64.0D) {
+            return false;
+        }
+        if (!hasMatchingMatterArchitect(player, payload.originPos(), front, payload.width(), payload.height(), payload.depth())) {
             return false;
         }
 
@@ -95,6 +98,20 @@ public record PlaceMatterBatteryPreviewBlockPayload(BlockPos originPos, int fron
         return targetPos.getX() >= minPos.getX() && targetPos.getX() <= maxPos.getX()
                 && targetPos.getY() >= minPos.getY() && targetPos.getY() <= maxPos.getY()
                 && targetPos.getZ() >= minPos.getZ() && targetPos.getZ() <= maxPos.getZ();
+    }
+
+    private static boolean hasMatchingMatterArchitect(Player player, BlockPos origin, Direction front, int width, int height, int depth) {
+        if (MatterArchitectItem.matchesLockedSelection(player.getMainHandItem(), origin, front, width, height, depth)
+                || MatterArchitectItem.matchesLockedSelection(player.getOffhandItem(), origin, front, width, height, depth)) {
+            return true;
+        }
+
+        for (ItemStack stack : player.getInventory().items) {
+            if (MatterArchitectItem.matchesLockedSelection(stack, origin, front, width, height, depth)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private static void clearMatchingMatterArchitect(Player player, BlockPos origin, Direction front, int width, int height, int depth) {

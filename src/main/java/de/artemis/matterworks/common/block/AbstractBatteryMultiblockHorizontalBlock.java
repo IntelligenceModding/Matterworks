@@ -2,9 +2,14 @@ package de.artemis.matterworks.common.block;
 
 import de.artemis.matterworks.common.multiblock.MatterBatteryMultiblockHelper;
 import net.minecraft.core.BlockPos;
+import net.minecraft.world.InteractionHand;
+import net.minecraft.world.ItemInteractionResult;
+import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.RenderShape;
 import net.minecraft.world.level.block.state.BlockState;
+import net.minecraft.world.phys.BlockHitResult;
 
 public abstract class AbstractBatteryMultiblockHorizontalBlock extends HorizontalFacingMachineBlock {
     protected AbstractBatteryMultiblockHorizontalBlock(Properties properties) {
@@ -30,5 +35,10 @@ public abstract class AbstractBatteryMultiblockHorizontalBlock extends Horizonta
             MatterBatteryMultiblockHelper.onBlockRemoved(level, pos);
         }
         super.onRemove(state, level, pos, newState, movedByPiston);
+    }
+
+    @Override
+    protected ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos, Player player, InteractionHand hand, BlockHitResult hitResult) {
+        return MatterBatteryMultiblockHelper.useFormedBatteryMemberWithItem(level, pos, player);
     }
 }

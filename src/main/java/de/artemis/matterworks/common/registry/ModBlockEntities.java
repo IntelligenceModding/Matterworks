@@ -18,7 +18,7 @@ import de.artemis.matterworks.common.blockentity.MatterStorageBarrelBlockEntity;
 import de.artemis.matterworks.common.blockentity.CreativeSinkBlockEntity;
 import de.artemis.matterworks.common.blockentity.CreativeSourceBlockEntity;
 import de.artemis.matterworks.common.blockentity.MatterBatteryCoreBlockEntity;
-import de.artemis.matterworks.common.blockentity.MatterBatteryPortBlockEntity;
+import de.artemis.matterworks.common.blockentity.MultiblockPortBlockEntity;
 import de.artemis.matterworks.common.blockentity.PowerCrystalChargerBlockEntity;
 import de.artemis.matterworks.common.blockentity.PowerCrystalOreBlockEntity;
 import net.minecraft.core.registries.Registries;
@@ -59,9 +59,9 @@ public class ModBlockEntities {
             BLOCK_ENTITY_TYPES.register("matter_battery_core",
                     () -> BlockEntityType.Builder.of(MatterBatteryCoreBlockEntity::new, ModBlocks.MATTER_BATTERY_CORE.get()).build(null));
 
-    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MatterBatteryPortBlockEntity>> MULTIBLOCK_PORT =
+    public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<MultiblockPortBlockEntity>> MULTIBLOCK_PORT =
             BLOCK_ENTITY_TYPES.register("multiblock_port",
-                    () -> BlockEntityType.Builder.of(MatterBatteryPortBlockEntity::new, ModBlocks.MULTIBLOCK_PORT.get()).build(null));
+                    () -> BlockEntityType.Builder.of(MultiblockPortBlockEntity::new, ModBlocks.MULTIBLOCK_PORT.get()).build(null));
 
     public static final DeferredHolder<BlockEntityType<?>, BlockEntityType<FluidTankBlockEntity>> FLUID_TANK =
             BLOCK_ENTITY_TYPES.register("fluid_tank",

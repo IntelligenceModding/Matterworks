@@ -4,7 +4,7 @@
       "model": "matterworks:block/matter_capacitor_cell"
     },
     "formed=true": {
-      "model": "matterworks:block/invisible"
+      "model": "matterworks:block/matter_capacitor_cell"
     }
   }
 }

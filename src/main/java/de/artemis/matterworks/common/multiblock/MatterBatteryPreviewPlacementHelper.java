@@ -3,6 +3,9 @@ package de.artemis.matterworks.common.multiblock;
 import de.artemis.matterworks.common.registry.ModBlocks;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
+import net.minecraft.core.particles.BlockParticleOption;
+import net.minecraft.core.particles.ParticleTypes;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.sounds.SoundSource;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.entity.player.Inventory;
@@ -36,8 +39,9 @@ public final class MatterBatteryPreviewPlacementHelper {
         }
         MultiblockRole role = MatterBatteryMultiblockLayout.getRole(localPos, width, height, depth);
 
-        BlockState currentState = player.level().getBlockState(targetPos);
-        if (matchesRequirement(role, currentState) || (!currentState.isAir() && !currentState.canBeReplaced())) {
+        Level level = player.level();
+        BlockState currentState = level.getBlockState(targetPos);
+        if (matchesRequirement(role, currentState)) {
             return false;
         }
 
@@ -47,7 +51,10 @@ public final class MatterBatteryPreviewPlacementHelper {
         }
 
         BlockState placedState = createPlacementState(selection.block(), front);
-        if (!player.level().setBlock(targetPos, placedState, 3)) {
+        if (MatterBatteryMultiblockHelper.wouldExceedPortLimit(level, origin, front, width, height, depth, targetPos, placedState)) {
+            return false;
+        }
+        if (!replaceBlock(level, targetPos, currentState, placedState, player)) {
             return false;
         }
 
@@ -56,10 +63,8 @@ public final class MatterBatteryPreviewPlacementHelper {
             player.getInventory().setChanged();
         }
 
-        SoundType soundType = placedState.getSoundType(player.level(), targetPos, player);
-        player.level().playSound(null, targetPos, soundType.getPlaceSound(), SoundSource.BLOCKS, (soundType.getVolume() + 1.0F) / 2.0F, soundType.getPitch() * 0.8F);
-        player.level().gameEvent(player, GameEvent.BLOCK_PLACE, targetPos);
-        if (player.level() instanceof net.minecraft.server.level.ServerLevel serverLevel) {
+        playPlacementEffects(level, targetPos, placedState, player);
+        if (level instanceof ServerLevel serverLevel) {
             MatterBatteryMultiblockHelper.tryAssembleAtOrigin(serverLevel, origin, front, width, height, depth, null, false);
         }
         return true;
@@ -95,7 +100,7 @@ public final class MatterBatteryPreviewPlacementHelper {
             case CONTROLLER -> state.is(ModBlocks.MATTER_BATTERY_CORE.get());
             case FRAME -> MatterBatteryMultiblockDefinition.matchesFrameState(state);
             case CASING, PORT -> MatterBatteryMultiblockDefinition.matchesShellFaceState(state);
-            case INTERNAL -> state.is(ModBlocks.MATTER_CAPACITOR_CELL.get());
+            case INTERNAL -> MatterBatteryMultiblockDefinition.matchesInternalState(state);
         };
     }
 
@@ -174,6 +179,38 @@ public final class MatterBatteryPreviewPlacementHelper {
             state = state.setValue(HorizontalDirectionalBlock.FACING, front);
         }
         return state;
+    }
+
+    private static boolean replaceBlock(Level level, BlockPos pos, BlockState currentState, BlockState placedState, Player player) {
+        if (!currentState.isAir()) {
+            if (currentState.getDestroySpeed(level, pos) < 0.0F) {
+                return false;
+            }
+            if (!level.destroyBlock(pos, !player.getAbilities().instabuild, player)) {
+                return false;
+            }
+        }
+
+        return level.setBlock(pos, placedState, 3);
+    }
+
+    private static void playPlacementEffects(Level level, BlockPos pos, BlockState placedState, Player player) {
+        SoundType soundType = placedState.getSoundType(level, pos, player);
+        level.playSound(null, pos, soundType.getPlaceSound(), SoundSource.BLOCKS, (soundType.getVolume() + 1.0F) / 2.0F, soundType.getPitch() * 0.8F);
+        level.gameEvent(player, GameEvent.BLOCK_PLACE, pos);
+        if (level instanceof ServerLevel serverLevel) {
+            serverLevel.sendParticles(
+                    new BlockParticleOption(ParticleTypes.BLOCK, placedState),
+                    pos.getX() + 0.5D,
+                    pos.getY() + 0.5D,
+                    pos.getZ() + 0.5D,
+                    16,
+                    0.32D,
+                    0.32D,
+                    0.32D,
+                    0.04D
+            );
+        }
     }
 
     public record InventoryBlockSelection(Block block, ItemStack stack) {
